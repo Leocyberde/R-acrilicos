@@ -88,6 +88,7 @@ export default function BudgetDetail() {
       const os = await base44.entities.WorkOrder.create({
         budget_id: String(id),
         client_name: budget.client_name,
+        client_email: budget.client_email,
         client_phone: budget.client_phone,
         client_address: budget.client_address,
         job: budget.job,

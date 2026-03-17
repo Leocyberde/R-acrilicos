@@ -33,7 +33,7 @@ export default function WorkOrders() {
     async function load() {
       let data;
       if (user?.role === 'cliente') {
-        data = await base44.entities.WorkOrder.filter({ client_name: user.full_name }, "-created_date", 200);
+        data = await base44.entities.WorkOrder.filter({ client_email: user.email }, "-created_date", 200);
       } else {
         data = await base44.entities.WorkOrder.list("-created_date", 200);
       }

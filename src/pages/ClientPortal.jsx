@@ -47,12 +47,12 @@ export default function ClientPortal() {
 
         setUser(currentUser);
 
-        const clientName = currentUser.full_name;
+        const clientEmail = currentUser.email;
 
         const [budgetsData, workOrdersData, receiptsData] = await Promise.all([
-          base44.entities.Budget.filter({ client_name: clientName }),
-          base44.entities.WorkOrder.filter({ client_name: clientName }),
-          base44.entities.Receipt.filter({ client_name: clientName }),
+          base44.entities.Budget.filter({ client_email: clientEmail }),
+          base44.entities.WorkOrder.filter({ client_email: clientEmail }),
+          base44.entities.Receipt.filter({ client_email: clientEmail }),
         ]);
 
         setBudgets(budgetsData || []);
