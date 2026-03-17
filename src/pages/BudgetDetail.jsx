@@ -77,44 +77,59 @@ export default function BudgetDetail() {
 
   const handleApproveAndCreateOS = async () => {
     setSaving(true);
-    await base44.entities.Budget.update(id, { status: "aprovado" });
-    const osItems = (budget.items || []).map(item => ({ name: item.name, quantity: item.quantity }));
-    const os = await base44.entities.WorkOrder.create({
-      budget_id: id,
-      client_name: budget.client_name,
-      client_phone: budget.client_phone,
-      client_address: budget.client_address,
-      job: budget.job,
-      producer: budget.producer,
-      description: budget.description,
-      items: osItems,
-      status: "pendente",
-      notes: budget.notes,
-    });
-    const receipt = await base44.entities.Receipt.create({
-      budget_id: id,
-      work_order_id: os.id,
-      client_name: budget.client_name,
-      client_phone: budget.client_phone,
-      client_email: budget.client_email,
-      client_address: budget.client_address,
-      job: budget.job,
-      producer: budget.producer,
-      description: budget.description,
-      items: budget.items,
-      subtotal: budget.subtotal,
-      discount: budget.discount,
-      total_amount: budget.total,
-      total_label: budget.total_label,
-      apply_margin: budget.apply_margin,
-      margin_percentage: budget.margin_percentage,
-      total_with_margin: budget.total_with_margin,
-      total_with_margin_label: budget.total_with_margin_label,
-      notes: budget.notes,
-    });
-    setBudget(prev => ({ ...prev, status: "aprovado" }));
+    try {
+      await base44.entities.Budget.update(id, { status: "aprovado" });
+
+      const osItems = (budget.items || []).map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+      }));
+
+      const os = await base44.entities.WorkOrder.create({
+        budget_id: String(id),
+        client_name: budget.client_name,
+        client_phone: budget.client_phone,
+        client_address: budget.client_address,
+        job: budget.job,
+        producer: budget.producer,
+        description: budget.description,
+        items: osItems,
+        status: "pendente",
+        notes: budget.notes,
+        start_date: new Date().toISOString().split("T")[0],
+      });
+
+      const receipt = await base44.entities.Receipt.create({
+        budget_id: String(id),
+        work_order_id: String(os.id),
+        client_name: budget.client_name,
+        client_phone: budget.client_phone,
+        client_email: budget.client_email,
+        client_address: budget.client_address,
+        job: budget.job,
+        producer: budget.producer,
+        description: budget.description,
+        items: budget.items,
+        subtotal: budget.subtotal,
+        discount: budget.discount,
+        total_amount: budget.total,
+        total_label: budget.total_label,
+        apply_margin: budget.apply_margin,
+        margin_percentage: budget.margin_percentage,
+        total_with_margin: budget.total_with_margin,
+        total_with_margin_label: budget.total_with_margin_label,
+        notes: budget.notes,
+        status: "pendente",
+        total_value: budget.total_with_margin || budget.total || 0,
+      });
+
+      setBudget(prev => ({ ...prev, status: "aprovado" }));
+      toast.success("O.S. e Recibo criados com sucesso!");
+      navigate(createPageUrl("ReceiptDetail") + `?id=${receipt.id}`);
+    } catch (e) {
+      toast.error("Erro ao criar O.S. e Recibo: " + e.message);
+    }
     setSaving(false);
-    navigate(createPageUrl("ReceiptDetail") + `?id=${receipt.id}`);
   };
 
   const handleUpdate = async (data) => {
@@ -274,7 +289,7 @@ export default function BudgetDetail() {
           <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
             <Edit className="h-3.5 w-3.5 mr-1.5" /> Editar
           </Button>
-          {budget.status === "pendente" && (
+          {["pendente", "aprovado", "aceito_cliente"].includes(budget.status) && (
             <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={handleApproveAndCreateOS} disabled={saving}>
               <Wrench className="h-3.5 w-3.5 mr-1.5" /> Criar O.S. e Recibo
             </Button>
