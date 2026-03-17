@@ -39,8 +39,7 @@ export default function ClientDetail() {
 
   useEffect(() => {
     async function load() {
-      const data = await base44.entities.Client.list();
-      const found = data.find(c => c.id === id);
+      const found = await base44.entities.Client.get(id);
       setClient(found);
       setLoading(false);
     }

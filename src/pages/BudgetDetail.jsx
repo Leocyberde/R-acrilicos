@@ -40,11 +40,11 @@ export default function BudgetDetail() {
 
   useEffect(() => {
     async function load() {
-      const data = await base44.entities.Budget.list();
-      const found = data.find(b => b.id === id);
+      const [found, layouts] = await Promise.all([
+        base44.entities.Budget.get(id),
+        base44.entities.LayoutSettings.list(),
+      ]);
       setBudget(found);
-      
-      const layouts = await base44.entities.LayoutSettings.list();
       const budgetLayout = layouts.find(l => l.document_type === "budget") || {};
       setLayoutSettings(budgetLayout);
       setLoading(false);

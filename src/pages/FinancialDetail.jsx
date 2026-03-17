@@ -30,8 +30,7 @@ export default function FinancialDetail() {
 
   useEffect(() => {
     async function load() {
-      const data = await base44.entities.Financial.list();
-      const found = data.find(p => p.id === id);
+      const found = await base44.entities.Financial.get(id);
       setPayment(found);
       setLoading(false);
     }

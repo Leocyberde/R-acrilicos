@@ -31,11 +31,11 @@ export default function ReceiptDetail() {
 
   useEffect(() => {
     async function load() {
-      const data = await base44.entities.Receipt.list();
-      const found = data.find(r => r.id === id);
+      const [found, layouts] = await Promise.all([
+        base44.entities.Receipt.get(id),
+        base44.entities.LayoutSettings.list(),
+      ]);
       setReceipt(found);
-      
-      const layouts = await base44.entities.LayoutSettings.list();
       const receiptLayout = layouts.find(l => l.document_type === "receipt") || {};
       setLayoutSettings(receiptLayout);
       setLoading(false);

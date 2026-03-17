@@ -37,11 +37,10 @@ export default function WorkOrderDetail() {
 
   useEffect(() => {
     async function load() {
-      const [data, user] = await Promise.all([
-        base44.entities.WorkOrder.list(),
+      const [found, user] = await Promise.all([
+        base44.entities.WorkOrder.get(id),
         base44.auth.me(),
       ]);
-      const found = data.find(o => o.id === id);
       setOrder(found);
       setIsClient(user?.role === "cliente");
       setLoading(false);
