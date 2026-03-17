@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { localClient } from "@/api/localClient";
+import { useAuth } from "@/lib/AuthContext";
 import {
   LayoutDashboard,
   FileText,
@@ -43,25 +44,26 @@ const navItems = [
 
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [user, setUser] = useState(null);
   const [permissions, setPermissions] = useState({});
+  const { user, logout } = useAuth();
 
   useEffect(() => {
-    async function loadUser() {
-      const currentUser = await base44.auth.me();
-      setUser(currentUser);
-      
-      if (currentUser && currentUser.role !== "admin") {
-        const userPerms = await base44.entities.UserPermissions.filter({
-          user_email: currentUser.email
-        });
-        if (userPerms.length > 0) {
-          setPermissions(userPerms[0]);
+    async function loadPermissions() {
+      if (user && user.role !== "admin") {
+        try {
+          const userPerms = await localClient.entities.UserPermissions.filter({
+            user_email: user.email
+          });
+          if (userPerms.length > 0) {
+            setPermissions(userPerms[0]);
+          }
+        } catch (e) {
+          console.error('Failed to load permissions', e);
         }
       }
     }
-    loadUser();
-  }, []);
+    loadPermissions();
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-slate-50 print:bg-white">
@@ -137,7 +139,7 @@ export default function Layout({ children, currentPageName }) {
         {/* Logout Button */}
         <div className="p-3 border-t border-slate-100">
           <button
-            onClick={() => base44.auth.logout()}
+            onClick={logout}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all duration-150"
           >
             <LogOut className="h-4.5 w-4.5 text-slate-400" />
