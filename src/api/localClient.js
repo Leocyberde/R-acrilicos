@@ -79,17 +79,13 @@ const auth = {
     return result;
   },
 
-  logout: (redirectUrl) => {
+  logout: () => {
     removeToken();
-    if (redirectUrl) {
-      window.location.href = '/login';
-    } else {
-      window.location.href = '/login';
-    }
+    window.location.href = '/select';
   },
 
   redirectToLogin: () => {
-    window.location.href = '/login';
+    window.location.href = '/select';
   },
 
   resetPassword: (userId, newPassword) =>

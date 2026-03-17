@@ -5,7 +5,7 @@ import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
-import Login from './pages/Login';
+import RoleSelector from './pages/RoleSelector';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -16,23 +16,23 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   : <>{children}</>;
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated } = useAuth();
+  const { isLoadingAuth, isAuthenticated } = useAuth();
   const location = useLocation();
 
-  if (location.pathname === '/login') {
-    return <Login />;
+  if (location.pathname === '/select') {
+    return <RoleSelector />;
   }
 
-  if (isLoadingPublicSettings || isLoadingAuth) {
+  if (isLoadingAuth) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      <div className="fixed inset-0 flex items-center justify-center bg-slate-900">
+        <div className="w-8 h-8 border-4 border-slate-600 border-t-indigo-500 rounded-full animate-spin"></div>
       </div>
     );
   }
 
-  if (!isAuthenticated || (authError && authError.type === 'auth_required')) {
-    return <Login />;
+  if (!isAuthenticated) {
+    return <RoleSelector />;
   }
 
   return (
@@ -53,12 +53,11 @@ const AuthenticatedApp = () => {
           }
         />
       ))}
-      <Route path="/login" element={<Login />} />
+      <Route path="/select" element={<RoleSelector />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
 };
-
 
 function App() {
   return (

@@ -7,9 +7,9 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(false);
+  const [isLoadingPublicSettings] = useState(false);
   const [authError, setAuthError] = useState(null);
-  const [appPublicSettings, setAppPublicSettings] = useState({});
+  const [appPublicSettings] = useState({});
 
   useEffect(() => {
     checkAppState();
@@ -20,7 +20,6 @@ export const AuthProvider = ({ children }) => {
     if (!token) {
       setIsLoadingAuth(false);
       setIsAuthenticated(false);
-      setAuthError({ type: 'auth_required', message: 'Login required' });
       return;
     }
     try {
@@ -31,7 +30,6 @@ export const AuthProvider = ({ children }) => {
     } catch {
       localStorage.removeItem('auth_token');
       setIsAuthenticated(false);
-      setAuthError({ type: 'auth_required', message: 'Sessão expirada' });
     } finally {
       setIsLoadingAuth(false);
     }
@@ -41,11 +39,11 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('auth_token');
     setUser(null);
     setIsAuthenticated(false);
-    window.location.href = '/login';
+    window.location.href = '/select';
   };
 
   const navigateToLogin = () => {
-    window.location.href = '/login';
+    window.location.href = '/select';
   };
 
   return (

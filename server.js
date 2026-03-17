@@ -193,14 +193,20 @@ async function initDB() {
       );
     `);
 
-    const adminCheck = await client.query("SELECT id FROM users WHERE email = 'admin@gestao.pro'");
-    if (adminCheck.rows.length === 0) {
-      const hash = await bcrypt.hash('admin123', 10);
-      await client.query(
-        "INSERT INTO users (email, password_hash, full_name, role) VALUES ($1, $2, $3, $4)",
-        ['admin@gestao.pro', hash, 'Administrador', 'admin']
-      );
-      console.log('Default admin created: admin@gestao.pro / admin123');
+    const seedUsers = [
+      { email: 'admin@gestao.pro', password: 'demo', full_name: 'Administrador', role: 'admin' },
+      { email: 'funcionario@gestao.pro', password: 'demo', full_name: 'Funcionário Demo', role: 'user' },
+      { email: 'cliente@gestao.pro', password: 'demo', full_name: 'Cliente Demo', role: 'cliente' },
+    ];
+    for (const u of seedUsers) {
+      const check = await client.query("SELECT id FROM users WHERE email = $1", [u.email]);
+      if (check.rows.length === 0) {
+        const hash = await bcrypt.hash(u.password, 10);
+        await client.query(
+          "INSERT INTO users (email, password_hash, full_name, role) VALUES ($1, $2, $3, $4)",
+          [u.email, hash, u.full_name, u.role]
+        );
+      }
     }
     console.log('Database initialized successfully');
   } finally {
