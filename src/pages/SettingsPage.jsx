@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, Image as ImageIcon, Shield, Layout } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -34,7 +35,9 @@ export default function SettingsPage() {
         company_address: "",
         company_phone: "",
         company_email: "",
+        company_email2: "",
         company_logo: "",
+        footer_notes: "",
       });
     }
     setLoading(false);
@@ -160,7 +163,7 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <Label>Email</Label>
+              <Label>Email Principal</Label>
               <Input
                 type="email"
                 value={settings?.company_email || ""}
@@ -170,6 +173,32 @@ export default function SettingsPage() {
               />
             </div>
           </div>
+          <div>
+            <Label>Email Secundário</Label>
+            <Input
+              type="email"
+              value={settings?.company_email2 || ""}
+              onChange={e => setSettings(prev => ({ ...prev, company_email2: e.target.value }))}
+              className="mt-1"
+              placeholder="financeiro@empresa.com"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Rodapé dos Orçamentos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Label>Instruções / Observações Fixas</Label>
+          <p className="text-xs text-slate-500 mb-2 mt-1">Este texto aparecerá em todos os orçamentos na seção "ATENÇÃO!" ao final do documento.</p>
+          <Textarea
+            value={settings?.footer_notes || ""}
+            onChange={e => setSettings(prev => ({ ...prev, footer_notes: e.target.value }))}
+            className="mt-1 min-h-[120px]"
+            placeholder="Ex: A PRODUÇÃO SERA INICIADA: APÓS ADIANTAMENTO DE 50%&#10;FATURAMENTO: 50% P/INICIAR PRODUÇÃO E 50% NA RETIRADA&#10;PARA RETIRAR - NÃO FAZEMOS ENTREGA !!!"
+          />
         </CardContent>
       </Card>
 
