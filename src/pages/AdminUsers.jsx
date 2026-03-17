@@ -49,13 +49,18 @@ export default function AdminUsers() {
   }, []);
 
   async function loadData() {
-    const [usersData, me] = await Promise.all([
-      base44.entities.User.list(),
-      base44.auth.me(),
-    ]);
-    setUsers(usersData);
-    setCurrentUser(me);
-    setLoading(false);
+    try {
+      const [usersData, me] = await Promise.all([
+        base44.entities.User.list(),
+        base44.auth.me(),
+      ]);
+      setUsers(usersData);
+      setCurrentUser(me);
+    } catch (err) {
+      toast.error("Erro ao carregar usuários: " + err.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   const handleInvite = async () => {

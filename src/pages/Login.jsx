@@ -73,7 +73,7 @@ export default function Login() {
             </Button>
           </form>
           <p className="text-xs text-slate-400 text-center mt-4">
-            Acesso padrão: admin@gestao.pro / admin123
+            Acesso padrão: admin@gestao.pro / demo
           </p>
         </CardContent>
       </Card>
