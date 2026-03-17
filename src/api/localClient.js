@@ -121,6 +121,12 @@ const users = {
   },
 };
 
+const functions = {
+  invoke: async (name, params) => {
+    return request('POST', `/functions/${name}`, params);
+  },
+};
+
 export const localClient = {
   entities: {
     Budget: createEntityClient('Budget'),
@@ -138,4 +144,5 @@ export const localClient = {
   auth,
   integrations,
   users,
+  functions,
 };

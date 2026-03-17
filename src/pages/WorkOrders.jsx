@@ -16,6 +16,7 @@ import StatusBadge from "@/components/StatusBadge";
 import ExportTabs from "@/components/ExportTabs";
 import PDFUploadDialog from "@/components/PDFUploadDialog";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function WorkOrders() {
   const [orders, setOrders] = useState([]);
@@ -26,15 +27,21 @@ export default function WorkOrders() {
   const [deleting, setDeleting] = useState(false);
   const [showPDFUpload, setShowPDFUpload] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     async function load() {
-      const data = await base44.entities.WorkOrder.list("-created_date", 200);
-      setOrders(data);
+      let data;
+      if (user?.role === 'cliente') {
+        data = await base44.entities.WorkOrder.filter({ client_name: user.full_name }, "-created_date", 200);
+      } else {
+        data = await base44.entities.WorkOrder.list("-created_date", 200);
+      }
+      setOrders(data || []);
       setLoading(false);
     }
     load();
-  }, []);
+  }, [user]);
 
   const filtered = orders.filter(o => {
     const matchSearch = o.client_name?.toLowerCase().includes(search.toLowerCase());
@@ -110,38 +117,42 @@ export default function WorkOrders() {
           <p className="text-slate-500 mt-0.5">{orders.length} ordens registradas</p>
         </div>
         <div className="flex gap-2">
-          <ExportTabs 
-            data={orders}
-            filename="relatorio_ordens_servico"
-            columns={[
-              { key: "client_name", label: "Cliente" },
-              { key: "job", label: "Job" },
-              { key: "description", label: "Descrição" },
-              { key: "created_date", label: "Criado", format: (v) => new Date(v).toLocaleDateString("pt-BR") },
-              { key: "status", label: "Status" },
-            ]}
-          />
-          <Button 
-            variant="outline"
-            onClick={() => setShowPDFUpload(true)}
-          >
-            <Upload className="h-4 w-4 mr-2" /> Importar PDF
-          </Button>
-          <Button 
-            onClick={() => navigate(createPageUrl("WorkOrderCreate"))}
-            className="bg-indigo-600 hover:bg-indigo-700"
-          >
-            <Plus className="h-4 w-4 mr-2" /> Nova Ordem
-          </Button>
-          {selected.length > 0 && (
-            <Button 
-              variant="outline" 
-              onClick={handleDeleteSelected} 
-              disabled={deleting}
-              className="text-red-600 hover:text-red-700"
-            >
-              <Trash2 className="h-4 w-4 mr-2" /> Excluir ({selected.length})
-            </Button>
+          {user?.role !== 'cliente' && (
+            <>
+              <ExportTabs 
+                data={orders}
+                filename="relatorio_ordens_servico"
+                columns={[
+                  { key: "client_name", label: "Cliente" },
+                  { key: "job", label: "Job" },
+                  { key: "description", label: "Descrição" },
+                  { key: "created_date", label: "Criado", format: (v) => new Date(v).toLocaleDateString("pt-BR") },
+                  { key: "status", label: "Status" },
+                ]}
+              />
+              <Button 
+                variant="outline"
+                onClick={() => setShowPDFUpload(true)}
+              >
+                <Upload className="h-4 w-4 mr-2" /> Importar PDF
+              </Button>
+              <Button 
+                onClick={() => navigate(createPageUrl("WorkOrderCreate"))}
+                className="bg-indigo-600 hover:bg-indigo-700"
+              >
+                <Plus className="h-4 w-4 mr-2" /> Nova Ordem
+              </Button>
+              {selected.length > 0 && (
+                <Button 
+                  variant="outline" 
+                  onClick={handleDeleteSelected} 
+                  disabled={deleting}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" /> Excluir ({selected.length})
+                </Button>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -177,28 +188,28 @@ export default function WorkOrders() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-100">
-                  <th className="px-5 py-3 w-12">
+                  {user?.role !== 'cliente' && <th className="px-5 py-3 w-12">
                     <Checkbox 
                       checked={filtered.length > 0 && selected.length === filtered.length}
                       onCheckedChange={handleSelectAll}
                     />
-                  </th>
+                  </th>}
                   <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">Cliente</th>
                   <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3 hidden sm:table-cell">Descrição</th>
                   <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">Status</th>
                   <th className="text-right text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3 hidden sm:table-cell">Data</th>
-                  <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3 w-20">Ações</th>
+                  {user?.role !== 'cliente' && <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3 w-20">Ações</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {filtered.map(o => (
                   <tr key={o.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-5 py-3.5" onClick={(e) => e.stopPropagation()}>
+                    {user?.role !== 'cliente' && <td className="px-5 py-3.5" onClick={(e) => e.stopPropagation()}>
                       <Checkbox 
                         checked={selected.includes(o.id)}
                         onCheckedChange={(checked) => handleSelect(o.id, checked)}
                       />
-                    </td>
+                    </td>}
                     <td className="px-5 py-3.5 cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
                       <p className="text-sm font-medium text-slate-800">{o.client_name}</p>
                     </td>
@@ -211,7 +222,7 @@ export default function WorkOrders() {
                     <td className="px-5 py-3.5 text-right hidden sm:table-cell cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
                       <span className="text-xs text-slate-400">{new Date(o.created_date).toLocaleDateString("pt-BR")}</span>
                     </td>
-                    <td className="px-5 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                    {user?.role !== 'cliente' && <td className="px-5 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -245,7 +256,7 @@ export default function WorkOrders() {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </td>
+                    </td>}
                   </tr>
                 ))}
               </tbody>

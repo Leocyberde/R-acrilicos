@@ -79,7 +79,7 @@ export default function ClientBudgetRequest() {
     const user = await base44.auth.me();
     await base44.entities.BudgetRequest.create({
       client_name: form.client_name,
-      email: user.email,
+      client_email: user.email,
       job: form.job,
       producer: form.producer,
       description: form.description,

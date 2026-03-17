@@ -37,17 +37,10 @@ export default function ClientCreate() {
       person_type: form.person_type,
       phone: form.phone,
       email: form.email,
-      address_street: form.address,
+      address: form.address,
+      cpf_cnpj: form.cpf_cnpj,
       notes: form.notes,
-      registration_files: [],
     };
-    
-    if (form.person_type === "fisica") {
-      clientData.cpf = form.cpf_cnpj;
-    } else {
-      clientData.cnpj = form.cpf_cnpj;
-    }
-    
     const client = await base44.entities.Client.create(clientData);
     navigate(createPageUrl("ClientDetail") + `?id=${client.id}`);
   };

@@ -75,6 +75,7 @@ async function initDB() {
         state VARCHAR(50),
         zip_code VARCHAR(20),
         cpf_cnpj VARCHAR(50),
+        person_type VARCHAR(20) DEFAULT 'fisica',
         notes TEXT,
         created_date TIMESTAMP DEFAULT NOW(),
         updated_date TIMESTAMP DEFAULT NOW()
@@ -85,12 +86,28 @@ async function initDB() {
         job VARCHAR(255),
         client_name VARCHAR(255),
         client_id INTEGER,
+        client_phone VARCHAR(100),
+        client_email VARCHAR(255),
+        client_address TEXT,
+        producer VARCHAR(255),
+        description TEXT,
         status VARCHAR(100) DEFAULT 'pendente',
         total_value DECIMAL(15,2) DEFAULT 0,
+        subtotal DECIMAL(15,2) DEFAULT 0,
+        total DECIMAL(15,2) DEFAULT 0,
+        total_with_margin DECIMAL(15,2) DEFAULT 0,
+        discount DECIMAL(5,2) DEFAULT 0,
+        apply_margin BOOLEAN DEFAULT TRUE,
+        margin_percentage DECIMAL(5,2) DEFAULT 15,
+        total_label VARCHAR(100),
+        total_with_margin_label VARCHAR(100),
         items JSONB DEFAULT '[]',
         notes TEXT,
         valid_until DATE,
+        emission_date DATE,
+        validity_date DATE,
         payment_terms TEXT,
+        pdf_url TEXT,
         created_by VARCHAR(255),
         created_date TIMESTAMP DEFAULT NOW(),
         updated_date TIMESTAMP DEFAULT NOW()
@@ -100,9 +117,13 @@ async function initDB() {
         id SERIAL PRIMARY KEY,
         client_name VARCHAR(255),
         client_email VARCHAR(255),
+        job VARCHAR(255),
+        producer VARCHAR(255),
         description TEXT,
-        status VARCHAR(100) DEFAULT 'pendente',
+        status VARCHAR(100) DEFAULT 'nova',
         notes TEXT,
+        items JSONB DEFAULT '[]',
+        attachments JSONB DEFAULT '[]',
         created_by VARCHAR(255),
         created_date TIMESTAMP DEFAULT NOW(),
         updated_date TIMESTAMP DEFAULT NOW()
@@ -114,7 +135,8 @@ async function initDB() {
         client_name VARCHAR(255),
         client_id INTEGER,
         budget_id INTEGER,
-        status VARCHAR(100) DEFAULT 'aberto',
+        producer VARCHAR(255),
+        status VARCHAR(100) DEFAULT 'pendente',
         priority VARCHAR(50) DEFAULT 'normal',
         description TEXT,
         items JSONB DEFAULT '[]',
@@ -193,6 +215,35 @@ async function initDB() {
       );
     `);
 
+    // Migrate existing tables to add missing columns
+    const migrations = [
+      "ALTER TABLE clients ADD COLUMN IF NOT EXISTS person_type VARCHAR(20) DEFAULT 'fisica'",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS client_phone VARCHAR(100)",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS client_email VARCHAR(255)",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS client_address TEXT",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS producer VARCHAR(255)",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS description TEXT",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS subtotal DECIMAL(15,2) DEFAULT 0",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS total DECIMAL(15,2) DEFAULT 0",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS total_with_margin DECIMAL(15,2) DEFAULT 0",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS discount DECIMAL(5,2) DEFAULT 0",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS apply_margin BOOLEAN DEFAULT TRUE",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS margin_percentage DECIMAL(5,2) DEFAULT 15",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS total_label VARCHAR(100)",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS total_with_margin_label VARCHAR(100)",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS emission_date DATE",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS validity_date DATE",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS pdf_url TEXT",
+      "ALTER TABLE budget_requests ADD COLUMN IF NOT EXISTS job VARCHAR(255)",
+      "ALTER TABLE budget_requests ADD COLUMN IF NOT EXISTS producer VARCHAR(255)",
+      "ALTER TABLE budget_requests ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'",
+      "ALTER TABLE budget_requests ADD COLUMN IF NOT EXISTS attachments JSONB DEFAULT '[]'",
+      "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS producer VARCHAR(255)",
+    ];
+    for (const sql of migrations) {
+      await client.query(sql);
+    }
+
     const seedUsers = [
       { email: 'admin@gestao.pro', password: 'demo', full_name: 'Administrador', role: 'admin' },
       { email: 'funcionario@gestao.pro', password: 'demo', full_name: 'Funcionário Demo', role: 'user' },
@@ -208,6 +259,129 @@ async function initDB() {
         );
       }
     }
+
+    // Seed demo client record linked to cliente@gestao.pro
+    const clientCheck = await client.query("SELECT id FROM clients WHERE email = 'cliente@gestao.pro'");
+    if (clientCheck.rows.length === 0) {
+      await client.query(`
+        INSERT INTO clients (name, email, phone, address, city, state, zip_code, cpf_cnpj, person_type, notes)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `, [
+        'Cliente Demo',
+        'cliente@gestao.pro',
+        '(11) 98765-4321',
+        'Rua das Flores, 123 - Jardim Paulista',
+        'São Paulo',
+        'SP',
+        '01452-001',
+        '123.456.789-00',
+        'fisica',
+        'Cliente de demonstração do sistema GestãoPro'
+      ]);
+    }
+
+    // Seed demo budget request from client
+    const brCheck = await client.query("SELECT id FROM budget_requests WHERE client_email = 'cliente@gestao.pro' LIMIT 1");
+    if (brCheck.rows.length === 0) {
+      await client.query(`
+        INSERT INTO budget_requests (client_name, client_email, job, producer, description, notes, items, attachments, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `, [
+        'Cliente Demo',
+        'cliente@gestao.pro',
+        'Projeto Mobiliário 2024',
+        'Funcionário Demo',
+        'Preciso de orçamento para aquisição e montagem de mobiliário para escritório.',
+        'Prazo urgente, necessidade para início de abril.',
+        JSON.stringify([
+          { name: 'Mesa de escritório executiva', quantity: 2 },
+          { name: 'Cadeira ergonômica', quantity: 4 },
+          { name: 'Armário de escritório', quantity: 1 }
+        ]),
+        JSON.stringify([]),
+        'nova'
+      ]);
+    }
+
+    // Seed demo budget for the client
+    const budgetCheck = await client.query("SELECT id FROM budgets WHERE client_name = 'Cliente Demo' LIMIT 1");
+    if (budgetCheck.rows.length === 0) {
+      const today = new Date().toISOString().split('T')[0];
+      const validUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      await client.query(`
+        INSERT INTO budgets (job, client_name, client_email, producer, description, status, emission_date, validity_date, valid_until,
+          items, subtotal, total, total_with_margin, discount, apply_margin, margin_percentage,
+          total_label, total_with_margin_label, notes, created_by)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+      `, [
+        'Projeto Mobiliário 2024',
+        'Cliente Demo',
+        'cliente@gestao.pro',
+        'Funcionário Demo',
+        'Fornecimento e montagem de mobiliário completo para escritório.',
+        'aprovado',
+        today,
+        validUntil,
+        validUntil,
+        JSON.stringify([
+          { name: 'Mesa de escritório executiva', quantity: 2, unit_price: 1200, total: 2400 },
+          { name: 'Cadeira ergonômica', quantity: 4, unit_price: 850, total: 3400 },
+          { name: 'Armário de escritório', quantity: 1, unit_price: 800, total: 800 }
+        ]),
+        6600, 6600, 7590, 0, true, 15,
+        'Total sem Nota', 'Total com Nota',
+        'Orçamento aprovado pelo cliente. Incluir montagem no local.',
+        'admin@gestao.pro'
+      ]);
+    }
+
+    // Seed demo work order for the client (assigned to the employee)
+    const woCheck = await client.query("SELECT id FROM work_orders WHERE client_name = 'Cliente Demo' LIMIT 1");
+    if (woCheck.rows.length === 0) {
+      const start = new Date().toISOString().split('T')[0];
+      const due = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      await client.query(`
+        INSERT INTO work_orders (job, client_name, producer, status, priority, description, items, notes, start_date, due_date, created_by)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+      `, [
+        'Projeto Mobiliário 2024',
+        'Cliente Demo',
+        'Funcionário Demo',
+        'em_producao',
+        'normal',
+        'Entrega e montagem do mobiliário de escritório conforme orçamento aprovado.',
+        JSON.stringify([
+          { name: 'Mesa de escritório executiva', quantity: 2 },
+          { name: 'Cadeira ergonômica', quantity: 4 },
+          { name: 'Armário de escritório', quantity: 1 }
+        ]),
+        'Montar na sala principal. Coordenar com recepção para acesso.',
+        start,
+        due,
+        'admin@gestao.pro'
+      ]);
+    }
+
+    // Seed demo receipt for the client
+    const receiptCheck = await client.query("SELECT id FROM receipts WHERE client_name = 'Cliente Demo' LIMIT 1");
+    if (receiptCheck.rows.length === 0) {
+      const dueDate = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      await client.query(`
+        INSERT INTO receipts (job, client_name, status, total_value, amount_paid, due_date, payment_method, notes, created_by)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      `, [
+        'Projeto Mobiliário 2024',
+        'Cliente Demo',
+        'pendente',
+        7590,
+        3795,
+        dueDate,
+        'transferencia',
+        'Parcela 1/2 do projeto Mobiliário 2024.',
+        'admin@gestao.pro'
+      ]);
+    }
+
     console.log('Database initialized successfully');
   } finally {
     client.release();

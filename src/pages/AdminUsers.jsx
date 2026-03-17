@@ -177,20 +177,13 @@ export default function AdminUsers() {
     }
     setResettingPassword(true);
     try {
-      const response = await base44.functions.invoke('resetUserPassword', {
-        email: resetPasswordUser.email,
-        newPassword: newPassword
-      });
-      if (response.data.success) {
-        toast.success("Senha redefinida com sucesso!");
-        setTimeout(() => {
-          setResetPasswordOpen(false);
-          setResetPasswordUser(null);
-          setNewPassword("");
-        }, 500);
-      } else {
-        toast.error("Erro ao redefinir senha: " + response.data.error);
-      }
+      await base44.auth.resetPassword(resetPasswordUser.id, newPassword);
+      toast.success("Senha redefinida com sucesso!");
+      setTimeout(() => {
+        setResetPasswordOpen(false);
+        setResetPasswordUser(null);
+        setNewPassword("");
+      }, 500);
     } catch (error) {
       toast.error("Erro ao redefinir senha: " + error.message);
     } finally {
