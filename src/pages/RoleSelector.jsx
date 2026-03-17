@@ -55,7 +55,7 @@ export default function RoleSelector() {
     setError("");
     setLoading(panel.role);
     try {
-      await localClient.auth.login(panel.email, "demo");
+      await localClient.auth.quickLogin(panel.role);
       window.location.href = "/";
     } catch (err) {
       setError("Erro ao acessar o painel. Tente novamente.");

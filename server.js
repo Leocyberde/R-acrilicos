@@ -233,6 +233,34 @@ const optionalAuth = (req, res, next) => {
   next();
 };
 
+app.post('/api/auth/quick-login', async (req, res) => {
+  try {
+    const roleEmailMap = {
+      admin: 'admin@gestao.pro',
+      user: 'funcionario@gestao.pro',
+      cliente: 'cliente@gestao.pro',
+    };
+    const { role } = req.body;
+    const email = roleEmailMap[role];
+    if (!email) return res.status(400).json({ error: 'Função inválida' });
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    let user = result.rows[0];
+    if (!user) {
+      const hash = await bcrypt.hash('demo', 10);
+      const nameMap = { admin: 'Administrador', user: 'Funcionário Demo', cliente: 'Cliente Demo' };
+      const ins = await pool.query(
+        'INSERT INTO users (email, password_hash, full_name, role) VALUES ($1, $2, $3, $4) RETURNING *',
+        [email, hash, nameMap[role], role]
+      );
+      user = ins.rows[0];
+    }
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ token, user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role } });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;

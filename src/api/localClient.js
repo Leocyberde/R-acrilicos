@@ -88,6 +88,12 @@ const auth = {
     window.location.href = '/select';
   },
 
+  quickLogin: async (role) => {
+    const result = await request('POST', '/auth/quick-login', { role });
+    if (result.token) setToken(result.token);
+    return result;
+  },
+
   resetPassword: (userId, newPassword) =>
     request('POST', '/auth/reset-password', { user_id: userId, new_password: newPassword }),
 };
