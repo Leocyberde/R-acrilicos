@@ -158,7 +158,7 @@ export default function Production() {
                 {filtered.map(order => (
                   <tr key={order.id} className="hover:bg-slate-50 transition-colors">
                     <td className="py-3 px-4">
-                      <p className="text-xs font-mono text-slate-500">#{order.id?.slice(-6)}</p>
+                      <p className="text-xs font-mono text-slate-500">#{String(order.id ?? '')}</p>
                     </td>
                     <td className="py-3 px-4">
                       <p className="text-sm font-medium text-slate-900">{order.client_name}</p>

@@ -145,7 +145,7 @@ export default function BudgetDetail() {
     }
 
     const pdfBlob = pdf.output('blob');
-    const pdfFile = new File([pdfBlob], `orcamento-${budget.id?.slice(-6)}.pdf`, { type: 'application/pdf' });
+    const pdfFile = new File([pdfBlob], `orcamento-${String(budget.id ?? '')}.pdf`, { type: 'application/pdf' });
 
     // Upload do PDF
     const { file_url } = await base44.integrations.Core.UploadFile({ file: pdfFile });
@@ -227,7 +227,7 @@ export default function BudgetDetail() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Orçamento #{budget.id?.slice(-6)}</h1>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Orçamento #{String(budget.id ?? '')}</h1>
             <p className="text-slate-500 mt-0.5">{budget.client_name}</p>
           </div>
         </div>
@@ -262,7 +262,7 @@ export default function BudgetDetail() {
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="h-3.5 w-3.5 mr-1.5" /> Imprimir
           </Button>
-          <Button variant="outline" size="sm" onClick={() => downloadPDF('budget-content', `orcamento-${budget.id?.slice(-6)}.pdf`)}>
+          <Button variant="outline" size="sm" onClick={() => downloadPDF('budget-content', `orcamento-${String(budget.id ?? '')}.pdf`)}>
             <Download className="h-3.5 w-3.5 mr-1.5" /> PDF
           </Button>
           <Button
@@ -319,7 +319,7 @@ export default function BudgetDetail() {
           }
         `}</style>
         <div className="hidden print:block">
-          <PrintHeader title="ORÇAMENTO" number={budget.id?.slice(-6)} />
+          <PrintHeader title="ORÇAMENTO" number={String(budget.id ?? '')} />
         </div>
 
         <div className="flex items-center justify-between mb-6 no-print">

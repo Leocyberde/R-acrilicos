@@ -141,7 +141,7 @@ export default function WorkOrderDetail() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">O.S. #{order.id?.slice(-6)}</h1>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">O.S. #{String(order.id ?? '')}</h1>
             <p className="text-slate-500 mt-0.5">{order.client_name}</p>
           </div>
         </div>
@@ -150,7 +150,7 @@ export default function WorkOrderDetail() {
             <>
               <ExportTabs 
                 data={[order]}
-                filename={`ordem-servico-${order.id?.slice(-6)}`}
+                filename={`ordem-servico-${String(order.id ?? '')}`}
                 columns={[
                   { key: "client_name", label: "Cliente" },
                   { key: "job", label: "Job" },
@@ -210,7 +210,7 @@ export default function WorkOrderDetail() {
         <TabsContent value="details" className="mt-4">
           <div id="order-content" className="bg-white rounded-xl border border-slate-200 p-6 sm:p-8">
         <div className="hidden print:block">
-          <PrintHeader title="ORDEM DE SERVIÇO" number={order.id?.slice(-6)} />
+          <PrintHeader title="ORDEM DE SERVIÇO" number={String(order.id ?? '')} />
         </div>
 
         {/* Status progress */}
@@ -413,7 +413,7 @@ export default function WorkOrderDetail() {
 
       {/* Print version - only details */}
       <div className="hidden print:block bg-white p-8">
-        <PrintHeader title="ORDEM DE SERVIÇO" number={order?.id?.slice(-6)} />
+        <PrintHeader title="ORDEM DE SERVIÇO" number={String(order?.id ?? '')} />
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-6 border-b border-slate-100">
           <div>

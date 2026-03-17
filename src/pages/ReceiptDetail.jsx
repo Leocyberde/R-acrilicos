@@ -101,7 +101,7 @@ export default function ReceiptDetail() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Editar Recibo</h1>
-            <p className="text-slate-500 mt-0.5">#{receipt.id?.slice(-6)}</p>
+            <p className="text-slate-500 mt-0.5">#{String(receipt.id ?? '')}</p>
           </div>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-6">
@@ -135,7 +135,7 @@ export default function ReceiptDetail() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Recibo #{receipt.id?.slice(-6)}</h1>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Recibo #{String(receipt.id ?? '')}</h1>
             <p className="text-slate-500 mt-0.5">{receipt.client_name}</p>
           </div>
         </div>
@@ -143,7 +143,7 @@ export default function ReceiptDetail() {
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="h-3.5 w-3.5 mr-1.5" /> Imprimir
           </Button>
-          <Button variant="outline" size="sm" onClick={() => downloadPDF('receipt-content', `recibo-${receipt.id?.slice(-6)}.pdf`)}>
+          <Button variant="outline" size="sm" onClick={() => downloadPDF('receipt-content', `recibo-${String(receipt.id ?? '')}.pdf`)}>
             <Download className="h-3.5 w-3.5 mr-1.5" /> PDF
           </Button>
           <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
@@ -184,7 +184,7 @@ export default function ReceiptDetail() {
           }
         `}</style>
         <div className="hidden print:block">
-          <PrintHeader title="RECIBO" number={receipt.id?.slice(-6)} />
+          <PrintHeader title="RECIBO" number={String(receipt.id ?? '')} />
         </div>
 
         <div className="flex items-center justify-between mb-6 no-print">
