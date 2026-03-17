@@ -239,6 +239,9 @@ async function initDB() {
       "ALTER TABLE budget_requests ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'",
       "ALTER TABLE budget_requests ADD COLUMN IF NOT EXISTS attachments JSONB DEFAULT '[]'",
       "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS producer VARCHAR(255)",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS client_counter_value DECIMAL(15,2)",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS client_counter_notes TEXT",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS client_response_date TIMESTAMP",
     ];
     for (const sql of migrations) {
       await client.query(sql);
