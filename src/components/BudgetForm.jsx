@@ -46,11 +46,27 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
   const updateField = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
   const handleClientSelect = (clientId) => {
-    const selectedClient = clients.find(c => c.id === clientId);
+    const selectedClient = clients.find(c => String(c.id) === String(clientId));
     if (selectedClient) {
+      const addressParts = [
+        selectedClient.address_street,
+        selectedClient.address_number ? `nº ${selectedClient.address_number}` : null,
+        selectedClient.address_complement,
+        selectedClient.address_city,
+        selectedClient.address_state,
+        selectedClient.address_zip_code ? `CEP ${selectedClient.address_zip_code}` : null,
+      ].filter(Boolean);
+      const composedAddress = addressParts.length > 0
+        ? addressParts.join(", ")
+        : selectedClient.address || selectedClient.city || "";
+
       setForm(prev => ({
         ...prev,
-        client_name: selectedClient.name,
+        client_id: selectedClient.id,
+        client_name: selectedClient.name || "",
+        client_phone: selectedClient.phone || selectedClient.mobile || "",
+        client_email: selectedClient.email || "",
+        client_address: composedAddress,
       }));
     }
   };
@@ -89,18 +105,21 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
         <Label className="mb-2 block">Selecionar Cliente Cadastrado</Label>
-        <Select onValueChange={handleClientSelect}>
+        <Select onValueChange={handleClientSelect} value={form.client_id ? String(form.client_id) : ""}>
           <SelectTrigger>
             <SelectValue placeholder="Clique para selecionar um cliente..." />
           </SelectTrigger>
           <SelectContent>
             {clients.map(client => (
-              <SelectItem key={client.id} value={client.id}>
+              <SelectItem key={client.id} value={String(client.id)}>
                 {client.name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+        {form.client_id && form.client_name && (
+          <p className="text-xs text-indigo-600 mt-1 font-medium">✓ Cliente selecionado: {form.client_name}</p>
+        )}
         <p className="text-xs text-slate-500 mt-1">Ou preencha os dados manualmente abaixo</p>
       </div>
 

@@ -5,6 +5,7 @@ import { createPageUrl } from "@/utils";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import BudgetForm from "@/components/BudgetForm";
+import { toast } from "sonner";
 
 export default function BudgetCreate() {
   const [loading, setLoading] = useState(false);
@@ -32,8 +33,15 @@ export default function BudgetCreate() {
 
   const handleSubmit = async (data) => {
     setLoading(true);
-    const created = await base44.entities.Budget.create(data);
-    navigate(createPageUrl("BudgetDetail") + `?id=${created.id}`);
+    try {
+      const created = await base44.entities.Budget.create(data);
+      toast.success("Orçamento criado com sucesso!");
+      navigate(createPageUrl("BudgetDetail") + `?id=${created.id}`);
+    } catch (err) {
+      console.error("Erro ao criar orçamento:", err);
+      toast.error("Erro ao salvar orçamento. Tente novamente.");
+      setLoading(false);
+    }
   };
 
   return (

@@ -70,7 +70,7 @@ export default function Layout({ children, currentPageName }) {
 
   useEffect(() => {
     async function loadBudgetRequestCount() {
-      if (user?.role === "admin") {
+      if (user?.role === "admin" && currentPageName !== "BudgetRequests") {
         try {
           const requests = await localClient.entities.BudgetRequest.filter({ status: "nova" });
           setBudgetRequestCount(requests.length);
@@ -79,10 +79,14 @@ export default function Layout({ children, currentPageName }) {
         }
       }
     }
-    loadBudgetRequestCount();
-    const interval = setInterval(loadBudgetRequestCount, 60000);
-    return () => clearInterval(interval);
-  }, [user]);
+    if (currentPageName === "BudgetRequests") {
+      setBudgetRequestCount(0);
+    } else {
+      loadBudgetRequestCount();
+      const interval = setInterval(loadBudgetRequestCount, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [user, currentPageName]);
 
   return (
     <div className="min-h-screen bg-slate-50 print:bg-white">
