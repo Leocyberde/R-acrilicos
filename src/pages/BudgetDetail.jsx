@@ -5,8 +5,6 @@ import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, CheckCircle, XCircle, Edit, Wrench, Trash2, RefreshCw, Receipt as ReceiptIcon, Download, Send, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
 import StatusBadge from "@/components/StatusBadge";
 import PrintHeader from "@/components/PrintHeader";
 import BudgetForm from "@/components/BudgetForm";
@@ -134,46 +132,14 @@ export default function BudgetDetail() {
 
   const handleSendToClient = async () => {
     setSaving(true);
-    // Gera o PDF do orçamento
-    const element = document.getElementById('budget-content');
-    const printElements = element.querySelectorAll('.print\\:block');
-    const noPrintElements = element.querySelectorAll('.no-print');
-    printElements.forEach(el => el.style.display = 'block');
-    noPrintElements.forEach(el => el.style.display = 'none');
-
-    const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
-
-    printElements.forEach(el => el.style.display = '');
-    noPrintElements.forEach(el => el.style.display = '');
-
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const imgWidth = 210;
-    const pageHeight = 297;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    let heightLeft = imgHeight;
-    let position = 0;
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-    while (heightLeft > 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+    try {
+      await base44.entities.Budget.update(id, { pdf_sent: true });
+      setBudget(prev => ({ ...prev, pdf_sent: true }));
+      toast.success("Orçamento enviado ao cliente com sucesso! Ele já pode visualizá-lo no portal.");
+    } catch {
+      toast.error("Erro ao enviar orçamento ao cliente.");
     }
-
-    const pdfBlob = pdf.output('blob');
-    const pdfFile = new File([pdfBlob], `orcamento-${String(budget.id ?? '')}.pdf`, { type: 'application/pdf' });
-
-    // Upload do PDF
-    const { file_url } = await base44.integrations.Core.UploadFile({ file: pdfFile });
-
-    // Salva referência do PDF no orçamento para que o cliente veja
-    await base44.entities.Budget.update(id, { pdf_url: file_url, pdf_sent: true });
-    setBudget(prev => ({ ...prev, pdf_url: file_url, pdf_sent: true }));
-
     setSaving(false);
-    alert("Orçamento enviado com sucesso! O cliente pode visualizá-lo no portal.");
   };
 
   const handleCreateReceipt = async () => {

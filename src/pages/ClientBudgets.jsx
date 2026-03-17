@@ -45,8 +45,9 @@ export default function ClientBudgets() {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
       if (currentUser) {
-        const data = await base44.entities.Budget.filter({ client_name: currentUser.full_name });
-        setBudgets(data || []);
+        const data = await base44.entities.Budget.filter({ client_email: currentUser.email });
+        const sent = (data || []).filter(b => b.pdf_sent === true || b.pdf_sent === 'true');
+        setBudgets(sent);
       }
       setLoading(false);
     };
