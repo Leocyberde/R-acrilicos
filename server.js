@@ -531,7 +531,9 @@ function buildEntityRoutes(tableName, orderDefault = '-created_date') {
       data.created_date = data.created_date || new Date().toISOString();
       data.updated_date = new Date().toISOString();
       const cols = Object.keys(data);
-      const vals = Object.values(data);
+      const vals = Object.values(data).map(v =>
+        (typeof v === 'object' && v !== null) ? JSON.stringify(v) : v
+      );
       const placeholders = vals.map((_, i) => `$${i + 1}`).join(', ');
       const result = await pool.query(
         `INSERT INTO ${tableName} (${cols.join(', ')}) VALUES (${placeholders}) RETURNING *`,
@@ -560,7 +562,9 @@ function buildEntityRoutes(tableName, orderDefault = '-created_date') {
       delete data.created_date;
       data.updated_date = new Date().toISOString();
       const cols = Object.keys(data);
-      const vals = Object.values(data);
+      const vals = Object.values(data).map(v =>
+        (typeof v === 'object' && v !== null) ? JSON.stringify(v) : v
+      );
       const sets = cols.map((c, i) => `${c} = $${i + 1}`).join(', ');
       vals.push(req.params.id);
       const result = await pool.query(

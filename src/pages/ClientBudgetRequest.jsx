@@ -76,20 +76,26 @@ export default function ClientBudgetRequest() {
       return;
     }
     setSubmitting(true);
-    const user = await base44.auth.me();
-    await base44.entities.BudgetRequest.create({
-      client_name: form.client_name,
-      client_email: user.email,
-      job: form.job,
-      producer: form.producer,
-      description: form.description,
-      notes: form.notes,
-      items: validItems,
-      attachments,
-      status: "nova",
-    });
-    setSubmitted(true);
-    setSubmitting(false);
+    try {
+      const user = await base44.auth.me();
+      await base44.entities.BudgetRequest.create({
+        client_name: form.client_name,
+        client_email: user?.email || "",
+        job: form.job,
+        producer: form.producer,
+        description: form.description,
+        notes: form.notes,
+        items: validItems,
+        attachments,
+        status: "nova",
+      });
+      setSubmitted(true);
+    } catch (err) {
+      toast.error("Erro ao enviar solicitação. Tente novamente.");
+      console.error("BudgetRequest create error:", err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (submitted) {
