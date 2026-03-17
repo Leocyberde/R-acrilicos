@@ -243,6 +243,17 @@ async function initDB() {
       "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS client_counter_notes TEXT",
       "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS client_response_date TIMESTAMP",
       "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS pdf_sent BOOLEAN DEFAULT FALSE",
+      "ALTER TABLE clients ADD COLUMN IF NOT EXISTS mobile VARCHAR(100)",
+      "ALTER TABLE clients ADD COLUMN IF NOT EXISTS cpf VARCHAR(50)",
+      "ALTER TABLE clients ADD COLUMN IF NOT EXISTS cnpj VARCHAR(50)",
+      "ALTER TABLE clients ADD COLUMN IF NOT EXISTS address_street TEXT",
+      "ALTER TABLE clients ADD COLUMN IF NOT EXISTS address_number VARCHAR(50)",
+      "ALTER TABLE clients ADD COLUMN IF NOT EXISTS address_complement VARCHAR(100)",
+      "ALTER TABLE clients ADD COLUMN IF NOT EXISTS address_zip_code VARCHAR(20)",
+      "ALTER TABLE clients ADD COLUMN IF NOT EXISTS address_city VARCHAR(100)",
+      "ALTER TABLE clients ADD COLUMN IF NOT EXISTS address_state VARCHAR(50)",
+      "ALTER TABLE clients ADD COLUMN IF NOT EXISTS photo_url TEXT",
+      "ALTER TABLE clients ADD COLUMN IF NOT EXISTS registration_files JSONB DEFAULT '[]'",
     ];
     for (const sql of migrations) {
       await client.query(sql);

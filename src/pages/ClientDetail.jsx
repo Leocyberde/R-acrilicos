@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Save, Upload, Download, Trash2, X, FileText } from "lucide-react";
+import { ArrowLeft, Save, Upload, Download, Trash2, X, FileText, Search } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 export default function ClientDetail() {
   const [client, setClient] = useState(null);
@@ -33,59 +34,95 @@ export default function ClientDetail() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState("info");
+  const [fetchingCep, setFetchingCep] = useState(false);
   const navigate = useNavigate();
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
 
   useEffect(() => {
     async function load() {
-      const found = await base44.entities.Client.get(id);
-      setClient(found);
+      try {
+        const found = await base44.entities.Client.get(id);
+        setClient(found);
+      } catch {
+        toast.error("Erro ao carregar cliente.");
+      }
       setLoading(false);
     }
     load();
   }, [id]);
 
+  const handleCepLookup = async (cep) => {
+    const cleaned = cep.replace(/\D/g, "");
+    if (cleaned.length !== 8) return;
+    setFetchingCep(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cleaned}/json/`);
+      const data = await res.json();
+      if (!data.erro) {
+        setClient(prev => ({
+          ...prev,
+          address_street: data.logradouro || prev.address_street,
+          address_city: data.localidade || prev.address_city,
+          address_state: data.uf || prev.address_state,
+          address_zip_code: cep,
+        }));
+        toast.success("Endereço preenchido automaticamente!");
+      } else {
+        toast.error("CEP não encontrado.");
+      }
+    } catch {
+      toast.error("Erro ao buscar CEP.");
+    }
+    setFetchingCep(false);
+  };
+
   const handleUpdate = async () => {
     setSaving(true);
-    const updateData = {
-      name: client.name,
-      phone: client.phone,
-      mobile: client.mobile,
-      email: client.email,
-      person_type: client.person_type,
-      notes: client.notes,
-      address_street: client.address_street,
-      address_number: client.address_number,
-      address_complement: client.address_complement,
-      address_zip_code: client.address_zip_code,
-      address_city: client.address_city,
-      address_state: client.address_state,
-    };
-    if (client.person_type === "fisica") {
-      updateData.cpf = client.cpf;
-    } else {
-      updateData.cnpj = client.cnpj;
+    try {
+      const updateData = {
+        name: client.name,
+        phone: client.phone,
+        mobile: client.mobile,
+        email: client.email,
+        person_type: client.person_type,
+        notes: client.notes,
+        address_street: client.address_street,
+        address_number: client.address_number,
+        address_complement: client.address_complement,
+        address_zip_code: client.address_zip_code,
+        address_city: client.address_city,
+        address_state: client.address_state,
+        cpf: client.person_type === "fisica" ? client.cpf : null,
+        cnpj: client.person_type === "juridica" ? client.cnpj : null,
+      };
+      await base44.entities.Client.update(id, updateData);
+      toast.success("Cliente salvo com sucesso!");
+    } catch {
+      toast.error("Erro ao salvar cliente.");
     }
-    await base44.entities.Client.update(id, updateData);
     setSaving(false);
   };
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    const files = client.registration_files || [];
-    files.push({
-      name: file.name,
-      url: file_url,
-      size: file.size,
-      uploaded_date: new Date().toISOString(),
-    });
-    await base44.entities.Client.update(id, { registration_files: files });
-    setClient(prev => ({ ...prev, registration_files: files }));
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const files = [...(client.registration_files || [])];
+      files.push({
+        name: file.name,
+        url: file_url,
+        size: file.size,
+        uploaded_date: new Date().toISOString(),
+      });
+      await base44.entities.Client.update(id, { registration_files: files });
+      setClient(prev => ({ ...prev, registration_files: files }));
+      toast.success("Arquivo anexado com sucesso!");
+    } catch {
+      toast.error("Erro ao enviar arquivo.");
+    }
     setUploading(false);
     e.target.value = "";
   };
@@ -93,15 +130,21 @@ export default function ClientDetail() {
   const handleDeleteFile = async (index) => {
     const files = [...(client.registration_files || [])];
     files.splice(index, 1);
-    setSaving(true);
-    await base44.entities.Client.update(id, { registration_files: files });
-    setClient(prev => ({ ...prev, registration_files: files }));
-    setSaving(false);
+    try {
+      await base44.entities.Client.update(id, { registration_files: files });
+      setClient(prev => ({ ...prev, registration_files: files }));
+    } catch {
+      toast.error("Erro ao remover arquivo.");
+    }
   };
 
   const handleDelete = async () => {
-    await base44.entities.Client.delete(id);
-    navigate(createPageUrl("Clients"));
+    try {
+      await base44.entities.Client.delete(id);
+      navigate(createPageUrl("Clients"));
+    } catch {
+      toast.error("Erro ao excluir cliente.");
+    }
   };
 
   const formatFileSize = (bytes) => {
@@ -177,7 +220,7 @@ export default function ClientDetail() {
           <TabsContent value="info" className="p-6 space-y-6 mt-0">
             <div>
               <h3 className="font-semibold text-slate-900 mb-4">Informações do Cliente</h3>
-              
+
               <div className="mb-6">
                 <Label className="mb-2 block">Tipo de Pessoa *</Label>
                 <Select value={client.person_type || "fisica"} onValueChange={value => setClient(prev => ({ ...prev, person_type: value }))}>
@@ -194,17 +237,18 @@ export default function ClientDetail() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label>{client.person_type === "juridica" ? "Empresa/Cliente *" : "Nome *"}</Label>
-                  <Input value={client.name} onChange={e => setClient(prev => ({ ...prev, name: e.target.value }))} className="mt-1" />
+                  <Input value={client.name || ""} onChange={e => setClient(prev => ({ ...prev, name: e.target.value }))} className="mt-1" />
                 </div>
                 <div>
                   <Label>{client.person_type === "juridica" ? "CNPJ" : "CPF"}</Label>
-                  <Input 
-                    value={client.person_type === "juridica" ? (client.cnpj || "") : (client.cpf || "")} 
-                    onChange={e => setClient(prev => ({ 
-                      ...prev, 
-                      [client.person_type === "juridica" ? "cnpj" : "cpf"]: e.target.value 
-                    }))} 
-                    className="mt-1" 
+                  <Input
+                    value={client.person_type === "juridica" ? (client.cnpj || "") : (client.cpf || "")}
+                    onChange={e => setClient(prev => ({
+                      ...prev,
+                      [client.person_type === "juridica" ? "cnpj" : "cpf"]: e.target.value
+                    }))}
+                    placeholder={client.person_type === "juridica" ? "00.000.000/0000-00" : "000.000.000-00"}
+                    className="mt-1"
                   />
                 </div>
                 <div>
@@ -224,29 +268,47 @@ export default function ClientDetail() {
               <div className="mt-6">
                 <h4 className="font-medium text-slate-900 mb-4">Endereço</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label>CEP</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        value={client.address_zip_code || ""}
+                        onChange={e => setClient(prev => ({ ...prev, address_zip_code: e.target.value }))}
+                        onBlur={e => handleCepLookup(e.target.value)}
+                        placeholder="00000-000"
+                        maxLength={9}
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleCepLookup(client.address_zip_code || "")}
+                        disabled={fetchingCep}
+                        title="Buscar CEP"
+                      >
+                        <Search className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    {fetchingCep && <p className="text-xs text-indigo-600 mt-1">Buscando endereço...</p>}
+                  </div>
+                  <div>
+                    <Label>Estado</Label>
+                    <Input value={client.address_state || ""} onChange={e => setClient(prev => ({ ...prev, address_state: e.target.value }))} maxLength="2" className="mt-1" placeholder="SP" />
+                  </div>
                   <div className="sm:col-span-2">
-                    <Label>Rua *</Label>
+                    <Label>Rua / Logradouro</Label>
                     <Input value={client.address_street || ""} onChange={e => setClient(prev => ({ ...prev, address_street: e.target.value }))} className="mt-1" />
                   </div>
                   <div>
-                    <Label>Número *</Label>
+                    <Label>Número</Label>
                     <Input value={client.address_number || ""} onChange={e => setClient(prev => ({ ...prev, address_number: e.target.value }))} className="mt-1" />
                   </div>
                   <div>
                     <Label>Complemento</Label>
-                    <Input value={client.address_complement || ""} onChange={e => setClient(prev => ({ ...prev, address_complement: e.target.value }))} className="mt-1" />
+                    <Input value={client.address_complement || ""} onChange={e => setClient(prev => ({ ...prev, address_complement: e.target.value }))} className="mt-1" placeholder="Apto, sala, bloco..." />
                   </div>
-                  <div>
-                    <Label>CEP</Label>
-                    <Input value={client.address_zip_code || ""} onChange={e => setClient(prev => ({ ...prev, address_zip_code: e.target.value }))} className="mt-1" />
-                  </div>
-                  <div>
-                    <Label>Cidade *</Label>
+                  <div className="sm:col-span-2">
+                    <Label>Cidade</Label>
                     <Input value={client.address_city || ""} onChange={e => setClient(prev => ({ ...prev, address_city: e.target.value }))} className="mt-1" />
-                  </div>
-                  <div>
-                    <Label>Estado *</Label>
-                    <Input value={client.address_state || ""} onChange={e => setClient(prev => ({ ...prev, address_state: e.target.value }))} maxLength="2" className="mt-1" />
                   </div>
                 </div>
               </div>

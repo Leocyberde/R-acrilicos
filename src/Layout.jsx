@@ -16,7 +16,8 @@ import {
   Users,
   Settings,
   Inbox,
-  LogOut
+  LogOut,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -35,8 +36,9 @@ const navItems = [
   { name: "Meus Orçamentos", icon: FileText, page: "ClientBudgets", clientOnly: true },
   { name: "Solicitar Orçamento", icon: FileText, page: "ClientBudgetRequest", clientOnly: true },
   { name: "Minhas O.S.", icon: Wrench, page: "WorkOrders", clientOnly: true },
+  { name: "Perfil", icon: User, page: "ClientProfile", clientOnly: true },
 
-  { name: "Solicitações de Orçamento", icon: Inbox, page: "BudgetRequests", adminOnly: true },
+  { name: "Solicitações de Orçamento", icon: Inbox, page: "BudgetRequests", adminOnly: true, showBadge: true },
   { name: "Usuários", icon: Users, page: "AdminUsers", adminOnly: true },
   { name: "Editor de Layout", icon: Settings, page: "LayoutEditor", adminOnly: true },
   { name: "Configurações", icon: Settings, page: "SettingsPage", adminOnly: true },
@@ -45,6 +47,7 @@ const navItems = [
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [permissions, setPermissions] = useState({});
+  const [budgetRequestCount, setBudgetRequestCount] = useState(0);
   const { user, logout } = useAuth();
 
   useEffect(() => {
@@ -63,6 +66,22 @@ export default function Layout({ children, currentPageName }) {
       }
     }
     loadPermissions();
+  }, [user]);
+
+  useEffect(() => {
+    async function loadBudgetRequestCount() {
+      if (user?.role === "admin") {
+        try {
+          const requests = await localClient.entities.BudgetRequest.filter({ status: "nova" });
+          setBudgetRequestCount(requests.length);
+        } catch (e) {
+          console.error('Failed to load budget requests count', e);
+        }
+      }
+    }
+    loadBudgetRequestCount();
+    const interval = setInterval(loadBudgetRequestCount, 60000);
+    return () => clearInterval(interval);
   }, [user]);
 
   return (
@@ -105,7 +124,7 @@ export default function Layout({ children, currentPageName }) {
           </button>
         </div>
 
-        <nav className="p-3 space-y-0.5 mt-2 flex-1">
+        <nav className="p-3 space-y-0.5 mt-2 flex-1 overflow-y-auto">
           {navItems.map((item) => {
             if (item.adminOnly && user?.role !== "admin") return null;
             if (item.clientOnly && user?.role !== "cliente") return null;
@@ -116,6 +135,7 @@ export default function Layout({ children, currentPageName }) {
               if (!allowedPages.includes(item.page)) return null;
             }
             const isActive = currentPageName === item.page;
+            const badgeCount = item.showBadge && user?.role === "admin" ? budgetRequestCount : 0;
             return (
               <Link
                 key={item.page}
@@ -128,9 +148,14 @@ export default function Layout({ children, currentPageName }) {
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 )}
               >
-                <item.icon className={cn("h-4.5 w-4.5", isActive ? "text-indigo-600" : "text-slate-400")} />
-                <span>{item.name}</span>
-                {isActive && <ChevronRight className="h-3.5 w-3.5 ml-auto text-indigo-400" />}
+                <item.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-indigo-600" : "text-slate-400")} />
+                <span className="flex-1">{item.name}</span>
+                {badgeCount > 0 && (
+                  <span className="ml-auto inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-bold">
+                    {badgeCount}
+                  </span>
+                )}
+                {isActive && !badgeCount && <ChevronRight className="h-3.5 w-3.5 ml-auto text-indigo-400" />}
               </Link>
             );
           })}
@@ -142,7 +167,7 @@ export default function Layout({ children, currentPageName }) {
             onClick={logout}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all duration-150"
           >
-            <LogOut className="h-4.5 w-4.5 text-slate-400" />
+            <LogOut className="h-4 w-4 text-slate-400" />
             <span>Sair</span>
           </button>
         </div>

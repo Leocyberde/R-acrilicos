@@ -76,6 +76,7 @@ import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import ClientPortal from './pages/ClientPortal';
 import ClientBudgets from './pages/ClientBudgets';
+import ClientProfile from './pages/ClientProfile';
 import __Layout from './Layout.jsx';
 
 
@@ -109,6 +110,7 @@ export const PAGES = {
     "WorkOrders": WorkOrders,
     "ClientPortal": ClientPortal,
     "ClientBudgets": ClientBudgets,
+    "ClientProfile": ClientProfile,
 }
 
 export const pagesConfig = {
