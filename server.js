@@ -242,6 +242,7 @@ async function initDB() {
       "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS client_counter_value DECIMAL(15,2)",
       "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS client_counter_notes TEXT",
       "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS client_response_date TIMESTAMP",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS pdf_sent BOOLEAN DEFAULT FALSE",
     ];
     for (const sql of migrations) {
       await client.query(sql);
@@ -639,9 +640,7 @@ app.delete('/api/entities/User/:id', authMiddleware, async (req, res) => {
 
 app.post('/api/integrations/upload', upload.single('file'), optionalAuth, (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  const host = req.get('host');
-  const protocol = req.headers['x-forwarded-proto'] || 'http';
-  const fileUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
+  const fileUrl = `/uploads/${req.file.filename}`;
   res.json({ file_url: fileUrl, filename: req.file.filename });
 });
 

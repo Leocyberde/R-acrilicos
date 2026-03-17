@@ -3,7 +3,8 @@ import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer, CheckCircle, XCircle, Edit, Wrench, Trash2, RefreshCw, Receipt as ReceiptIcon, Download, Send } from "lucide-react";
+import { ArrowLeft, Printer, CheckCircle, XCircle, Edit, Wrench, Trash2, RefreshCw, Receipt as ReceiptIcon, Download, Send, AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import StatusBadge from "@/components/StatusBadge";
@@ -54,8 +55,25 @@ export default function BudgetDetail() {
 
   const updateStatus = async (status) => {
     setSaving(true);
-    await base44.entities.Budget.update(id, { status });
-    setBudget(prev => ({ ...prev, status }));
+    try {
+      await base44.entities.Budget.update(id, { status });
+      setBudget(prev => ({ ...prev, status }));
+      toast.success("Status atualizado com sucesso!");
+    } catch {
+      toast.error("Erro ao atualizar status.");
+    }
+    setSaving(false);
+  };
+
+  const handleAcceptCounterProposal = async () => {
+    setSaving(true);
+    try {
+      await base44.entities.Budget.update(id, { status: "aceito_cliente" });
+      setBudget(prev => ({ ...prev, status: "aceito_cliente" }));
+      toast.success("Contraproposta aceita! Status atualizado para Aceito pelo Cliente.");
+    } catch {
+      toast.error("Erro ao aceitar contraproposta.");
+    }
     setSaving(false);
   };
 
@@ -257,6 +275,18 @@ export default function BudgetDetail() {
                   <span>Reprovado</span>
                 </div>
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => updateStatus("aceito_cliente")} disabled={budget.status === "aceito_cliente"}>
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                  <span>Aceito pelo Cliente</span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => updateStatus("recusado_cliente")} disabled={budget.status === "recusado_cliente"}>
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-orange-500" />
+                  <span>Recusado pelo Cliente</span>
+                </div>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <Button variant="outline" size="sm" onClick={() => window.print()}>
@@ -302,6 +332,43 @@ export default function BudgetDetail() {
           </AlertDialog>
         </div>
       </div>
+
+      {/* Counter-proposal alert for admin */}
+      {budget.status === "recusado_cliente" && budget.client_counter_value && (
+        <div className="no-print rounded-xl border-2 border-orange-300 bg-orange-50 p-5">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5 shrink-0" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-orange-800 text-sm">Contraproposta do Cliente</h3>
+              <p className="text-orange-700 text-sm mt-1">
+                O cliente recusou o orçamento e enviou uma contraproposta de{" "}
+                <span className="font-bold">
+                  R$ {(budget.client_counter_value || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                </span>
+                {budget.client_response_date && (
+                  <span className="text-orange-600">
+                    {" "}em {new Date(budget.client_response_date).toLocaleDateString("pt-BR")}
+                  </span>
+                )}
+              </p>
+              {budget.client_counter_notes && (
+                <p className="text-orange-700 text-sm mt-2 italic">"{budget.client_counter_notes}"</p>
+              )}
+              <div className="mt-3">
+                <Button
+                  size="sm"
+                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                  onClick={handleAcceptCounterProposal}
+                  disabled={saving}
+                >
+                  <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
+                  Aceitar Contraproposta
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Print version */}
       <div id="budget-content" className="bg-white rounded-xl border border-slate-200 p-6 sm:p-8 print:border-0 print:shadow-none print:p-0" style={{

@@ -45,21 +45,30 @@ export default function SettingsPage() {
     if (!file) return;
     
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setSettings(prev => ({ ...prev, company_logo: file_url }));
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setSettings(prev => ({ ...prev, company_logo: file_url }));
+      toast.success("Logo carregado com sucesso!");
+    } catch {
+      toast.error("Erro ao fazer upload do logo. Tente novamente.");
+    }
     setUploading(false);
     e.target.value = "";
   };
 
   const handleSave = async () => {
     setSaving(true);
-    if (settings.id) {
-      await base44.entities.Settings.update(settings.id, settings);
-    } else {
-      const created = await base44.entities.Settings.create(settings);
-      setSettings(created);
+    try {
+      if (settings.id) {
+        await base44.entities.Settings.update(settings.id, settings);
+      } else {
+        const created = await base44.entities.Settings.create(settings);
+        setSettings(created);
+      }
+      toast.success("Configurações salvas com sucesso!");
+    } catch {
+      toast.error("Erro ao salvar configurações. Tente novamente.");
     }
-    toast.success("Configurações salvas com sucesso!");
     setSaving(false);
   };
 

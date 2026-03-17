@@ -169,7 +169,7 @@ export default function ClientBudgets() {
           {budgets.map((budget) => {
             const cfg = statusConfig[budget.status] || { badge: "bg-slate-100 text-slate-700 border-slate-200", label: budget.status };
             const isOpen = expanded[budget.id];
-            const canRespond = budget.status === "pendente";
+            const canRespond = budget.status === "pendente" || budget.status === "aprovado";
 
             return (
               <Card key={budget.id} className="border-0 shadow-sm">

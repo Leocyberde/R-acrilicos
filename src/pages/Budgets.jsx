@@ -39,6 +39,8 @@ export default function Budgets() {
     { value: "pendente", label: "Pendentes" },
     { value: "aprovado", label: "Aprovados" },
     { value: "reprovado", label: "Reprovados" },
+    { value: "recusado_cliente", label: "Recusados pelo Cliente" },
+    { value: "aceito_cliente", label: "Aceitos pelo Cliente" },
   ];
 
   const handleSelectAll = (checked) => {
