@@ -5,9 +5,10 @@ import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Search, FileText, Trash2 } from "lucide-react";
+import { Plus, FileText, Trash2 } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import ExportTabs from "@/components/ExportTabs";
+import SearchAutocomplete from "@/components/SearchAutocomplete";
 import { toast } from "sonner";
 
 export default function Budgets() {
@@ -123,10 +124,12 @@ export default function Budgets() {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input placeholder="Buscar por cliente..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
-        </div>
+        <SearchAutocomplete
+          placeholder="Buscar por cliente..."
+          value={search}
+          onChange={setSearch}
+          suggestions={[...new Set(budgets.map(b => b.client_name).filter(Boolean))]}
+        />
         <div className="flex gap-1.5 bg-white border rounded-lg p-1">
           {statusFilters.map(f => (
             <button

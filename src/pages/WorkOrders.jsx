@@ -5,7 +5,8 @@ import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Wrench, Trash2, RefreshCw, Plus, Upload, Zap, ZapOff, AlertTriangle } from "lucide-react";
+import { Wrench, Trash2, RefreshCw, Plus, Upload, Zap, ZapOff, AlertTriangle } from "lucide-react";
+import SearchAutocomplete from "@/components/SearchAutocomplete";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -196,10 +197,12 @@ export default function WorkOrders() {
       )}
 
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input placeholder="Buscar por cliente..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
-        </div>
+        <SearchAutocomplete
+          placeholder="Buscar por cliente..."
+          value={search}
+          onChange={setSearch}
+          suggestions={[...new Set(orders.map(o => o.client_name).filter(Boolean))]}
+        />
         <div className="flex gap-1.5 bg-white border rounded-lg p-1 overflow-x-auto">
           {statusFilters.map(f => (
             <button
@@ -232,7 +235,7 @@ export default function WorkOrders() {
                       onCheckedChange={handleSelectAll}
                     />
                   </th>}
-                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">Cliente</th>
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">{user?.role === 'cliente' ? 'Job' : 'Cliente'}</th>
                   <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3 hidden sm:table-cell">Descrição</th>
                   <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">Status</th>
                   <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3 hidden md:table-cell">Entrega</th>
@@ -254,7 +257,7 @@ export default function WorkOrders() {
                     <td className="px-5 py-3.5 cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
                       <div className="flex items-center gap-2">
                         {urgent && <Zap className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />}
-                        <p className="text-sm font-medium text-slate-800">{o.client_name}</p>
+                        <p className="text-sm font-medium text-slate-800">{user?.role === 'cliente' ? (o.job || '—') : o.client_name}</p>
                       </div>
                     </td>
                     <td className="px-5 py-3.5 hidden sm:table-cell cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
