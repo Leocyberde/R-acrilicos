@@ -26,6 +26,7 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
     description: initialData?.description || "",
     emission_date: initialData?.emission_date || new Date().toISOString().split('T')[0],
     validity_date: initialData?.validity_date || "",
+    delivery_date: initialData?.delivery_date || "",
     notes: initialData?.notes || "",
     discount: initialData?.discount || 0,
     apply_margin: initialData?.apply_margin !== undefined ? initialData.apply_margin : true,
@@ -151,6 +152,10 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
         <div>
           <Label>Validade</Label>
           <Input type="date" value={form.validity_date} onChange={e => updateField("validity_date", e.target.value)} className="mt-1" />
+        </div>
+        <div>
+          <Label>Data de Entrega</Label>
+          <Input type="date" value={form.delivery_date} onChange={e => updateField("delivery_date", e.target.value)} className="mt-1" />
         </div>
       </div>
 

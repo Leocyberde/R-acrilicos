@@ -12,6 +12,7 @@ export default function ClientBudgetRequest() {
     client_name: "",
     job: "",
     producer: "",
+    delivery_date: "",
     description: "",
     notes: "",
   });
@@ -83,6 +84,7 @@ export default function ClientBudgetRequest() {
         client_email: user?.email || "",
         job: form.job,
         producer: form.producer,
+        delivery_date: form.delivery_date || null,
         description: form.description,
         notes: form.notes,
         items: validItems,
@@ -171,6 +173,16 @@ export default function ClientBudgetRequest() {
                 onChange={e => handleChange("producer", e.target.value)}
               />
             </div>
+          </div>
+          <div>
+            <Label>Data de Entrega Necessária <span className="text-red-500">*</span></Label>
+            <p className="text-xs text-slate-500 mb-1">Informe a data em que você precisa que o projeto esteja pronto</p>
+            <Input
+              className="mt-1"
+              type="date"
+              value={form.delivery_date}
+              onChange={e => handleChange("delivery_date", e.target.value)}
+            />
           </div>
         </div>
 

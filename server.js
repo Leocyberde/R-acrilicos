@@ -277,6 +277,13 @@ async function initDB() {
       "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS description TEXT",
       "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS subtotal DECIMAL(15,2) DEFAULT 0",
       "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS budget_id INTEGER",
+      "ALTER TABLE budget_requests ADD COLUMN IF NOT EXISTS delivery_date DATE",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS delivery_date DATE",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS start_datetime TIMESTAMP",
+      "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS delivery_date DATE",
+      "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS start_datetime TIMESTAMP",
+      "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS delivery_date DATE",
+      "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS start_datetime TIMESTAMP",
     ];
     for (const sql of migrations) {
       await client.query(sql);
@@ -630,6 +637,63 @@ function buildEntityRoutes(tableName, orderDefault = '-created_date') {
 
 app.use('/api/entities/Budget', buildEntityRoutes('budgets'));
 app.use('/api/entities/BudgetRequest', buildEntityRoutes('budget_requests'));
+
+app.put('/api/entities/WorkOrder/:id', optionalAuth, async (req, res) => {
+  try {
+    const data = { ...req.body };
+    delete data.id;
+    delete data.created_date;
+    data.updated_date = new Date().toISOString();
+
+    if (data.status === 'em_producao') {
+      const current = await pool.query('SELECT status, start_datetime FROM work_orders WHERE id = $1', [req.params.id]);
+      if (current.rows[0] && current.rows[0].status !== 'em_producao' && !current.rows[0].start_datetime) {
+        data.start_datetime = new Date().toISOString();
+      }
+    }
+
+    const cols = Object.keys(data);
+    const vals = Object.values(data).map(v =>
+      (typeof v === 'object' && v !== null) ? JSON.stringify(v) : v
+    );
+    const sets = cols.map((c, i) => `${c} = $${i + 1}`).join(', ');
+    vals.push(req.params.id);
+    const result = await pool.query(
+      `UPDATE work_orders SET ${sets} WHERE id = $${vals.length} RETURNING *`,
+      vals
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Not found' });
+
+    const wo = result.rows[0];
+
+    if (wo.start_datetime && wo.budget_id) {
+      await pool.query(
+        `UPDATE budgets SET start_datetime = $1, updated_date = NOW() WHERE id = $2`,
+        [wo.start_datetime, wo.budget_id]
+      );
+      await pool.query(
+        `UPDATE receipts SET start_datetime = $1, updated_date = NOW() WHERE budget_id = $2`,
+        [wo.start_datetime, wo.budget_id]
+      );
+    }
+
+    if (wo.delivery_date && wo.budget_id) {
+      await pool.query(
+        `UPDATE budgets SET delivery_date = $1, updated_date = NOW() WHERE id = $2 AND delivery_date IS NULL`,
+        [wo.delivery_date, wo.budget_id]
+      );
+      await pool.query(
+        `UPDATE receipts SET delivery_date = $1, updated_date = NOW() WHERE budget_id = $2 AND delivery_date IS NULL`,
+        [wo.delivery_date, wo.budget_id]
+      );
+    }
+
+    res.json(wo);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.use('/api/entities/WorkOrder', buildEntityRoutes('work_orders'));
 app.use('/api/entities/Receipt', buildEntityRoutes('receipts'));
 app.use('/api/entities/Financial', buildEntityRoutes('financial'));

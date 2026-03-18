@@ -20,6 +20,7 @@ export default function BudgetCreate() {
     producer: searchParams.get("producer") || "",
     description: searchParams.get("description") || "",
     notes: searchParams.get("notes") || "",
+    delivery_date: searchParams.get("delivery_date") || "",
     items: (() => {
       try {
         const parsed = JSON.parse(searchParams.get("items") || "[]");

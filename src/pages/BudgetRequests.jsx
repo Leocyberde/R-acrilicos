@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Inbox, Eye, Paperclip, User, FileText, Link2, ExternalLink, ArrowRight } from "lucide-react";
+import { Inbox, Eye, Paperclip, User, FileText, Link2, ExternalLink, ArrowRight, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { createPageUrl } from "@/utils";
 
@@ -196,7 +196,7 @@ export default function BudgetRequests() {
                   </SelectContent>
                 </Select>
                 <a
-                  href={createPageUrl(`BudgetCreate?client_name=${encodeURIComponent(selected.client_name || "")}&job=${encodeURIComponent(selected.job || "")}&producer=${encodeURIComponent(selected.producer || "")}&description=${encodeURIComponent(selected.description || "")}&notes=${encodeURIComponent(selected.notes || "")}&items=${encodeURIComponent(JSON.stringify(selected.items || []))}`)}
+                  href={createPageUrl(`BudgetCreate?client_name=${encodeURIComponent(selected.client_name || "")}&job=${encodeURIComponent(selected.job || "")}&producer=${encodeURIComponent(selected.producer || "")}&description=${encodeURIComponent(selected.description || "")}&notes=${encodeURIComponent(selected.notes || "")}&items=${encodeURIComponent(JSON.stringify(selected.items || []))}&delivery_date=${encodeURIComponent(selected.delivery_date || "")}`)}
                   className="ml-auto flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
                   onClick={() => setSelected(null)}
                 >
@@ -220,9 +220,18 @@ export default function BudgetRequests() {
                   <p className="text-sm text-slate-800 mt-0.5">{selected.producer || "—"}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Data</p>
+                  <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Data da Solicitação</p>
                   <p className="text-sm text-slate-800 mt-0.5">{new Date(selected.created_date).toLocaleDateString("pt-BR")}</p>
                 </div>
+                {selected.delivery_date && (
+                  <div className="col-span-2 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    <Truck className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs text-amber-600 font-medium uppercase tracking-wider">Data de Entrega Necessária</p>
+                      <p className="text-sm text-amber-800 font-semibold mt-0.5">{new Date(selected.delivery_date).toLocaleDateString("pt-BR")}</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Itens */}

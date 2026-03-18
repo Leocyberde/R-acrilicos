@@ -4,10 +4,30 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Wrench, Receipt, AlertCircle, Download } from "lucide-react";
+import { FileText, Wrench, Receipt, AlertCircle, Download, Clock, Calendar, Truck } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
+
+function formatDateTime(val) {
+  if (!val) return null;
+  try { return format(new Date(val), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }); } catch { return null; }
+}
+function formatDate(val) {
+  if (!val) return null;
+  try { return format(new Date(val), "dd/MM/yyyy", { locale: ptBR }); } catch { return null; }
+}
+
+function DateInfo({ icon: Icon, label, value, highlight }) {
+  if (!value) return null;
+  return (
+    <div className={`flex items-center gap-1.5 text-sm ${highlight ? "text-blue-700 font-medium" : "text-slate-600"}`}>
+      <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+      <span className="text-slate-500">{label}:</span>
+      <span className="font-medium">{value}</span>
+    </div>
+  );
+}
 
 const statusConfig = {
   pendente: { bg: "bg-yellow-50", text: "text-yellow-700", badge: "bg-yellow-100 text-yellow-800" },
@@ -129,19 +149,10 @@ export default function ClientPortal() {
                             </Badge>
                           </div>
                           <p className="text-sm text-slate-600 mb-3">{budget.description}</p>
-                          <div className="flex flex-wrap gap-4 text-sm">
-                            {budget.emission_date && (
-                              <div>
-                                <span className="text-slate-500">Emissão: </span>
-                                <span className="font-medium">{format(new Date(budget.emission_date), "dd/MM/yyyy", { locale: ptBR })}</span>
-                              </div>
-                            )}
-                            {budget.validity_date && (
-                              <div>
-                                <span className="text-slate-500">Validade: </span>
-                                <span className="font-medium">{format(new Date(budget.validity_date), "dd/MM/yyyy", { locale: ptBR })}</span>
-                              </div>
-                            )}
+                          <div className="flex flex-col gap-1.5">
+                            <DateInfo icon={Clock} label="Criado em" value={formatDateTime(budget.created_date)} />
+                            <DateInfo icon={Calendar} label="Início da produção" value={formatDateTime(budget.start_datetime)} highlight={!!budget.start_datetime} />
+                            <DateInfo icon={Truck} label="Data de entrega" value={formatDate(budget.delivery_date)} />
                           </div>
                         </div>
                         <div className="text-right ml-4">
@@ -193,17 +204,10 @@ export default function ClientPortal() {
                             </Badge>
                           </div>
                           <p className="text-sm text-slate-600 mb-3">{order.description}</p>
-                          <div className="flex flex-wrap gap-4 text-sm">
-                            <div>
-                              <span className="text-slate-500">Produtor: </span>
-                              <span className="font-medium">{order.producer || "—"}</span>
-                            </div>
-                            {order.delivery_date && (
-                              <div>
-                                <span className="text-slate-500">Entrega: </span>
-                                <span className="font-medium">{format(new Date(order.delivery_date), "dd/MM/yyyy", { locale: ptBR })}</span>
-                              </div>
-                            )}
+                          <div className="flex flex-col gap-1.5">
+                            <DateInfo icon={Clock} label="Criado em" value={formatDateTime(order.created_date)} />
+                            <DateInfo icon={Calendar} label="Início da produção" value={formatDateTime(order.start_datetime)} highlight={!!order.start_datetime} />
+                            <DateInfo icon={Truck} label="Data de entrega" value={formatDate(order.delivery_date)} />
                           </div>
                         </div>
                         <Button
@@ -240,17 +244,10 @@ export default function ClientPortal() {
                         <div className="flex-1">
                           <h3 className="font-semibold text-slate-900 mb-2">{receipt.description || "Recibo"}</h3>
                           <p className="text-sm text-slate-600 mb-3">{receipt.notes}</p>
-                          <div className="flex flex-wrap gap-4 text-sm">
-                            <div>
-                              <span className="text-slate-500">Forma de Pagamento: </span>
-                              <span className="font-medium text-capitalize">{receipt.payment_method?.replace(/_/g, " ") || "—"}</span>
-                            </div>
-                            {receipt.emission_date && (
-                              <div>
-                                <span className="text-slate-500">Emissão: </span>
-                                <span className="font-medium">{format(new Date(receipt.emission_date), "dd/MM/yyyy", { locale: ptBR })}</span>
-                              </div>
-                            )}
+                          <div className="flex flex-col gap-1.5">
+                            <DateInfo icon={Clock} label="Criado em" value={formatDateTime(receipt.created_date)} />
+                            <DateInfo icon={Calendar} label="Início da produção" value={formatDateTime(receipt.start_datetime)} highlight={!!receipt.start_datetime} />
+                            <DateInfo icon={Truck} label="Data de entrega" value={formatDate(receipt.delivery_date)} />
                           </div>
                         </div>
                         <div className="text-right ml-4">
