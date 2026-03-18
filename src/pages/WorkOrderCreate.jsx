@@ -21,6 +21,8 @@ export default function WorkOrderCreate() {
     description: "",
     items: [{ name: "", quantity: 1 }],
     notes: "",
+    start_date: "",
+    delivery_date: "",
   });
 
   useEffect(() => {
@@ -85,7 +87,9 @@ export default function WorkOrderCreate() {
         items: form.items.filter(item => item.name.trim()),
         notes: form.notes,
         status: "pendente",
-        budget_id: ""
+        budget_id: null,
+        start_date: form.start_date || null,
+        delivery_date: form.delivery_date || null,
       });
       toast.success("Ordem de serviço criada com sucesso");
       navigate(createPageUrl("WorkOrders"));
@@ -158,6 +162,30 @@ export default function WorkOrderCreate() {
             placeholder="Nome do produtor"
             className="w-full"
           />
+        </div>
+
+        {/* Datas */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-900 mb-2">Data de Início</label>
+            <Input
+              type="date"
+              name="start_date"
+              value={form.start_date}
+              onChange={handleInputChange}
+              className="w-full"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-900 mb-2">Data de Entrega</label>
+            <Input
+              type="date"
+              name="delivery_date"
+              value={form.delivery_date}
+              onChange={handleInputChange}
+              className="w-full"
+            />
+          </div>
         </div>
 
         {/* Descrição */}
