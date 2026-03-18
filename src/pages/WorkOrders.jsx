@@ -235,11 +235,19 @@ export default function WorkOrders() {
                       onCheckedChange={handleSelectAll}
                     />
                   </th>}
-                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">{user?.role === 'cliente' ? 'Job' : 'Cliente'}</th>
-                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3 hidden sm:table-cell">Descrição</th>
-                  <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">Status</th>
-                  <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3 hidden md:table-cell">Entrega</th>
-                  {user?.role !== 'cliente' && <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3 w-20">Ações</th>}
+                  {user?.role === 'cliente' ? (
+                    <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Job</th>
+                  ) : (
+                    <>
+                      <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Job</th>
+                      <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 hidden md:table-cell">Empresa</th>
+                      <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Status</th>
+                      <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 hidden lg:table-cell">Produtor</th>
+                      <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">Cliente</th>
+                    </>
+                  )}
+                  <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 hidden md:table-cell">Entrega</th>
+                  {user?.role !== 'cliente' && <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 w-20">Ações</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -254,18 +262,41 @@ export default function WorkOrders() {
                         onCheckedChange={(checked) => handleSelect(o.id, checked)}
                       />
                     </td>}
-                    <td className="px-5 py-3.5 cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
-                      <div className="flex items-center gap-2">
-                        {urgent && <Zap className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />}
-                        <p className="text-sm font-medium text-slate-800">{user?.role === 'cliente' ? (o.job || '—') : o.client_name}</p>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3.5 hidden sm:table-cell cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
-                      <p className="text-sm text-slate-500 truncate max-w-xs">{o.description || "—"}</p>
-                    </td>
-                    <td className="px-5 py-3.5 text-center cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
-                      <StatusBadge status={o.status} />
-                    </td>
+                    {user?.role === 'cliente' ? (
+                      <td className="px-4 py-3.5 cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
+                        <div className="flex items-center gap-2">
+                          {urgent && <Zap className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />}
+                          <p className="text-sm font-semibold text-slate-800">{o.job || "—"}</p>
+                        </div>
+                      </td>
+                    ) : (
+                      <>
+                        <td className="px-4 py-3.5 cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
+                          <div className="flex items-center gap-2">
+                            {urgent && <Zap className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />}
+                            <p className="text-sm font-semibold text-slate-800">{o.job || "—"}</p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 hidden md:table-cell cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
+                          <p className="text-sm text-slate-700 truncate max-w-[160px]">{o.client_name || "—"}</p>
+                        </td>
+                        <td className="px-4 py-3.5 text-center cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
+                          <StatusBadge status={o.status} />
+                        </td>
+                        <td className="px-4 py-3.5 hidden lg:table-cell cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
+                          <p className="text-sm text-slate-600 truncate max-w-[140px]">{o.producer || "—"}</p>
+                        </td>
+                        <td className="px-4 py-3.5 hidden sm:table-cell cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
+                          <p className="text-sm text-slate-600 truncate max-w-[140px]">{o.client_name || "—"}</p>
+                        </td>
+                      </>
+                    )}
+                    {/* Keep old status cell for client-only view */}
+                    {user?.role === 'cliente' && (
+                      <td className="px-4 py-3.5 text-center cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
+                        <StatusBadge status={o.status} />
+                      </td>
+                    )}
                     <td className="px-5 py-3.5 text-center hidden md:table-cell cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
                       {o.delivery_date ? (
                         <div>

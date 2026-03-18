@@ -162,11 +162,12 @@ export default function Budgets() {
                       onCheckedChange={handleSelectAll}
                     />
                   </th>
-                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">Cliente</th>
-                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3 hidden sm:table-cell">Descrição</th>
-                  <th className="text-right text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">Total</th>
-                  <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">Status</th>
-                  <th className="text-right text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3 hidden sm:table-cell">Data</th>
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Job</th>
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 hidden md:table-cell">Empresa</th>
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 hidden lg:table-cell">Produtor</th>
+                  <th className="text-right text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Total</th>
+                  <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">Status</th>
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">Cliente</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -178,21 +179,23 @@ export default function Budgets() {
                         onCheckedChange={(checked) => handleSelect(b.id, checked)}
                       />
                     </td>
-                    <td className="px-5 py-3.5 cursor-pointer" onClick={() => navigate(createPageUrl("BudgetDetail") + `?id=${b.id}`)}>
-                      <p className="text-sm font-medium text-slate-800">{b.client_name}</p>
-                      <p className="text-xs text-slate-400 sm:hidden">{b.description?.substring(0, 30)}</p>
+                    <td className="px-4 py-3.5 cursor-pointer" onClick={() => navigate(createPageUrl("BudgetDetail") + `?id=${b.id}`)}>
+                      <p className="text-sm font-semibold text-slate-800">{b.job || "—"}</p>
                     </td>
-                    <td className="px-5 py-3.5 hidden sm:table-cell cursor-pointer" onClick={() => navigate(createPageUrl("BudgetDetail") + `?id=${b.id}`)}>
-                      <p className="text-sm text-slate-500 truncate max-w-xs">{b.description || "—"}</p>
+                    <td className="px-4 py-3.5 hidden md:table-cell cursor-pointer" onClick={() => navigate(createPageUrl("BudgetDetail") + `?id=${b.id}`)}>
+                      <p className="text-sm text-slate-700 truncate max-w-[160px]">{b.client_name || "—"}</p>
                     </td>
-                    <td className="px-5 py-3.5 text-right cursor-pointer" onClick={() => navigate(createPageUrl("BudgetDetail") + `?id=${b.id}`)}>
+                    <td className="px-4 py-3.5 hidden lg:table-cell cursor-pointer" onClick={() => navigate(createPageUrl("BudgetDetail") + `?id=${b.id}`)}>
+                      <p className="text-sm text-slate-600 truncate max-w-[140px]">{b.producer || "—"}</p>
+                    </td>
+                    <td className="px-4 py-3.5 text-right cursor-pointer" onClick={() => navigate(createPageUrl("BudgetDetail") + `?id=${b.id}`)}>
                       <span className="text-sm font-semibold text-slate-800">R$ {(b.total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                     </td>
-                    <td className="px-5 py-3.5 text-center cursor-pointer" onClick={() => navigate(createPageUrl("BudgetDetail") + `?id=${b.id}`)}>
+                    <td className="px-4 py-3.5 text-center hidden sm:table-cell cursor-pointer" onClick={() => navigate(createPageUrl("BudgetDetail") + `?id=${b.id}`)}>
                       <StatusBadge status={b.status} />
                     </td>
-                    <td className="px-5 py-3.5 text-right hidden sm:table-cell cursor-pointer" onClick={() => navigate(createPageUrl("BudgetDetail") + `?id=${b.id}`)}>
-                      <span className="text-xs text-slate-400">{new Date(b.created_date).toLocaleDateString("pt-BR")}</span>
+                    <td className="px-4 py-3.5 hidden sm:table-cell cursor-pointer" onClick={() => navigate(createPageUrl("BudgetDetail") + `?id=${b.id}`)}>
+                      <p className="text-sm text-slate-600 truncate max-w-[140px]">{b.client_name || "—"}</p>
                     </td>
                   </tr>
                 ))}
