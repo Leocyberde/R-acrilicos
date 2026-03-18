@@ -284,6 +284,9 @@ async function initDB() {
       "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS start_datetime TIMESTAMP",
       "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS delivery_date DATE",
       "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS start_datetime TIMESTAMP",
+      "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS is_urgent BOOLEAN DEFAULT FALSE",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS is_urgent BOOLEAN DEFAULT FALSE",
+      "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS is_urgent BOOLEAN DEFAULT FALSE",
     ];
     for (const sql of migrations) {
       await client.query(sql);
@@ -677,15 +680,27 @@ app.put('/api/entities/WorkOrder/:id', optionalAuth, async (req, res) => {
       );
     }
 
-    if (wo.delivery_date && wo.budget_id) {
-      await pool.query(
-        `UPDATE budgets SET delivery_date = $1, updated_date = NOW() WHERE id = $2 AND delivery_date IS NULL`,
-        [wo.delivery_date, wo.budget_id]
-      );
-      await pool.query(
-        `UPDATE receipts SET delivery_date = $1, updated_date = NOW() WHERE budget_id = $2 AND delivery_date IS NULL`,
-        [wo.delivery_date, wo.budget_id]
-      );
+    if (wo.budget_id) {
+      if (wo.delivery_date !== undefined) {
+        await pool.query(
+          `UPDATE budgets SET delivery_date = $1, updated_date = NOW() WHERE id = $2`,
+          [wo.delivery_date, wo.budget_id]
+        );
+        await pool.query(
+          `UPDATE receipts SET delivery_date = $1, updated_date = NOW() WHERE budget_id = $2`,
+          [wo.delivery_date, wo.budget_id]
+        );
+      }
+      if (data.is_urgent !== undefined) {
+        await pool.query(
+          `UPDATE budgets SET is_urgent = $1, updated_date = NOW() WHERE id = $2`,
+          [wo.is_urgent, wo.budget_id]
+        );
+        await pool.query(
+          `UPDATE receipts SET is_urgent = $1, updated_date = NOW() WHERE budget_id = $2`,
+          [wo.is_urgent, wo.budget_id]
+        );
+      }
     }
 
     res.json(wo);

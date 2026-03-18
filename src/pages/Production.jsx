@@ -4,9 +4,21 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Factory, ArrowRight } from "lucide-react";
+import { Search, Factory, ArrowRight, Zap, AlertTriangle } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import ExportTabs from "@/components/ExportTabs";
+
+function getDaysUntilDelivery(deliveryDate) {
+  if (!deliveryDate) return null;
+  return Math.ceil((new Date(deliveryDate) - new Date()) / (1000 * 60 * 60 * 24));
+}
+
+function isOrderUrgent(order) {
+  if (order.status === 'entregue') return false;
+  if (order.is_urgent) return true;
+  const days = getDaysUntilDelivery(order.delivery_date);
+  return days !== null && days <= 3;
+}
 
 const statusLabels = {
   pendente: "Pendente",
@@ -79,6 +91,8 @@ export default function Production() {
     );
   }
 
+  const urgentOrders = orders.filter(o => isOrderUrgent(o));
+
   // Group by status for kanban-like view
   const grouped = {};
   statusFlow.forEach(s => { grouped[s] = filtered.filter(o => o.status === s); });
@@ -102,6 +116,20 @@ export default function Production() {
           ]}
         />
       </div>
+
+      {urgentOrders.length > 0 && (
+        <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+          <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-red-700">
+              {urgentOrders.length} pedido(s) com prazo urgente!
+            </p>
+            <p className="text-xs text-red-500 mt-0.5">
+              {urgentOrders.map(o => `O.S. #${o.id} — ${o.client_name}${o.delivery_date ? ` (entrega: ${new Date(o.delivery_date).toLocaleDateString("pt-BR")})` : ""}`).join(" · ")}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
@@ -148,17 +176,23 @@ export default function Production() {
                   <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">O.S.</th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Cliente</th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Job</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Descrição</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Itens</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider hidden md:table-cell">Descrição</th>
+                  <th className="text-center py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Entrega</th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Status</th>
                   <th className="text-right py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.map(order => (
-                  <tr key={order.id} className="hover:bg-slate-50 transition-colors">
+                {filtered.map(order => {
+                  const urgent = isOrderUrgent(order);
+                  const days = getDaysUntilDelivery(order.delivery_date);
+                  return (
+                  <tr key={order.id} className={`hover:bg-slate-50 transition-colors ${urgent ? "bg-red-50/50" : ""}`}>
                     <td className="py-3 px-4">
-                      <p className="text-xs font-mono text-slate-500">#{String(order.id ?? '')}</p>
+                      <div className="flex items-center gap-1.5">
+                        {urgent && <Zap className="h-3.5 w-3.5 text-red-500" />}
+                        <p className="text-xs font-mono text-slate-500">#{String(order.id ?? '')}</p>
+                      </div>
                     </td>
                     <td className="py-3 px-4">
                       <p className="text-sm font-medium text-slate-900">{order.client_name}</p>
@@ -166,11 +200,20 @@ export default function Production() {
                     <td className="py-3 px-4">
                       <p className="text-sm text-slate-600">{order.job || "-"}</p>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-4 hidden md:table-cell">
                       <p className="text-sm text-slate-600 line-clamp-1">{order.description || "-"}</p>
                     </td>
-                    <td className="py-3 px-4">
-                      <p className="text-xs text-slate-500">{order.items?.length || 0} item(s)</p>
+                    <td className="py-3 px-4 text-center">
+                      {order.delivery_date ? (
+                        <div>
+                          <p className={`text-xs font-medium ${urgent ? "text-red-600" : "text-slate-600"}`}>{new Date(order.delivery_date).toLocaleDateString("pt-BR")}</p>
+                          {days !== null && order.status !== 'entregue' && (
+                            <p className={`text-xs ${days <= 0 ? "text-red-600 font-bold" : days <= 3 ? "text-orange-500 font-medium" : "text-slate-400"}`}>
+                              {days <= 0 ? "Vencido!" : `Faltam ${days}d`}
+                            </p>
+                          )}
+                        </div>
+                      ) : <span className="text-xs text-slate-400">—</span>}
                     </td>
                     <td className="py-3 px-4">
                       <StatusBadge status={order.status} />
@@ -193,7 +236,8 @@ export default function Production() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

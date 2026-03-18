@@ -5,7 +5,7 @@ import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Wrench, Trash2, RefreshCw, Plus, Upload } from "lucide-react";
+import { Search, Wrench, Trash2, RefreshCw, Plus, Upload, Zap, ZapOff, AlertTriangle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +17,18 @@ import ExportTabs from "@/components/ExportTabs";
 import PDFUploadDialog from "@/components/PDFUploadDialog";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/AuthContext";
+
+function getDaysUntilDelivery(deliveryDate) {
+  if (!deliveryDate) return null;
+  return Math.ceil((new Date(deliveryDate) - new Date()) / (1000 * 60 * 60 * 24));
+}
+
+function isOrderUrgent(order) {
+  if (order.status === 'entregue') return false;
+  if (order.is_urgent) return true;
+  const days = getDaysUntilDelivery(order.delivery_date);
+  return days !== null && days <= 3;
+}
 
 export default function WorkOrders() {
   const [orders, setOrders] = useState([]);
@@ -101,6 +113,16 @@ export default function WorkOrders() {
     }
   };
 
+  const handleToggleUrgent = async (id, currentVal) => {
+    try {
+      await base44.entities.WorkOrder.update(id, { is_urgent: !currentVal });
+      setOrders(orders.map(o => o.id === id ? { ...o, is_urgent: !currentVal } : o));
+      toast.success(!currentVal ? "Pedido marcado como urgente" : "Urgência removida");
+    } catch (error) {
+      toast.error("Erro ao atualizar urgência");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -108,6 +130,8 @@ export default function WorkOrders() {
       </div>
     );
   }
+
+  const urgentOrders = orders.filter(o => isOrderUrgent(o));
 
   return (
     <div className="space-y-6">
@@ -157,6 +181,20 @@ export default function WorkOrders() {
         </div>
       </div>
 
+      {urgentOrders.length > 0 && (
+        <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+          <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-red-700">
+              {urgentOrders.length} pedido(s) com prazo urgente!
+            </p>
+            <p className="text-xs text-red-500 mt-0.5">
+              {urgentOrders.map(o => `O.S. #${o.id} — ${o.client_name}${o.delivery_date ? ` (entrega: ${new Date(o.delivery_date).toLocaleDateString("pt-BR")})` : ""}`).join(" · ")}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -197,13 +235,16 @@ export default function WorkOrders() {
                   <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">Cliente</th>
                   <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3 hidden sm:table-cell">Descrição</th>
                   <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">Status</th>
-                  <th className="text-right text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3 hidden sm:table-cell">Data</th>
+                  <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3 hidden md:table-cell">Entrega</th>
                   {user?.role !== 'cliente' && <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3 w-20">Ações</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {filtered.map(o => (
-                  <tr key={o.id} className="hover:bg-slate-50/50 transition-colors">
+                {filtered.map(o => {
+                  const urgent = isOrderUrgent(o);
+                  const days = getDaysUntilDelivery(o.delivery_date);
+                  return (
+                  <tr key={o.id} className={`hover:bg-slate-50/50 transition-colors ${urgent ? "bg-red-50/40" : ""}`}>
                     {user?.role !== 'cliente' && <td className="px-5 py-3.5" onClick={(e) => e.stopPropagation()}>
                       <Checkbox 
                         checked={selected.includes(o.id)}
@@ -211,7 +252,10 @@ export default function WorkOrders() {
                       />
                     </td>}
                     <td className="px-5 py-3.5 cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
-                      <p className="text-sm font-medium text-slate-800">{o.client_name}</p>
+                      <div className="flex items-center gap-2">
+                        {urgent && <Zap className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />}
+                        <p className="text-sm font-medium text-slate-800">{o.client_name}</p>
+                      </div>
                     </td>
                     <td className="px-5 py-3.5 hidden sm:table-cell cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
                       <p className="text-sm text-slate-500 truncate max-w-xs">{o.description || "—"}</p>
@@ -219,8 +263,17 @@ export default function WorkOrders() {
                     <td className="px-5 py-3.5 text-center cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
                       <StatusBadge status={o.status} />
                     </td>
-                    <td className="px-5 py-3.5 text-right hidden sm:table-cell cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
-                      <span className="text-xs text-slate-400">{new Date(o.created_date).toLocaleDateString("pt-BR")}</span>
+                    <td className="px-5 py-3.5 text-center hidden md:table-cell cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
+                      {o.delivery_date ? (
+                        <div>
+                          <p className={`text-xs font-medium ${urgent ? "text-red-600" : "text-slate-600"}`}>{new Date(o.delivery_date).toLocaleDateString("pt-BR")}</p>
+                          {days !== null && o.status !== 'entregue' && (
+                            <p className={`text-xs ${days <= 0 ? "text-red-600 font-bold" : days <= 3 ? "text-orange-500" : "text-slate-400"}`}>
+                              {days <= 0 ? "Vencido!" : `${days}d`}
+                            </p>
+                          )}
+                        </div>
+                      ) : <span className="text-xs text-slate-400">—</span>}
                     </td>
                     {user?.role !== 'cliente' && <td className="px-5 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
@@ -254,11 +307,18 @@ export default function WorkOrders() {
                               Entregue
                             </div>
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleToggleUrgent(o.id, o.is_urgent)} className={o.is_urgent ? "text-red-600" : "text-orange-600"}>
+                            <div className="flex items-center gap-2">
+                              {o.is_urgent ? <ZapOff className="h-3.5 w-3.5" /> : <Zap className="h-3.5 w-3.5" />}
+                              {o.is_urgent ? "Remover Urgência" : "Marcar Urgente"}
+                            </div>
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>}
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

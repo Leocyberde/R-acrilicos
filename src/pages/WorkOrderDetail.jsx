@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer, Trash2, Upload, Download, FileText, X, Edit, Save } from "lucide-react";
+import { ArrowLeft, Printer, Trash2, Upload, Download, FileText, X, Edit, Save, Zap, ZapOff, AlertTriangle } from "lucide-react";
 import { downloadPDF } from "@/components/DownloadPDF";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,12 +63,28 @@ export default function WorkOrderDetail() {
       client_address: order.client_address,
       description: order.description,
       notes: order.notes,
-      delivery_date: order.delivery_date,
+      delivery_date: order.delivery_date || null,
       items: order.items,
     });
     setSaving(false);
     setEditing(false);
   };
+
+  const toggleUrgent = async () => {
+    setSaving(true);
+    const newVal = !order.is_urgent;
+    await base44.entities.WorkOrder.update(id, { is_urgent: newVal });
+    setOrder(prev => ({ ...prev, is_urgent: newVal }));
+    setSaving(false);
+  };
+
+  const daysUntilDelivery = order?.delivery_date
+    ? Math.ceil((new Date(order.delivery_date) - new Date()) / (1000 * 60 * 60 * 24))
+    : null;
+
+  const computedUrgent = order?.is_urgent || (
+    daysUntilDelivery !== null && daysUntilDelivery <= 3 && order?.status !== 'entregue'
+  );
 
 
 
@@ -159,6 +175,18 @@ export default function WorkOrderDetail() {
                   { key: "status", label: "Status" },
                 ]}
               />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleUrgent}
+                disabled={saving}
+                className={order.is_urgent
+                  ? "border-red-400 text-red-600 bg-red-50 hover:bg-red-100"
+                  : "text-slate-600 hover:text-orange-600 hover:border-orange-400"}
+              >
+                {order.is_urgent ? <ZapOff className="h-3.5 w-3.5 mr-1.5" /> : <Zap className="h-3.5 w-3.5 mr-1.5" />}
+                {order.is_urgent ? "Remover Urgência" : "Marcar Urgente"}
+              </Button>
               <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
                 <Edit className="h-3.5 w-3.5 mr-1.5" /> Editar
               </Button>
@@ -200,6 +228,23 @@ export default function WorkOrderDetail() {
           )}
         </div>
       </div>
+
+      {computedUrgent && order.status !== 'entregue' && (
+        <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+          <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-red-700">
+              {order.is_urgent ? "Pedido marcado como URGENTE" : `⚠️ Atenção: faltam ${daysUntilDelivery <= 0 ? "0" : daysUntilDelivery} dia(s) para a data de entrega!`}
+            </p>
+            {daysUntilDelivery !== null && (
+              <p className="text-xs text-red-500 mt-0.5">
+                Data de entrega: {new Date(order.delivery_date).toLocaleDateString("pt-BR")}
+                {daysUntilDelivery <= 0 ? " — Prazo vencido!" : ""}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <Tabs defaultValue="details" className="no-print">
         <TabsList>
