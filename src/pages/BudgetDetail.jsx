@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer, CheckCircle, XCircle, Edit, Wrench, Trash2, RefreshCw, Receipt as ReceiptIcon, Download, Send, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Printer, CheckCircle, XCircle, Edit, Wrench, Trash2, RefreshCw, Receipt as ReceiptIcon, Download, Send, AlertTriangle, Lock } from "lucide-react";
 import { toast } from "sonner";
 import StatusBadge from "@/components/StatusBadge";
 import BudgetForm from "@/components/BudgetForm";
@@ -123,7 +123,7 @@ export default function BudgetDetail() {
         total_with_margin: budget.total_with_margin,
         total_with_margin_label: budget.total_with_margin_label,
         notes: budget.notes,
-        status: "pendente",
+        status: "em_aberto",
         total_value: budget.total_with_margin || budget.total || 0,
         delivery_date: budget.delivery_date || null,
       });
@@ -148,6 +148,18 @@ export default function BudgetDetail() {
   const handleDelete = async () => {
     await base44.entities.Budget.delete(id);
     navigate(createPageUrl("Budgets"));
+  };
+
+  const handleClose = async () => {
+    setSaving(true);
+    try {
+      await base44.entities.Budget.update(id, { status: "orcamento_fechado" });
+      setBudget(prev => ({ ...prev, status: "orcamento_fechado" }));
+      toast.success("Orçamento fechado com sucesso!");
+    } catch {
+      toast.error("Erro ao fechar orçamento.");
+    }
+    setSaving(false);
   };
 
   const handleSendToClient = async () => {
@@ -244,6 +256,12 @@ export default function BudgetDetail() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => updateStatus("em_aberto")} disabled={budget.status === "em_aberto"}>
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-sky-500" />
+                  <span>Em Aberto</span>
+                </div>
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => updateStatus("pendente")} disabled={budget.status === "pendente"}>
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-amber-500" />
@@ -295,9 +313,20 @@ export default function BudgetDetail() {
           <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
             <Edit className="h-3.5 w-3.5 mr-1.5" /> Editar
           </Button>
-          {["pendente", "aprovado", "aceito_cliente"].includes(budget.status) && (
+          {["pendente", "aprovado", "aceito_cliente", "em_aberto"].includes(budget.status) && (
             <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={handleApproveAndCreateOS} disabled={saving}>
               <Wrench className="h-3.5 w-3.5 mr-1.5" /> Criar O.S. e Recibo
+            </Button>
+          )}
+          {budget.status !== "orcamento_fechado" && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-slate-400 text-slate-700 hover:bg-slate-100"
+              onClick={handleClose}
+              disabled={saving}
+            >
+              <Lock className="h-3.5 w-3.5 mr-1.5" /> Fechar Orçamento
             </Button>
           )}
           <AlertDialog>

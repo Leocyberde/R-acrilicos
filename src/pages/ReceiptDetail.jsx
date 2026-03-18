@@ -3,10 +3,12 @@ import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer, Trash2, Edit, Download } from "lucide-react";
+import { ArrowLeft, Printer, Trash2, Edit, Download, Lock } from "lucide-react";
+import StatusBadge from "@/components/StatusBadge";
 import PrintHeader from "@/components/PrintHeader";
 import BudgetForm from "@/components/BudgetForm";
 import { downloadPDF } from "@/components/DownloadPDF";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +48,18 @@ export default function ReceiptDetail() {
   const handleDelete = async () => {
     await base44.entities.Receipt.delete(id);
     navigate(createPageUrl("Receipts"));
+  };
+
+  const handleClose = async () => {
+    setSaving(true);
+    try {
+      await base44.entities.Receipt.update(id, { status: "recibo_fechado" });
+      setReceipt(prev => ({ ...prev, status: "recibo_fechado" }));
+      toast.success("Recibo fechado com sucesso!");
+    } catch {
+      toast.error("Erro ao fechar recibo.");
+    }
+    setSaving(false);
   };
 
   const handleUpdate = async (data) => {
@@ -139,7 +153,8 @@ export default function ReceiptDetail() {
             <p className="text-slate-500 mt-0.5">{receipt.client_name}</p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
+          <StatusBadge status={receipt.status || "em_aberto"} />
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="h-3.5 w-3.5 mr-1.5" /> Imprimir
           </Button>
@@ -149,6 +164,17 @@ export default function ReceiptDetail() {
           <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
             <Edit className="h-3.5 w-3.5 mr-1.5" /> Editar
           </Button>
+          {receipt.status !== "recibo_fechado" && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-slate-400 text-slate-700 hover:bg-slate-100"
+              onClick={handleClose}
+              disabled={saving}
+            >
+              <Lock className="h-3.5 w-3.5 mr-1.5" /> Fechar Recibo
+            </Button>
+          )}
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600">

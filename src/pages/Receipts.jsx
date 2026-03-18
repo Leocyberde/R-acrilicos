@@ -38,6 +38,8 @@ export default function Receipts() {
 
   const statusFilters = [
     { value: "all", label: "Todos" },
+    { value: "em_aberto", label: "Em Aberto" },
+    { value: "recibo_fechado", label: "Fechados" },
     { value: "pendente", label: "Pendentes" },
     { value: "parcial", label: "Parcial" },
     { value: "pago", label: "Pagos" },
@@ -173,6 +175,7 @@ export default function Receipts() {
                   <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">Cliente</th>
                   <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3 hidden sm:table-cell">Job</th>
                   <th className="text-right text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">Valor Total</th>
+                  <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3 hidden md:table-cell">Status</th>
                   <th className="text-right text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3 hidden md:table-cell">Data</th>
                 </tr>
               </thead>
@@ -193,6 +196,9 @@ export default function Receipts() {
                     </td>
                     <td className="px-5 py-3.5 text-right cursor-pointer" onClick={() => navigate(createPageUrl("ReceiptDetail") + `?id=${r.id}`)}>
                       <span className="text-sm font-semibold text-slate-800">R$ {(r.total_amount || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                    </td>
+                    <td className="px-5 py-3.5 text-center hidden md:table-cell cursor-pointer" onClick={() => navigate(createPageUrl("ReceiptDetail") + `?id=${r.id}`)}>
+                      <StatusBadge status={r.status || "em_aberto"} />
                     </td>
                     <td className="px-5 py-3.5 text-right hidden md:table-cell cursor-pointer" onClick={() => navigate(createPageUrl("ReceiptDetail") + `?id=${r.id}`)}>
                       <span className="text-xs text-slate-400">{new Date(r.created_date).toLocaleDateString("pt-BR")}</span>

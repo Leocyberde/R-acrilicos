@@ -287,6 +287,8 @@ async function initDB() {
       "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS is_urgent BOOLEAN DEFAULT FALSE",
       "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS is_urgent BOOLEAN DEFAULT FALSE",
       "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS is_urgent BOOLEAN DEFAULT FALSE",
+      "ALTER TABLE budgets ALTER COLUMN status SET DEFAULT 'em_aberto'",
+      "ALTER TABLE receipts ALTER COLUMN status SET DEFAULT 'em_aberto'",
     ];
     for (const sql of migrations) {
       await client.query(sql);

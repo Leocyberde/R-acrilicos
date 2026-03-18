@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 
 const statusConfig = {
+  em_aberto: { label: "Em Aberto", bg: "bg-sky-50", text: "text-sky-700", dot: "bg-sky-500" },
   pendente: { label: "Pendente", bg: "bg-amber-50", text: "text-amber-700", dot: "bg-amber-500" },
   aprovado: { label: "Aprovado", bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500" },
   reprovado: { label: "Reprovado", bg: "bg-red-50", text: "text-red-700", dot: "bg-red-500" },
@@ -12,6 +13,8 @@ const statusConfig = {
   vencido: { label: "Vencido", bg: "bg-red-50", text: "text-red-700", dot: "bg-red-500" },
   aceito_cliente: { label: "Aceito pelo Cliente", bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500" },
   recusado_cliente: { label: "Recusado pelo Cliente", bg: "bg-orange-50", text: "text-orange-700", dot: "bg-orange-500" },
+  orcamento_fechado: { label: "Orçamento Fechado", bg: "bg-slate-100", text: "text-slate-600", dot: "bg-slate-500" },
+  recibo_fechado: { label: "Recibo Fechado", bg: "bg-slate-100", text: "text-slate-600", dot: "bg-slate-500" },
 };
 
 export default function StatusBadge({ status }) {

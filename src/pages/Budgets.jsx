@@ -36,6 +36,8 @@ export default function Budgets() {
 
   const statusFilters = [
     { value: "all", label: "Todos" },
+    { value: "em_aberto", label: "Em Aberto" },
+    { value: "orcamento_fechado", label: "Fechados" },
     { value: "pendente", label: "Pendentes" },
     { value: "aprovado", label: "Aprovados" },
     { value: "reprovado", label: "Reprovados" },
