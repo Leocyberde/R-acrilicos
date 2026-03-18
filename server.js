@@ -711,7 +711,76 @@ app.put('/api/entities/WorkOrder/:id', optionalAuth, async (req, res) => {
   }
 });
 
-app.use('/api/entities/WorkOrder', buildEntityRoutes('work_orders'));
+function mapWorkOrder(row) {
+  if (!row) return row;
+  return {
+    ...row,
+    delivery_date: row.delivery_date || row.due_date || null,
+    start_datetime: row.start_datetime || (row.start_date ? new Date(row.start_date).toISOString() : null),
+  };
+}
+
+app.get('/api/entities/WorkOrder', optionalAuth, async (req, res) => {
+  try {
+    const { sort, limit, ...filters } = req.query;
+    let query = 'SELECT * FROM work_orders';
+    const vals = [];
+    const conditions = [];
+    for (const [k, v] of Object.entries(filters)) {
+      vals.push(v);
+      conditions.push(`${k} = $${vals.length}`);
+    }
+    if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
+    const sortCol = sort?.startsWith('-') ? sort.slice(1) : sort;
+    const sortDir = sort?.startsWith('-') ? 'DESC' : 'ASC';
+    if (sortCol) query += ` ORDER BY ${sortCol} ${sortDir}`;
+    if (limit) query += ` LIMIT ${parseInt(limit)}`;
+    const result = await pool.query(query, vals);
+    res.json(result.rows.map(mapWorkOrder));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/entities/WorkOrder/:id', optionalAuth, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM work_orders WHERE id = $1', [req.params.id]);
+    if (!result.rows[0]) return res.status(404).json({ error: 'Not found' });
+    res.json(mapWorkOrder(result.rows[0]));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/entities/WorkOrder', optionalAuth, async (req, res) => {
+  try {
+    const data = { ...req.body };
+    delete data.id;
+    data.created_date = new Date().toISOString();
+    data.updated_date = new Date().toISOString();
+    const cols = Object.keys(data);
+    const vals = Object.values(data).map(v =>
+      (typeof v === 'object' && v !== null) ? JSON.stringify(v) : v
+    );
+    const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ');
+    const result = await pool.query(
+      `INSERT INTO work_orders (${cols.join(', ')}) VALUES (${placeholders}) RETURNING *`,
+      vals
+    );
+    res.status(201).json(mapWorkOrder(result.rows[0]));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/entities/WorkOrder/:id', optionalAuth, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM work_orders WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 app.use('/api/entities/Receipt', buildEntityRoutes('receipts'));
 app.use('/api/entities/Financial', buildEntityRoutes('financial'));
 app.use('/api/entities/Client', buildEntityRoutes('clients'));

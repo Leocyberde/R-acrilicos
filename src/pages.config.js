@@ -74,6 +74,7 @@ import WorkOrderCreate from './pages/WorkOrderCreate';
 import WorkOrderDashboard from './pages/WorkOrderDashboard';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
+import Calendar from './pages/Calendar';
 import ClientPortal from './pages/ClientPortal';
 import ClientBudgets from './pages/ClientBudgets';
 import ClientProfile from './pages/ClientProfile';
@@ -108,6 +109,7 @@ export const PAGES = {
     "WorkOrderDashboard": WorkOrderDashboard,
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
+    "Calendar": Calendar,
     "ClientPortal": ClientPortal,
     "ClientBudgets": ClientBudgets,
     "ClientProfile": ClientProfile,

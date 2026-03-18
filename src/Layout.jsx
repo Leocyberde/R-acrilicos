@@ -18,6 +18,7 @@ import {
   Inbox,
   LogOut,
   User,
+  CalendarDays,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +33,7 @@ const navItems = [
   { name: "Financeiro", icon: TrendingUp, page: "Financial", module: "financial" },
   { name: "Produção", icon: Factory, page: "Production", module: "production" },
   { name: "Contas a Receber", icon: TrendingUp, page: "AccountsReceivable", module: "accounts_receivable" },
+  { name: "Calendário", icon: CalendarDays, page: "Calendar" },
 
   { name: "Meus Orçamentos", icon: FileText, page: "ClientBudgets", clientOnly: true },
   { name: "Solicitar Orçamento", icon: FileText, page: "ClientBudgetRequest", clientOnly: true },
@@ -135,7 +137,7 @@ export default function Layout({ children, currentPageName }) {
             if (user?.role === "cliente") {
               if (!item.clientOnly) return null;
             } else if (user?.role !== "admin") {
-              const allowedPages = ["WorkOrderDashboard", "WorkOrders", "Production"];
+              const allowedPages = ["WorkOrderDashboard", "WorkOrders", "Production", "Calendar"];
               if (!allowedPages.includes(item.page)) return null;
             }
             const isActive = currentPageName === item.page;
