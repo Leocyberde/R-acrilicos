@@ -201,29 +201,44 @@ export default function WorkOrderDashboard() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-100">
-                    <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">Cliente</th>
-                    <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">Descrição</th>
-                    <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">Data</th>
-                    <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">Status</th>
+                    <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Job</th>
+                    <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 hidden md:table-cell">Empresa</th>
+                    <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 hidden lg:table-cell">Produtor</th>
+                    <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">Cliente</th>
+                    <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 hidden md:table-cell">Itens</th>
+                    <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {orders.map(o => (
+                  {orders.map(o => {
+                    const itemCount = Array.isArray(o.items) ? o.items.length : 0;
+                    return (
                     <tr key={o.id} className="hover:bg-slate-50/50 cursor-pointer transition-colors" onClick={() => window.location.href = createPageUrl("WorkOrderDetail") + `?id=${o.id}`}>
-                      <td className="px-5 py-3">
-                        <p className="text-sm font-medium text-slate-800">{o.client_name}</p>
+                      <td className="px-4 py-3">
+                        <p className="text-sm font-semibold text-slate-800">{o.job || "—"}</p>
                       </td>
-                      <td className="px-5 py-3">
-                        <p className="text-sm text-slate-600">{o.description?.substring(0, 50) || "Sem descrição"}</p>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        <p className="text-sm text-slate-700 truncate max-w-[150px]">{o.client_name || "—"}</p>
                       </td>
-                      <td className="px-5 py-3 text-center">
-                        <span className="text-xs text-slate-600">{new Date(o.created_date).toLocaleDateString("pt-BR")}</span>
+                      <td className="px-4 py-3 hidden lg:table-cell">
+                        <p className="text-sm text-slate-600 truncate max-w-[130px]">{o.producer || "—"}</p>
                       </td>
-                      <td className="px-5 py-3 text-center">
+                      <td className="px-4 py-3 hidden sm:table-cell">
+                        <p className="text-sm text-slate-600 truncate max-w-[130px]">{o.client_name || "—"}</p>
+                      </td>
+                      <td className="px-4 py-3 text-center hidden md:table-cell">
+                        {itemCount > 0 ? (
+                          <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                            {itemCount} {itemCount === 1 ? "item" : "itens"}
+                          </span>
+                        ) : <span className="text-xs text-slate-400">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-center">
                         <StatusBadge status={o.status} />
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

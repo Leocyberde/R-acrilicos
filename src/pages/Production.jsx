@@ -174,10 +174,11 @@ export default function Production() {
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50">
                   <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">O.S.</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Cliente</th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Job</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider hidden md:table-cell">Descrição</th>
-                  <th className="text-center py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Entrega</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider hidden md:table-cell">Empresa</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider hidden lg:table-cell">Produtor</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider hidden sm:table-cell">Cliente</th>
+                  <th className="text-center py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider hidden md:table-cell">Itens</th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Status</th>
                   <th className="text-right py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Ações</th>
                 </tr>
@@ -186,6 +187,7 @@ export default function Production() {
                 {filtered.map(order => {
                   const urgent = isOrderUrgent(order);
                   const days = getDaysUntilDelivery(order.delivery_date);
+                  const itemCount = Array.isArray(order.items) ? order.items.length : 0;
                   return (
                   <tr key={order.id} className={`hover:bg-slate-50 transition-colors ${urgent ? "bg-red-50/50" : ""}`}>
                     <td className="py-3 px-4">
@@ -195,24 +197,22 @@ export default function Production() {
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <p className="text-sm font-medium text-slate-900">{order.client_name}</p>
-                    </td>
-                    <td className="py-3 px-4">
-                      <p className="text-sm text-slate-600">{order.job || "-"}</p>
+                      <p className="text-sm font-semibold text-slate-900">{order.job || "—"}</p>
                     </td>
                     <td className="py-3 px-4 hidden md:table-cell">
-                      <p className="text-sm text-slate-600 line-clamp-1">{order.description || "-"}</p>
+                      <p className="text-sm text-slate-700 truncate max-w-[150px]">{order.client_name || "—"}</p>
                     </td>
-                    <td className="py-3 px-4 text-center">
-                      {order.delivery_date ? (
-                        <div>
-                          <p className={`text-xs font-medium ${urgent ? "text-red-600" : "text-slate-600"}`}>{new Date(order.delivery_date).toLocaleDateString("pt-BR")}</p>
-                          {days !== null && order.status !== 'entregue' && (
-                            <p className={`text-xs ${days <= 0 ? "text-red-600 font-bold" : days <= 3 ? "text-orange-500 font-medium" : "text-slate-400"}`}>
-                              {days <= 0 ? "Vencido!" : `Faltam ${days}d`}
-                            </p>
-                          )}
-                        </div>
+                    <td className="py-3 px-4 hidden lg:table-cell">
+                      <p className="text-sm text-slate-600 truncate max-w-[130px]">{order.producer || "—"}</p>
+                    </td>
+                    <td className="py-3 px-4 hidden sm:table-cell">
+                      <p className="text-sm text-slate-600 truncate max-w-[130px]">{order.client_name || "—"}</p>
+                    </td>
+                    <td className="py-3 px-4 text-center hidden md:table-cell">
+                      {itemCount > 0 ? (
+                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                          {itemCount} {itemCount === 1 ? "item" : "itens"}
+                        </span>
                       ) : <span className="text-xs text-slate-400">—</span>}
                     </td>
                     <td className="py-3 px-4">
