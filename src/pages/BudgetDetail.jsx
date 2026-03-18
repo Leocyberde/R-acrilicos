@@ -100,6 +100,7 @@ export default function BudgetDetail() {
         status: "pendente",
         notes: budget.notes,
         start_date: new Date().toISOString().split("T")[0],
+        delivery_date: budget.delivery_date || null,
       });
 
       const receipt = await base44.entities.Receipt.create({
@@ -124,6 +125,7 @@ export default function BudgetDetail() {
         notes: budget.notes,
         status: "pendente",
         total_value: budget.total_with_margin || budget.total || 0,
+        delivery_date: budget.delivery_date || null,
       });
 
       setBudget(prev => ({ ...prev, status: "aprovado" }));
@@ -182,6 +184,7 @@ export default function BudgetDetail() {
       total_with_margin: budget.total_with_margin,
       total_with_margin_label: budget.total_with_margin_label,
       notes: budget.notes,
+      delivery_date: budget.delivery_date || null,
     });
     setSaving(false);
     navigate(createPageUrl("ReceiptDetail") + `?id=${receipt.id}`);

@@ -270,10 +270,10 @@ export default function ClientBudgets() {
     setSubmitting(true);
     try {
       await base44.entities.Budget.update(budget.id, {
-        status: "aprovado",
+        status: "aceito_cliente",
         client_response_date: new Date().toISOString(),
       });
-      setBudgets(prev => prev.map(b => b.id === budget.id ? { ...b, status: "aprovado" } : b));
+      setBudgets(prev => prev.map(b => b.id === budget.id ? { ...b, status: "aceito_cliente" } : b));
       toast.success("Orçamento aceito com sucesso!");
     } catch {
       toast.error("Erro ao aceitar orçamento.");
