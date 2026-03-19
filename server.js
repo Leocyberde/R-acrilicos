@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
@@ -18,7 +19,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'gestao-pro-secret-2024';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('localhost') ? false : { rejectUnauthorized: false }
+  ssl: { rejectUnauthorized: false }
 });
 
 const uploadsDir = path.join(__dirname, 'uploads');
