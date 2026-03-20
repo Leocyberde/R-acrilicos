@@ -29,6 +29,7 @@ export default function WhatsAppSettings() {
   const [waStatus, setWaStatus] = useState("disconnected");
   const [qrImage, setQrImage] = useState(null);
   const [settings, setSettings] = useState({ app_url: "", auto_connect: false });
+  const [detectedUrl, setDetectedUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -67,8 +68,9 @@ export default function WhatsAppSettings() {
   async function loadSettings() {
     try {
       const data = await localClient.whatsapp.getSettings();
+      setDetectedUrl(data.detected_url || "");
       setSettings({
-        app_url: data.app_url || "",
+        app_url: data.app_url || data.detected_url || "",
         auto_connect: data.auto_connect || false,
       });
     } catch {
@@ -270,15 +272,34 @@ export default function WhatsAppSettings() {
               <Link className="h-3.5 w-3.5" />
               URL do Sistema (para links nos menus)
             </Label>
-            <Input
-              value={settings.app_url}
-              onChange={(e) => setSettings((p) => ({ ...p, app_url: e.target.value }))}
-              className="mt-1"
-              placeholder="https://seu-app.replit.app"
-            />
-            <p className="text-xs text-slate-500 mt-1">
-              Link da sua aplicação. Será usado nos botões enviados pelo bot para o cliente acessar orçamentos e O.S.
-            </p>
+            <div className="flex gap-2 mt-1">
+              <Input
+                value={settings.app_url}
+                onChange={(e) => setSettings((p) => ({ ...p, app_url: e.target.value }))}
+                placeholder="https://seu-app.replit.app"
+              />
+              {detectedUrl && settings.app_url !== detectedUrl && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="shrink-0 text-xs px-3"
+                  onClick={() => setSettings((p) => ({ ...p, app_url: detectedUrl }))}
+                >
+                  Usar atual
+                </Button>
+              )}
+            </div>
+            <div className="mt-2 space-y-1">
+              {detectedUrl && (
+                <p className="text-xs text-green-700 bg-green-50 border border-green-100 rounded px-2 py-1.5 flex items-start gap-1.5">
+                  <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  <span>URL detectada automaticamente: <strong>{detectedUrl}</strong></span>
+                </p>
+              )}
+              <p className="text-xs text-slate-500">
+                É a URL desta aplicação. O bot usa esse link para mandar ao cliente quando ele pede orçamento ou quer ver suas O.S. Se publicar o app, atualize aqui com a nova URL.
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center justify-between py-1">

@@ -859,7 +859,10 @@ app.get('/api/whatsapp/settings', authMiddleware, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
   try {
     const result = await pool.query('SELECT * FROM whatsapp_settings ORDER BY id LIMIT 1');
-    res.json(result.rows[0] || { app_url: '', auto_connect: false });
+    const row = result.rows[0] || { app_url: '', auto_connect: false };
+    const domain = process.env.REPLIT_DEV_DOMAIN;
+    const detected_url = domain ? `https://${domain}` : '';
+    res.json({ ...row, detected_url });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -897,13 +900,18 @@ initDB().then(async () => {
   whatsappService.setPool(pool);
   try {
     const settingsResult = await pool.query('SELECT * FROM whatsapp_settings LIMIT 1');
+    const fallbackUrl = process.env.REPLIT_DEV_DOMAIN
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+      : '';
     if (settingsResult.rows.length > 0) {
       const cfg = settingsResult.rows[0];
-      if (cfg.app_url) whatsappService.setAppUrl(cfg.app_url);
+      whatsappService.setAppUrl(cfg.app_url || fallbackUrl);
       if (cfg.auto_connect) {
         console.log('[WhatsApp] Auto-connect ativado, conectando...');
         whatsappService.connect();
       }
+    } else if (fallbackUrl) {
+      whatsappService.setAppUrl(fallbackUrl);
     }
   } catch (e) {
     console.error('[WhatsApp] Falha ao carregar configurações:', e.message);
