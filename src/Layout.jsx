@@ -19,6 +19,7 @@ import {
   LogOut,
   User,
   CalendarDays,
+  Smartphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +45,7 @@ const navItems = [
   { name: "Usuários", icon: Users, page: "AdminUsers", adminOnly: true },
   { name: "Editor de Layout", icon: Settings, page: "LayoutEditor", adminOnly: true },
   { name: "Configurações", icon: Settings, page: "SettingsPage", adminOnly: true },
+  { name: "WhatsApp", icon: Smartphone, page: "WhatsAppSettings", adminOnly: true },
 ];
 
 export default function Layout({ children, currentPageName }) {

@@ -8,6 +8,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
+import * as whatsappService from './whatsapp/service.js';
 
 const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
@@ -211,6 +212,14 @@ async function initDB() {
         id SERIAL PRIMARY KEY,
         section_name VARCHAR(100),
         styles JSONB DEFAULT '{}',
+        created_date TIMESTAMP DEFAULT NOW(),
+        updated_date TIMESTAMP DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS whatsapp_settings (
+        id SERIAL PRIMARY KEY,
+        app_url VARCHAR(500) DEFAULT '',
+        auto_connect BOOLEAN DEFAULT FALSE,
         created_date TIMESTAMP DEFAULT NOW(),
         updated_date TIMESTAMP DEFAULT NOW()
       );
@@ -829,12 +838,76 @@ app.post('/api/integrations/upload', upload.single('file'), optionalAuth, (req, 
   res.json({ file_url: fileUrl, filename: req.file.filename });
 });
 
+app.get('/api/whatsapp/status', authMiddleware, (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+  res.json(whatsappService.getStatus());
+});
+
+app.post('/api/whatsapp/connect', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+  const result = await whatsappService.connect();
+  res.json(result);
+});
+
+app.post('/api/whatsapp/disconnect', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+  const result = await whatsappService.disconnect();
+  res.json(result);
+});
+
+app.get('/api/whatsapp/settings', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+  try {
+    const result = await pool.query('SELECT * FROM whatsapp_settings ORDER BY id LIMIT 1');
+    res.json(result.rows[0] || { app_url: '', auto_connect: false });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/whatsapp/settings', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+  try {
+    const { app_url, auto_connect } = req.body;
+    const existing = await pool.query('SELECT id FROM whatsapp_settings LIMIT 1');
+    if (existing.rows.length > 0) {
+      await pool.query(
+        'UPDATE whatsapp_settings SET app_url = $1, auto_connect = $2, updated_date = NOW() WHERE id = $3',
+        [app_url || '', auto_connect || false, existing.rows[0].id]
+      );
+    } else {
+      await pool.query(
+        'INSERT INTO whatsapp_settings (app_url, auto_connect) VALUES ($1, $2)',
+        [app_url || '', auto_connect || false]
+      );
+    }
+    whatsappService.setAppUrl(app_url || '');
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.use(express.static(path.join(__dirname, 'dist')));
 app.get('/{*path}', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-initDB().then(() => {
+initDB().then(async () => {
+  whatsappService.setPool(pool);
+  try {
+    const settingsResult = await pool.query('SELECT * FROM whatsapp_settings LIMIT 1');
+    if (settingsResult.rows.length > 0) {
+      const cfg = settingsResult.rows[0];
+      if (cfg.app_url) whatsappService.setAppUrl(cfg.app_url);
+      if (cfg.auto_connect) {
+        console.log('[WhatsApp] Auto-connect ativado, conectando...');
+        whatsappService.connect();
+      }
+    }
+  } catch (e) {
+    console.error('[WhatsApp] Falha ao carregar configurações:', e.message);
+  }
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
   });

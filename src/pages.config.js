@@ -78,6 +78,7 @@ import Calendar from './pages/Calendar';
 import ClientPortal from './pages/ClientPortal';
 import ClientBudgets from './pages/ClientBudgets';
 import ClientProfile from './pages/ClientProfile';
+import WhatsAppSettings from './pages/WhatsAppSettings';
 import __Layout from './Layout.jsx';
 
 
@@ -113,6 +114,7 @@ export const PAGES = {
     "ClientPortal": ClientPortal,
     "ClientBudgets": ClientBudgets,
     "ClientProfile": ClientProfile,
+    "WhatsAppSettings": WhatsAppSettings,
 }
 
 export const pagesConfig = {

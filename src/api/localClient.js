@@ -127,6 +127,14 @@ const functions = {
   },
 };
 
+const whatsapp = {
+  status: () => request('GET', '/whatsapp/status'),
+  connect: () => request('POST', '/whatsapp/connect'),
+  disconnect: () => request('POST', '/whatsapp/disconnect'),
+  getSettings: () => request('GET', '/whatsapp/settings'),
+  saveSettings: (data) => request('POST', '/whatsapp/settings', data),
+};
+
 export const localClient = {
   entities: {
     Budget: createEntityClient('Budget'),
@@ -145,4 +153,5 @@ export const localClient = {
   integrations,
   users,
   functions,
+  whatsapp,
 };
