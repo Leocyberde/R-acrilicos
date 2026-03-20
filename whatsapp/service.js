@@ -95,8 +95,15 @@ function fmtDate(d) {
 }
 
 async function getLink(path) {
-  const base = appUrl ? appUrl.replace(/\/$/, '') : '';
-  return base ? `${base}${path}` : null;
+  if (!appUrl) return null;
+  let base = appUrl.replace(/\/$/, '');
+  
+  // Se a base já termina com o path solicitado, não adiciona novamente
+  if (path && base.endsWith(path)) {
+    return base;
+  }
+  
+  return `${base}${path}`;
 }
 
 async function handleMessage(jid, text) {
