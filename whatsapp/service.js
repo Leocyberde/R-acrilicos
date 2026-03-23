@@ -8,6 +8,7 @@ import QRCode from 'qrcode';
 import P from 'pino';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { generateBudgetPDF } from './pdfGenerator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,6 +59,30 @@ async function sendMsg(jid, text) {
     await sock.sendMessage(jid, { text });
   } catch (e) {
     console.error('[WhatsApp] Send error:', e.message);
+  }
+}
+
+async function sendDoc(jid, buffer, fileName, caption) {
+  if (!sock || status !== 'connected') return;
+  try {
+    await sock.sendMessage(jid, {
+      document: buffer,
+      mimetype: 'application/pdf',
+      fileName,
+      caption: caption || '',
+    });
+  } catch (e) {
+    console.error('[WhatsApp] Send document error:', e.message);
+  }
+}
+
+async function getCompanySettings() {
+  if (!dbPool) return {};
+  try {
+    const result = await dbPool.query('SELECT * FROM settings ORDER BY id LIMIT 1');
+    return result.rows[0] || {};
+  } catch {
+    return {};
   }
 }
 
@@ -191,31 +216,41 @@ async function handleMessage(jid, text) {
       const client = clientResult.rows[0];
 
       const budgetsResult = await dbPool.query(
-        `SELECT id, job, status, total_with_margin, total, emission_date, validity_date
-         FROM budgets
+        `SELECT * FROM budgets
          WHERE (client_id = $1 OR client_name ILIKE $2)
            AND status NOT IN ('cancelado', 'recusado')
          ORDER BY created_date DESC
-         LIMIT 8`,
+         LIMIT 5`,
         [client.id, `%${client.name}%`]
       );
 
       if (budgetsResult.rows.length === 0) {
         await sendMsg(jid, `🔍 Nenhum orçamento em aberto para *${client.name}*.\n\nPara solicitar um novo orçamento, responda com *1*.\n\nDigite *menu* para voltar ao início.`);
-      } else {
-        const lines = budgetsResult.rows.map((b, i) => {
-          const valor = fmtCurrency(b.total_with_margin || b.total);
-          const st = fmtStatus(b.status);
-          const emissao = fmtDate(b.emission_date);
-          const validade = fmtDate(b.validity_date);
-          return `${i + 1}. 📄 *${b.job || 'Orçamento #' + b.id}*\n   • Status: ${st}\n   • Valor: ${valor}\n   • Emissão: ${emissao}\n   • Validade: ${validade}`;
-        });
-
-        const portalLink = await getLink('/ClientPortal');
-        const linkLine = portalLink ? `\n\n🔗 Acesse o portal completo: ${portalLink}` : '';
-        const msg = `📊 *Orçamentos de ${client.name}:*\n\n${lines.join('\n\n')}${linkLine}\n\nDigite *menu* para outras opções.`;
-        await sendMsg(jid, msg);
+        conversations.delete(phone);
+        return;
       }
+
+      const company = await getCompanySettings();
+      const count = budgetsResult.rows.length;
+
+      await sendMsg(jid, `📊 *${count} orçamento(s) encontrado(s) para ${client.name}.*\n\nEnviando os PDFs agora, aguarde...`);
+
+      for (const budget of budgetsResult.rows) {
+        try {
+          const pdfBuffer = await generateBudgetPDF(budget, company);
+          const valor = fmtCurrency(budget.total_with_margin || budget.total);
+          const status = fmtStatus(budget.status);
+          const fileName = `Orcamento_${budget.id}_${(budget.job || 'GestãoPro').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 30)}.pdf`;
+          const caption = `📄 *Orçamento #${budget.id}*\n• Job: ${budget.job || '-'}\n• Status: ${status}\n• Valor: ${valor}\n• Emissão: ${fmtDate(budget.emission_date)}\n• Validade: ${fmtDate(budget.validity_date)}`;
+          await sendDoc(jid, pdfBuffer, fileName, caption);
+          await new Promise(r => setTimeout(r, 800));
+        } catch (pdfErr) {
+          console.error(`[WhatsApp Bot] PDF generation error for budget ${budget.id}:`, pdfErr.message);
+          await sendMsg(jid, `⚠️ Não foi possível gerar o PDF do Orçamento #${budget.id}. Status: ${fmtStatus(budget.status)} — Valor: ${fmtCurrency(budget.total_with_margin || budget.total)}`);
+        }
+      }
+
+      await sendMsg(jid, `✅ PDFs enviados!\n\nDigite *menu* para outras opções ou *1* para solicitar um novo orçamento.`);
     } catch (e) {
       console.error('[WhatsApp Bot] CPF lookup error:', e.message);
       await sendMsg(jid, '⚠️ Erro ao consultar seus orçamentos. Por favor, tente novamente mais tarde ou contate o suporte (opção *4*).');
