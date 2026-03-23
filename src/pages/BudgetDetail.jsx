@@ -297,7 +297,18 @@ export default function BudgetDetail() {
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="h-3.5 w-3.5 mr-1.5" /> Imprimir
           </Button>
-          <Button variant="outline" size="sm" onClick={() => downloadPDF('budget-content', `orcamento-${String(budget.id ?? '')}.pdf`)}>
+          <Button variant="outline" size="sm" onClick={async () => {
+            const token = localStorage.getItem('auth_token');
+            const res = await fetch(`/api/budgets/${budget.id}/pdf`, { headers: { Authorization: `Bearer ${token}` } });
+            if (!res.ok) { toast.error('Erro ao gerar PDF'); return; }
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `orcamento-${budget.id}.pdf`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}>
             <Download className="h-3.5 w-3.5 mr-1.5" /> PDF
           </Button>
           <Button
@@ -398,7 +409,7 @@ export default function BudgetDetail() {
           <div className="flex items-start justify-between pb-4 mb-4 border-b-2 border-slate-800">
             <div className="flex-1">
               {companySettings?.company_logo ? (
-                <img src={companySettings.company_logo} alt="Logo" className="h-14 mb-2 object-contain" />
+                <img src={companySettings.company_logo} alt="Logo" className="h-24 mb-2 object-contain" />
               ) : (
                 <p className="text-xl font-bold text-slate-900">{companySettings?.company_name || "Minha Empresa"}</p>
               )}

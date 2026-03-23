@@ -9,6 +9,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
 import * as whatsappService from './whatsapp/service.js';
+import { generateBudgetPDF, generateReceiptPDF } from './whatsapp/pdfGenerator.js';
 
 const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
@@ -932,6 +933,42 @@ app.post('/api/integrations/upload', upload.single('file'), optionalAuth, (req, 
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   const fileUrl = `/uploads/${req.file.filename}`;
   res.json({ file_url: fileUrl, filename: req.file.filename });
+});
+
+app.get('/api/budgets/:id/pdf', authMiddleware, async (req, res) => {
+  try {
+    const budgetResult = await pool.query('SELECT * FROM budgets WHERE id = $1', [req.params.id]);
+    if (budgetResult.rows.length === 0) return res.status(404).json({ error: 'Orçamento não encontrado' });
+    const budget = budgetResult.rows[0];
+    const settingsResult = await pool.query('SELECT * FROM settings ORDER BY id LIMIT 1');
+    const company = settingsResult.rows[0] || {};
+    const pdfBuffer = await generateBudgetPDF(budget, company);
+    const fileName = `Orcamento_${budget.id}_${(budget.job || 'gestao').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 30)}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.send(pdfBuffer);
+  } catch (e) {
+    console.error('PDF budget error:', e.message);
+    res.status(500).json({ error: 'Erro ao gerar PDF' });
+  }
+});
+
+app.get('/api/receipts/:id/pdf', authMiddleware, async (req, res) => {
+  try {
+    const receiptResult = await pool.query('SELECT * FROM receipts WHERE id = $1', [req.params.id]);
+    if (receiptResult.rows.length === 0) return res.status(404).json({ error: 'Recibo não encontrado' });
+    const receipt = receiptResult.rows[0];
+    const settingsResult = await pool.query('SELECT * FROM settings ORDER BY id LIMIT 1');
+    const company = settingsResult.rows[0] || {};
+    const pdfBuffer = await generateReceiptPDF(receipt, company);
+    const fileName = `Recibo_${receipt.id}_${(receipt.job || 'gestao').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 30)}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.send(pdfBuffer);
+  } catch (e) {
+    console.error('PDF receipt error:', e.message);
+    res.status(500).json({ error: 'Erro ao gerar PDF' });
+  }
 });
 
 app.get('/api/whatsapp/status', authMiddleware, (req, res) => {

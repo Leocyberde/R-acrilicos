@@ -158,7 +158,18 @@ export default function ReceiptDetail() {
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="h-3.5 w-3.5 mr-1.5" /> Imprimir
           </Button>
-          <Button variant="outline" size="sm" onClick={() => downloadPDF('receipt-content', `recibo-${String(receipt.id ?? '')}.pdf`)}>
+          <Button variant="outline" size="sm" onClick={async () => {
+            const token = localStorage.getItem('auth_token');
+            const res = await fetch(`/api/receipts/${receipt.id}/pdf`, { headers: { Authorization: `Bearer ${token}` } });
+            if (!res.ok) { alert('Erro ao gerar PDF'); return; }
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `recibo-${receipt.id}.pdf`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}>
             <Download className="h-3.5 w-3.5 mr-1.5" /> PDF
           </Button>
           <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
