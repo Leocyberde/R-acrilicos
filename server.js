@@ -650,6 +650,102 @@ function buildEntityRoutes(tableName, orderDefault = '-created_date') {
   return router;
 }
 
+app.post('/api/public/clients/register', async (req, res) => {
+  try {
+    const {
+      name, person_type, phone, mobile, email,
+      cpf, cnpj, cpf_cnpj,
+      address_zip_code, address_street, address_number,
+      address_complement, address_city, address_state, notes,
+    } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Nome é obrigatório.' });
+    }
+    if (!phone && !mobile && !email) {
+      return res.status(400).json({ error: 'Informe pelo menos um contato (telefone, celular ou email).' });
+    }
+
+    const docValue = cpf_cnpj || cnpj || cpf || null;
+
+    const result = await pool.query(
+      `INSERT INTO clients
+        (name, person_type, phone, mobile, email, cpf, cnpj, cpf_cnpj,
+         address_zip_code, address_street, address_number, address_complement,
+         address_city, address_state, notes, created_date, updated_date)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,NOW(),NOW())
+       RETURNING *`,
+      [
+        name.trim(),
+        person_type || 'fisica',
+        phone || null, mobile || null, email || null,
+        cpf || null, cnpj || null, docValue,
+        address_zip_code || null, address_street || null, address_number || null,
+        address_complement || null, address_city || null, address_state || null,
+        notes || null,
+      ]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (e) {
+    console.error('[Public] Client register error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/public/budget-requests', async (req, res) => {
+  try {
+    const {
+      client_name, client_email, client_phone,
+      job, producer, delivery_date, description, notes, items, status,
+    } = req.body;
+
+    if (!client_name || !client_name.trim()) {
+      return res.status(400).json({ error: 'Nome do cliente é obrigatório.' });
+    }
+
+    let clientId = null;
+    if (client_email) {
+      const existing = await pool.query(
+        'SELECT id FROM clients WHERE email = $1 LIMIT 1',
+        [client_email]
+      );
+      if (existing.rows.length > 0) clientId = existing.rows[0].id;
+    }
+
+    const result = await pool.query(
+      `INSERT INTO budget_requests
+        (client_name, client_email, job, producer, delivery_date,
+         description, notes, items, attachments, status, created_date, updated_date)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'[]',$9,NOW(),NOW())
+       RETURNING *`,
+      [
+        client_name.trim(),
+        client_email || null,
+        job || null,
+        producer || null,
+        delivery_date || null,
+        description || null,
+        notes || null,
+        JSON.stringify(items || []),
+        status || 'nova',
+      ]
+    );
+
+    if (client_phone && !clientId) {
+      const byPhone = await pool.query(
+        `SELECT id FROM clients WHERE phone = $1 OR mobile = $1 LIMIT 1`,
+        [client_phone]
+      );
+      if (byPhone.rows.length > 0) clientId = byPhone.rows[0].id;
+    }
+
+    res.status(201).json(result.rows[0]);
+  } catch (e) {
+    console.error('[Public] Budget request error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.use('/api/entities/Budget', buildEntityRoutes('budgets'));
 app.use('/api/entities/BudgetRequest', buildEntityRoutes('budget_requests'));
 

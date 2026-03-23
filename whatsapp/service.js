@@ -125,12 +125,8 @@ async function handleMessage(jid, text) {
 
   if (state.step === 'menu') {
     if (input === '1') {
-      const link = await getLink('/ClientBudgetRequest');
-      const msg = link
-        ? `📋 *Solicitar Orçamento*\n\nAcesse o link abaixo para preencher seu pedido de orçamento:\n\n🔗 ${link}\n\nNossos especialistas analisarão sua solicitação e entrarão em contato em breve! 😊`
-        : `📋 *Solicitar Orçamento*\n\nEntre em contato conosco diretamente para solicitar seu orçamento. Responda com *4* para falar com nossa equipe!`;
-      await sendMsg(jid, msg);
-      conversations.delete(phone);
+      state.step = 'awaiting_has_registration';
+      await sendMsg(jid, '📋 *Solicitar Orçamento*\n\nVocê já tem cadastro conosco?\n\nResponda *sim* ou *não*.\n\n_Digite *menu* a qualquer momento para voltar ao início._');
     } else if (input === '2') {
       state.step = 'awaiting_cpf';
       await sendMsg(jid, '🔍 *Consultar Orçamentos*\n\nPor favor, informe seu *CPF ou CNPJ* (pode incluir pontuação ou somente números):\n\nExemplo: _123.456.789-00_ ou _12345678900_');
@@ -146,6 +142,27 @@ async function handleMessage(jid, text) {
       conversations.delete(phone);
     } else {
       await sendMsg(jid, '❓ Opção não reconhecida. Responda com *1*, *2*, *3* ou *4*.\n\nDigite *menu* para ver o cardápio novamente.');
+    }
+  } else if (state.step === 'awaiting_has_registration') {
+    const YES = ['sim', 's', 'yes', '1', 'tenho', 'já tenho', 'ja tenho'];
+    const NO = ['não', 'nao', 'n', 'no', 'não tenho', 'nao tenho', 'nunca', 'novo'];
+
+    if (YES.includes(lc)) {
+      const link = await getLink('/ClientBudgetRequest');
+      const msg = link
+        ? `✅ Perfeito! Acesse o link abaixo para preencher seu pedido de orçamento:\n\n🔗 ${link}\n\nNossos especialistas analisarão e entrarão em contato em breve! 😊`
+        : `✅ Perfeito! Entre em contato conosco diretamente para solicitar seu orçamento. Responda com *4* para falar com nossa equipe!`;
+      await sendMsg(jid, msg);
+      conversations.delete(phone);
+    } else if (NO.includes(lc)) {
+      const link = await getLink('/ClientRegister');
+      const msg = link
+        ? `👤 *Novo Cadastro*\n\nSem problema! Primeiro faça seu cadastro acessando o link abaixo:\n\n🔗 ${link}\n\nApós o cadastro, você poderá solicitar seu orçamento diretamente pelo formulário! 😊`
+        : `👤 *Novo Cadastro*\n\nEntre em contato com nossa equipe para realizar seu cadastro. Responda com *4* para falar com o suporte.`;
+      await sendMsg(jid, msg);
+      conversations.delete(phone);
+    } else {
+      await sendMsg(jid, '❓ Não entendi. Responda *sim* se já tem cadastro ou *não* se for novo cliente.\n\nDigite *menu* para voltar ao início.');
     }
   } else if (state.step === 'awaiting_cpf') {
     const digits = input.replace(/\D/g, '');

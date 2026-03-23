@@ -16,12 +16,21 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
 
+const PUBLIC_ROUTES = ['/ClientBudgetRequest', '/ClientRegister'];
+
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isAuthenticated } = useAuth();
   const location = useLocation();
 
   if (location.pathname === '/select') {
     return <RoleSelector />;
+  }
+
+  const isPublicRoute = PUBLIC_ROUTES.includes(location.pathname);
+
+  if (isPublicRoute) {
+    const Page = Pages[location.pathname.replace('/', '')];
+    if (Page) return <Page />;
   }
 
   if (isLoadingAuth) {

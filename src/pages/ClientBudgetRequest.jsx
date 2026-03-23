@@ -1,15 +1,16 @@
-import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Paperclip, Send, CheckCircle2, X, Upload } from "lucide-react";
+import { Plus, Trash2, Send, CheckCircle2, X } from "lucide-react";
 import { toast } from "sonner";
 
 export default function ClientBudgetRequest() {
   const [form, setForm] = useState({
     client_name: "",
+    client_email: "",
+    client_phone: "",
     job: "",
     producer: "",
     delivery_date: "",
@@ -17,22 +18,8 @@ export default function ClientBudgetRequest() {
     notes: "",
   });
   const [items, setItems] = useState([{ name: "", quantity: 1 }]);
-  const [attachments, setAttachments] = useState([]);
-  const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-
-  useEffect(() => {
-    async function loadClient() {
-      const user = await base44.auth.me();
-      if (user) {
-        const clients = await base44.entities.Client.list();
-        const userClient = clients.find(c => c.email === user.email);
-        setForm(prev => ({ ...prev, client_name: userClient?.name || user.full_name || "" }));
-      }
-    }
-    loadClient();
-  }, []);
 
   const handleChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -50,51 +37,45 @@ export default function ClientBudgetRequest() {
     setItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
   };
 
-  const handleFileChange = async (e) => {
-    const files = Array.from(e.target.files);
-    if (!files.length) return;
-    setUploading(true);
-    for (const file of files) {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setAttachments(prev => [...prev, { name: file.name, url: file_url, size: file.size }]);
-    }
-    setUploading(false);
-    e.target.value = "";
-  };
-
-  const removeAttachment = (idx) => {
-    setAttachments(prev => prev.filter((_, i) => i !== idx));
-  };
-
   const handleSubmit = async () => {
     if (!form.client_name.trim()) {
       toast.error("Por favor, informe seu nome.");
       return;
     }
+    if (!form.client_phone.trim() && !form.client_email.trim()) {
+      toast.error("Informe pelo menos um contato (telefone ou email).");
+      return;
+    }
     const validItems = items.filter(i => i.name.trim());
     if (validItems.length === 0) {
-      toast.error("Adicione pelo menos um item.");
+      toast.error("Adicione pelo menos um item ao pedido.");
       return;
     }
     setSubmitting(true);
     try {
-      const user = await base44.auth.me();
-      await base44.entities.BudgetRequest.create({
-        client_name: form.client_name,
-        client_email: user?.email || "",
-        job: form.job,
-        producer: form.producer,
-        delivery_date: form.delivery_date || null,
-        description: form.description,
-        notes: form.notes,
-        items: validItems,
-        attachments,
-        status: "nova",
+      const res = await fetch('/api/public/budget-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_name: form.client_name,
+          client_email: form.client_email,
+          client_phone: form.client_phone,
+          job: form.job,
+          producer: form.producer,
+          delivery_date: form.delivery_date || null,
+          description: form.description,
+          notes: form.notes,
+          items: validItems,
+          status: "nova",
+        }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Erro ao enviar');
+      }
       setSubmitted(true);
     } catch (err) {
-      toast.error("Erro ao enviar solicitação. Tente novamente.");
-      console.error("BudgetRequest create error:", err);
+      toast.error(err.message || "Erro ao enviar solicitação. Tente novamente.");
     } finally {
       setSubmitting(false);
     }
@@ -113,10 +94,8 @@ export default function ClientBudgetRequest() {
             variant="outline"
             onClick={() => {
               setSubmitted(false);
-              setForm({ client_name: "", job: "", producer: "", description: "", notes: "" });
+              setForm({ client_name: "", client_email: "", client_phone: "", job: "", producer: "", delivery_date: "", description: "", notes: "" });
               setItems([{ name: "", quantity: 1 }]);
-              setAttachments([]);
-              location.reload();
             }}
             className="mt-4"
           >
@@ -130,36 +109,53 @@ export default function ClientBudgetRequest() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-slate-100 py-10 px-4">
       <div className="max-w-2xl mx-auto space-y-6">
-        {/* Header */}
         <div className="text-center space-y-1">
           <h1 className="text-3xl font-bold text-slate-900">Solicitação de Orçamento</h1>
           <p className="text-slate-500">Preencha o formulário abaixo e envie sua solicitação</p>
         </div>
 
-        {/* Nome do Cliente */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-          <h2 className="font-semibold text-slate-800 text-base border-b pb-2">Informações</h2>
+          <h2 className="font-semibold text-slate-800 text-base border-b pb-2">Seus Dados</h2>
           <div>
-            <Label>Empresa/Cliente <span className="text-red-500">*</span></Label>
+            <Label>Nome / Empresa <span className="text-red-500">*</span></Label>
             <Input
               className="mt-1"
-              placeholder="Sua empresa"
+              placeholder="Seu nome ou nome da empresa"
               value={form.client_name}
               onChange={e => handleChange("client_name", e.target.value)}
-              disabled
             />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label>Telefone / WhatsApp</Label>
+              <Input
+                className="mt-1"
+                placeholder="(11) 99999-0000"
+                value={form.client_phone}
+                onChange={e => handleChange("client_phone", e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Email</Label>
+              <Input
+                className="mt-1"
+                type="email"
+                placeholder="email@exemplo.com"
+                value={form.client_email}
+                onChange={e => handleChange("client_email", e.target.value)}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Card pedido */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
           <h2 className="font-semibold text-slate-800 text-base border-b pb-2">Dados do Pedido</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <Label>Job</Label>
+              <Label>Job / Projeto</Label>
               <Input
                 className="mt-1"
-                placeholder="Nome do projeto / job"
+                placeholder="Nome do projeto"
                 value={form.job}
                 onChange={e => handleChange("job", e.target.value)}
               />
@@ -175,8 +171,7 @@ export default function ClientBudgetRequest() {
             </div>
           </div>
           <div>
-            <Label>Data de Entrega Necessária <span className="text-red-500">*</span></Label>
-            <p className="text-xs text-slate-500 mb-1">Informe a data em que você precisa que o projeto esteja pronto</p>
+            <Label>Data de Entrega Necessária</Label>
             <Input
               className="mt-1"
               type="date"
@@ -186,10 +181,9 @@ export default function ClientBudgetRequest() {
           </div>
         </div>
 
-        {/* Itens */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
           <div className="flex items-center justify-between border-b pb-2">
-            <h2 className="font-semibold text-slate-800 text-base">Itens</h2>
+            <h2 className="font-semibold text-slate-800 text-base">Itens <span className="text-red-500">*</span></h2>
             <Button size="sm" variant="outline" onClick={addItem}>
               <Plus className="h-4 w-4 mr-1" /> Adicionar Item
             </Button>
@@ -221,7 +215,6 @@ export default function ClientBudgetRequest() {
           </div>
         </div>
 
-        {/* Descrição e Observações */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
           <h2 className="font-semibold text-slate-800 text-base border-b pb-2">Detalhes</h2>
           <div>
@@ -246,48 +239,10 @@ export default function ClientBudgetRequest() {
           </div>
         </div>
 
-        {/* Anexos */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-          <h2 className="font-semibold text-slate-800 text-base border-b pb-2">Arquivos Anexados</h2>
-          <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl p-6 cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-all">
-            {uploading ? (
-              <div className="flex items-center gap-2 text-indigo-600">
-                <div className="h-5 w-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-                <span className="text-sm">Enviando...</span>
-              </div>
-            ) : (
-              <>
-                <Upload className="h-8 w-8 text-slate-400 mb-2" />
-                <span className="text-sm text-slate-500">Clique para selecionar arquivos</span>
-                <span className="text-xs text-slate-400 mt-1">Qualquer tipo de arquivo</span>
-              </>
-            )}
-            <input type="file" multiple className="hidden" onChange={handleFileChange} disabled={uploading} />
-          </label>
-
-          {attachments.length > 0 && (
-            <div className="space-y-2 mt-2">
-              {attachments.map((att, idx) => (
-                <div key={idx} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Paperclip className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                    <span className="text-sm text-slate-700 truncate">{att.name}</span>
-                    <span className="text-xs text-slate-400 flex-shrink-0">({(att.size / 1024).toFixed(0)}KB)</span>
-                  </div>
-                  <button onClick={() => removeAttachment(idx)} className="text-slate-400 hover:text-red-500 flex-shrink-0 ml-2">
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Submit */}
         <Button
           className="w-full bg-indigo-600 hover:bg-indigo-700 h-12 text-base"
           onClick={handleSubmit}
-          disabled={submitting || uploading}
+          disabled={submitting}
         >
           {submitting ? (
             <div className="flex items-center gap-2">

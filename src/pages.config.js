@@ -58,6 +58,7 @@ import Budgets from './pages/Budgets';
 import Client from './pages/Client';
 import ClientBudgetRequest from './pages/ClientBudgetRequest';
 import ClientCreate from './pages/ClientCreate';
+import ClientRegister from './pages/ClientRegister';
 import ClientDetail from './pages/ClientDetail';
 import Clients from './pages/Clients';
 import Dashboard from './pages/Dashboard';
@@ -94,6 +95,7 @@ export const PAGES = {
     "Client": Client,
     "ClientBudgetRequest": ClientBudgetRequest,
     "ClientCreate": ClientCreate,
+    "ClientRegister": ClientRegister,
     "ClientDetail": ClientDetail,
     "Clients": Clients,
     "Dashboard": Dashboard,
