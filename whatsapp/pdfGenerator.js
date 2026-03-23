@@ -1,50 +1,14 @@
 import PDFDocument from 'pdfkit';
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
 function fmtCurrency(value) {
   return `R$ ${Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function fmtDate(d) {
   if (!d) return '-';
-  try {
-    return new Date(d).toLocaleDateString('pt-BR');
-  } catch {
-    return String(d);
-  }
-}
-
-function fmtStatus(s) {
-  const map = {
-    pendente: 'Pendente',
-    em_aberto: 'Em Aberto',
-    aprovado: 'Aprovado',
-    recusado: 'Recusado',
-    em_producao: 'Em Produção',
-    concluido: 'Concluído',
-    cancelado: 'Cancelado',
-    entregue: 'Entregue',
-    nova: 'Nova',
-    em_andamento: 'Em Andamento',
-    aceito_cliente: 'Aceito pelo Cliente',
-  };
-  return map[s] || s;
-}
-
-const COLORS = {
-  primary: '#4F46E5',
-  dark: '#1E293B',
-  gray: '#64748B',
-  lightGray: '#F1F5F9',
-  border: '#E2E8F0',
-  white: '#FFFFFF',
-  green: '#059669',
-};
-
-function hexToRgb(hex) {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return [r, g, b];
+  try { return new Date(d).toLocaleDateString('pt-BR'); } catch { return String(d); }
 }
 
 async function fetchLogoBuffer(logoUrl) {
@@ -52,497 +16,550 @@ async function fetchLogoBuffer(logoUrl) {
   try {
     if (logoUrl.startsWith('data:')) {
       const base64Data = logoUrl.split(',')[1];
-      if (!base64Data) return null;
-      return Buffer.from(base64Data, 'base64');
+      return base64Data ? Buffer.from(base64Data, 'base64') : null;
     }
     const url = logoUrl.startsWith('http') ? logoUrl : `http://localhost:3001${logoUrl}`;
     const res = await fetch(url);
     if (!res.ok) return null;
-    const arrayBuffer = await res.arrayBuffer();
-    return Buffer.from(arrayBuffer);
-  } catch {
-    return null;
-  }
+    return Buffer.from(await res.arrayBuffer());
+  } catch { return null; }
 }
 
+// ── Color palette matching the panel ─────────────────────────────────────────
+const C = {
+  slate900: '#0f172a',
+  slate800: '#1e293b',
+  slate700: '#334155',
+  slate600: '#475569',
+  slate500: '#64748b',
+  slate400: '#94a3b8',
+  slate300: '#cbd5e1',
+  slate200: '#e2e8f0',
+  slate50:  '#f8fafc',
+  red600:   '#dc2626',
+  white:    '#ffffff',
+};
+
+// ── Line drawing helper ───────────────────────────────────────────────────────
+function hLine(doc, x, y, width, color, thickness = 0.5) {
+  doc.save()
+    .strokeColor(color)
+    .lineWidth(thickness)
+    .moveTo(x, y)
+    .lineTo(x + width, y)
+    .stroke()
+    .restore();
+}
+
+// ── Budget PDF — same layout as the panel ───────────────────────────────────
 export async function generateBudgetPDF(budget, company = {}) {
   const logoBuffer = await fetchLogoBuffer(company.company_logo);
 
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({
-      margin: 40,
-      size: 'A4',
-      info: {
-        Title: `Orçamento #${budget.id}`,
-        Author: company.company_name || 'GestãoPro',
-      },
-    });
-
+    const doc = new PDFDocument({ margin: 0, size: 'A4' });
     const chunks = [];
-    doc.on('data', chunk => chunks.push(chunk));
+    doc.on('data', c => chunks.push(c));
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    const PAGE_WIDTH = doc.page.width - 80;
-    const companyName = company.company_name || 'GestãoPro';
+    const ML = 40;               // margin left
+    const MR = 40;               // margin right
+    const PW = doc.page.width - ML - MR;   // printable width
+    const companyName = company.company_name || '';
 
-    const HEADER_H = 110;
+    let y = 40;
 
-    // ── Header background ──────────────────────────────────────────
-    doc.rect(0, 0, doc.page.width, HEADER_H)
-      .fill(hexToRgb(COLORS.primary));
+    // ── COMPANY HEADER ───────────────────────────────────────────────────────
+    // Left: logo / company name + contact info
+    // Right: "Orçamento" + dates
 
-    // Logo or Company name
+    const headerStartY = y;
+    const leftW = PW * 0.55;
+    const rightW = PW * 0.42;
+    const rightX = ML + PW - rightW;
+
+    // Logo
     if (logoBuffer) {
       try {
-        doc.image(logoBuffer, 40, 12, { fit: [160, 86], align: 'left', valign: 'center' });
+        doc.image(logoBuffer, ML, y, { fit: [leftW, 90], align: 'left' });
+        y += 96;
       } catch {
-        doc.fillColor(COLORS.white)
-          .font('Helvetica-Bold')
-          .fontSize(20)
-          .text(companyName, 40, 30, { width: PAGE_WIDTH / 2 });
+        doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(16)
+          .text(companyName, ML, y, { width: leftW });
+        y += 22;
       }
     } else {
-      doc.fillColor(COLORS.white)
-        .font('Helvetica-Bold')
-        .fontSize(20)
-        .text(companyName, 40, 30, { width: PAGE_WIDTH / 2 });
+      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(16)
+        .text(companyName, ML, y, { width: leftW });
+      y += 22;
     }
 
-    // Company info on right
-    const infoLines = [];
-    if (company.company_name) infoLines.push(company.company_name);
-    if (company.cnpj) infoLines.push(`CNPJ: ${company.cnpj}`);
-    if (company.company_phone) infoLines.push(`Tel: ${company.company_phone}`);
-    if (company.company_email) infoLines.push(company.company_email);
+    // Contact info below logo/name
+    const contactY = logoBuffer ? headerStartY + 96 : y;
+    let cy = contactY;
+    if (companyName && logoBuffer) {
+      doc.fillColor(C.slate600).font('Helvetica-Bold').fontSize(8).text(companyName, ML, cy, { width: leftW });
+      cy += 11;
+    }
+    if (company.company_phone) {
+      doc.fillColor(C.slate700).font('Helvetica').fontSize(8).text(company.company_phone, ML, cy, { width: leftW });
+      cy += 11;
+    }
+    if (company.company_email) {
+      doc.fillColor(C.slate700).font('Helvetica').fontSize(8).text(company.company_email, ML, cy, { width: leftW });
+      cy += 11;
+    }
+    if (company.company_email2) {
+      doc.fillColor(C.slate700).font('Helvetica').fontSize(8).text(company.company_email2, ML, cy, { width: leftW });
+      cy += 11;
+    }
+    if (company.company_address) {
+      doc.fillColor(C.slate700).font('Helvetica').fontSize(8).text(company.company_address, ML, cy, { width: leftW });
+      cy += 11;
+    }
 
-    doc.font('Helvetica')
-      .fontSize(8)
-      .fillColor('#CBD5E1');
-    infoLines.forEach((line, i) => {
-      doc.text(line, doc.page.width / 2, 20 + (i * 13), {
-        width: PAGE_WIDTH / 2,
-        align: 'right',
-      });
-    });
+    // Right side: "Orçamento" + dates
+    const emissionDate = budget.emission_date
+      ? fmtDate(budget.emission_date)
+      : fmtDate(budget.created_date);
 
-    // ── Budget title bar ──────────────────────────────────────────
-    doc.rect(0, HEADER_H, doc.page.width, 36)
-      .fill(hexToRgb(COLORS.dark));
+    doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(26)
+      .text('Orçamento', rightX, headerStartY, { width: rightW, align: 'right' });
+    doc.fillColor(C.slate600).font('Helvetica').fontSize(9)
+      .text(`Data: ${emissionDate}`, rightX, headerStartY + 32, { width: rightW, align: 'right' });
+    if (budget.validity_date) {
+      doc.fillColor(C.slate500).font('Helvetica').fontSize(8)
+        .text(`Válido até: ${fmtDate(budget.validity_date)}`, rightX, headerStartY + 44, { width: rightW, align: 'right' });
+    }
 
-    doc.fillColor(COLORS.white)
-      .font('Helvetica-Bold')
-      .fontSize(14)
-      .text(`ORÇAMENTO Nº ${budget.id}`, 40, HEADER_H + 11, { width: PAGE_WIDTH });
+    // Number below "Orçamento"
+    doc.fillColor(C.slate700).font('Helvetica').fontSize(8)
+      .text(`Nº ${budget.id}`, rightX, headerStartY + 57, { width: rightW, align: 'right' });
 
-    // Status badge on right
-    const statusText = fmtStatus(budget.status);
-    doc.font('Helvetica')
-      .fontSize(9)
-      .text(statusText, 40, HEADER_H + 15, { width: PAGE_WIDTH, align: 'right' });
+    y = Math.max(cy, headerStartY + 70) + 10;
 
-    let y = HEADER_H + 54;
+    // Header border (border-b-2 border-slate-800)
+    hLine(doc, ML, y, PW, C.slate800, 2);
+    y += 12;
 
-    // ── Info cards (two columns) ─────────────────────────────────
-    const col1X = 40;
-    const col2X = doc.page.width / 2 + 10;
-    const colW = doc.page.width / 2 - 50;
-    const cardH = 80;
+    // ── JOB / PRODUTOR / EMPRESA ─────────────────────────────────────────────
+    const labelW = 72;
+    const valW = PW - labelW;
 
-    doc.rect(col1X, y, colW, cardH).fill(hexToRgb(COLORS.lightGray));
-    doc.rect(col2X, y, colW, cardH).fill(hexToRgb(COLORS.lightGray));
-
-    // Left card: Client info
-    doc.fillColor(COLORS.gray).font('Helvetica-Bold').fontSize(7).text('CLIENTE', col1X + 10, y + 10);
-    doc.fillColor(COLORS.dark).font('Helvetica-Bold').fontSize(11).text(budget.client_name || '-', col1X + 10, y + 22, { width: colW - 20 });
-    if (budget.client_email) {
-      doc.fillColor(COLORS.gray).font('Helvetica').fontSize(8).text(budget.client_email, col1X + 10, y + 37, { width: colW - 20 });
+    if (budget.job) {
+      doc.fillColor(C.slate800).font('Helvetica-Bold').fontSize(9).text('JOB:', ML, y, { width: labelW, continued: false });
+      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text(budget.job, ML + labelW, y, { width: valW });
+      y += 14;
+    }
+    if (budget.producer) {
+      doc.fillColor(C.slate700).font('Helvetica-Bold').fontSize(9).text('Produtor:', ML, y, { width: labelW, continued: false });
+      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text(budget.producer, ML + labelW, y, { width: valW });
+      y += 14;
+    }
+    if (budget.client_name) {
+      doc.fillColor(C.slate700).font('Helvetica-Bold').fontSize(9).text('Empresa:', ML, y, { width: labelW, continued: false });
+      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text(budget.client_name, ML + labelW, y, { width: valW });
+      y += 14;
     }
     if (budget.client_phone) {
-      doc.fillColor(COLORS.gray).font('Helvetica').fontSize(8).text(budget.client_phone, col1X + 10, y + 49, { width: colW - 20 });
-    }
-
-    // Right card: Dates
-    doc.fillColor(COLORS.gray).font('Helvetica-Bold').fontSize(7).text('INFORMAÇÕES', col2X + 10, y + 10);
-    const rightInfo = [
-      ['Emissão:', fmtDate(budget.emission_date)],
-      ['Validade:', fmtDate(budget.validity_date)],
-      ['Job:', budget.job || '-'],
-      ['Produtor:', budget.producer || '-'],
-    ];
-    rightInfo.forEach(([label, value], i) => {
-      doc.fillColor(COLORS.gray).font('Helvetica-Bold').fontSize(8)
-        .text(label, col2X + 10, y + 22 + i * 13, { width: 55, continued: false });
-      doc.fillColor(COLORS.dark).font('Helvetica').fontSize(8)
-        .text(value, col2X + 65, y + 22 + i * 13, { width: colW - 75 });
-    });
-
-    y += cardH + 20;
-
-    // ── Description ──────────────────────────────────────────────
-    if (budget.description) {
-      doc.fillColor(COLORS.gray).font('Helvetica-Bold').fontSize(8).text('DESCRIÇÃO', 40, y);
+      doc.fillColor(C.slate700).font('Helvetica').fontSize(8).text('Telefone:', ML, y, { width: labelW, continued: false });
+      doc.fillColor(C.slate800).font('Helvetica').fontSize(8).text(budget.client_phone, ML + labelW, y, { width: valW });
       y += 12;
-      doc.fillColor(COLORS.dark).font('Helvetica').fontSize(9)
-        .text(budget.description, 40, y, { width: PAGE_WIDTH });
-      y += doc.heightOfString(budget.description, { width: PAGE_WIDTH }) + 15;
+    }
+    if (budget.client_email) {
+      doc.fillColor(C.slate700).font('Helvetica').fontSize(8).text('E-mail:', ML, y, { width: labelW, continued: false });
+      doc.fillColor(C.slate800).font('Helvetica').fontSize(8).text(budget.client_email, ML + labelW, y, { width: valW });
+      y += 12;
     }
 
-    // ── Items table ──────────────────────────────────────────────
-    doc.fillColor(COLORS.gray).font('Helvetica-Bold').fontSize(8).text('ITENS DO ORÇAMENTO', 40, y);
+    // Section border (border-b border-slate-300)
+    y += 4;
+    hLine(doc, ML, y, PW, C.slate300, 0.5);
     y += 10;
 
-    const tableTop = y;
-    const COL = {
-      num: { x: 40, w: 30 },
-      desc: { x: 75, w: 260 },
-      qty: { x: 340, w: 55 },
-      unit: { x: 400, w: 70 },
-      total: { x: 475, w: 75 },
-    };
+    // ── DESCRIPTION ──────────────────────────────────────────────────────────
+    if (budget.description) {
+      doc.fillColor(C.slate600).font('Helvetica-Oblique').fontSize(9)
+        .text(budget.description, ML, y, { width: PW });
+      y += doc.heightOfString(budget.description, { width: PW, font: 'Helvetica-Oblique', size: 9 }) + 10;
+    }
 
-    doc.rect(40, tableTop, PAGE_WIDTH, 20).fill(hexToRgb(COLORS.primary));
-    doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(8);
-    doc.text('#', COL.num.x + 4, tableTop + 6, { width: COL.num.w });
-    doc.text('Descrição', COL.desc.x + 4, tableTop + 6, { width: COL.desc.w });
-    doc.text('Qtd', COL.qty.x + 4, tableTop + 6, { width: COL.qty.w, align: 'center' });
-    doc.text('Unit.', COL.unit.x + 4, tableTop + 6, { width: COL.unit.w, align: 'right' });
-    doc.text('Total', COL.total.x + 4, tableTop + 6, { width: COL.total.w, align: 'right' });
-
-    y = tableTop + 20;
-
+    // ── ITEMS TABLE ───────────────────────────────────────────────────────────
     const items = Array.isArray(budget.items) ? budget.items : [];
-    if (items.length === 0) {
-      doc.rect(40, y, PAGE_WIDTH, 22).fill(hexToRgb(COLORS.lightGray));
-      doc.fillColor(COLORS.gray).font('Helvetica').fontSize(8)
-        .text('Nenhum item cadastrado.', 44, y + 7, { width: PAGE_WIDTH });
-      y += 22;
-    } else {
-      items.forEach((item, i) => {
-        const rowH = 22;
-        const bgColor = i % 2 === 0 ? COLORS.white : COLORS.lightGray;
-        doc.rect(40, y, PAGE_WIDTH, rowH).fill(hexToRgb(bgColor));
+    if (items.length > 0) {
+      const COL = {
+        item:  { x: ML,         w: PW * 0.50 },
+        qty:   { x: ML + PW * 0.50, w: PW * 0.12 },
+        unit:  { x: ML + PW * 0.62, w: PW * 0.19 },
+        total: { x: ML + PW * 0.81, w: PW * 0.19 },
+      };
 
+      // Table header
+      doc.fillColor(C.slate800).font('Helvetica-Bold').fontSize(9)
+        .text('Item', COL.item.x, y, { width: COL.item.w })
+        .text('Qtd', COL.qty.x, y, { width: COL.qty.w, align: 'center' })
+        .text('Preço Unit.', COL.unit.x, y, { width: COL.unit.w, align: 'right' })
+        .text('Subtotal', COL.total.x, y, { width: COL.total.w, align: 'right' });
+      y += 13;
+      hLine(doc, ML, y, PW, C.slate800, 1.5);
+      y += 6;
+
+      // Table rows
+      items.forEach((item, i) => {
         const qty = Number(item.quantity || 1);
         const unitPrice = Number(item.unit_price || item.price || 0);
-        const lineTotal = Number(item.total || item.line_total || (qty * unitPrice) || 0);
+        const lineTotal = Number(item.total || item.line_total || qty * unitPrice || 0);
 
-        doc.fillColor(COLORS.gray).font('Helvetica').fontSize(8)
-          .text(String(i + 1), COL.num.x + 4, y + 7, { width: COL.num.w });
-        doc.fillColor(COLORS.dark).font('Helvetica').fontSize(8)
-          .text(item.name || item.description || '-', COL.desc.x + 4, y + 7, { width: COL.desc.w });
-        doc.fillColor(COLORS.dark).font('Helvetica').fontSize(8)
-          .text(String(qty), COL.qty.x + 4, y + 7, { width: COL.qty.w, align: 'center' });
-        doc.fillColor(COLORS.dark).font('Helvetica').fontSize(8)
-          .text(unitPrice > 0 ? fmtCurrency(unitPrice) : '-', COL.unit.x + 4, y + 7, { width: COL.unit.w, align: 'right' });
-        doc.fillColor(COLORS.dark).font('Helvetica').fontSize(8)
-          .text(lineTotal > 0 ? fmtCurrency(lineTotal) : '-', COL.total.x + 4, y + 7, { width: COL.total.w, align: 'right' });
+        const rowText = item.name || item.description || '-';
+        const rowH = Math.max(doc.heightOfString(rowText, { width: COL.item.w - 4, size: 9 }), 14);
 
-        y += rowH;
+        doc.fillColor(C.slate800).font('Helvetica').fontSize(9)
+          .text(rowText, COL.item.x, y, { width: COL.item.w - 4 });
+        doc.fillColor(C.slate700).font('Helvetica').fontSize(9)
+          .text(String(qty), COL.qty.x, y, { width: COL.qty.w, align: 'center' })
+          .text(fmtCurrency(unitPrice), COL.unit.x, y, { width: COL.unit.w, align: 'right' })
+          .text(fmtCurrency(lineTotal), COL.total.x, y, { width: COL.total.w, align: 'right' });
+
+        y += rowH + 4;
+        hLine(doc, ML, y, PW, C.slate200, 0.5);
+        y += 5;
       });
+
+      y += 6;
     }
 
-    doc.rect(40, y, PAGE_WIDTH, 1).fill(hexToRgb(COLORS.border));
+    // ── TOTALS ────────────────────────────────────────────────────────────────
+    const totalsX = ML + PW - 200;
+    const totalsW = 200;
+
+    const subtotal = Number(budget.subtotal || 0);
+    const discount = Number(budget.discount || 0);
+    const total = Number(budget.total || 0);
+    const totalWithMargin = Number(budget.total_with_margin || 0);
+
+    if (discount > 0 && subtotal > 0) {
+      doc.fillColor(C.red600).font('Helvetica').fontSize(9)
+        .text(`Desconto (${discount}%):`, totalsX, y, { width: totalsW / 2 });
+      doc.fillColor(C.red600).font('Helvetica').fontSize(9)
+        .text(`- ${fmtCurrency(subtotal * discount / 100)}`, totalsX + totalsW / 2, y, { width: totalsW / 2, align: 'right' });
+      y += 13;
+    }
+
+    // border-t-2 border-slate-800
+    hLine(doc, totalsX, y, totalsW, C.slate800, 1.5);
+    y += 6;
+
+    const totalLabel = budget.total_label || 'Sem Nota Total';
+    doc.fillColor(C.slate800).font('Helvetica-Bold').fontSize(9)
+      .text(totalLabel, totalsX, y, { width: totalsW / 2 });
+    doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9)
+      .text(fmtCurrency(total), totalsX + totalsW / 2, y, { width: totalsW / 2, align: 'right' });
+    y += 14;
+
+    if (totalWithMargin > 0) {
+      hLine(doc, totalsX, y, totalsW, C.slate400, 0.5);
+      y += 6;
+      const marginLabel = budget.total_with_margin_label || 'Com Nota Total';
+      doc.fillColor(C.slate800).font('Helvetica-Bold').fontSize(9)
+        .text(marginLabel, totalsX, y, { width: totalsW / 2 });
+      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9)
+        .text(fmtCurrency(totalWithMargin), totalsX + totalsW / 2, y, { width: totalsW / 2, align: 'right' });
+      y += 14;
+    }
+
+    if (budget.producer) {
+      doc.fillColor(C.slate500).font('Helvetica-Oblique').fontSize(8)
+        .text(`Elaborado por: ${budget.producer}`, totalsX, y, { width: totalsW, align: 'right' });
+      y += 12;
+    }
+
     y += 10;
 
-    // ── Totals ────────────────────────────────────────────────────
-    const totalBoxX = doc.page.width / 2;
-    const totalBoxW = doc.page.width / 2 - 40;
-
-    const totals = [];
-    if (Number(budget.subtotal) > 0) {
-      totals.push(['Subtotal:', fmtCurrency(budget.subtotal)]);
-    }
-    if (Number(budget.discount) > 0) {
-      totals.push([`Desconto (${budget.discount}%):`, '-' + fmtCurrency(Number(budget.subtotal || 0) * Number(budget.discount) / 100)]);
-    }
-    if (Number(budget.total) > 0 && Number(budget.total_with_margin) > 0 && budget.apply_margin) {
-      totals.push([budget.total_label || 'Total s/ margem:', fmtCurrency(budget.total)]);
-    }
-
-    const mainTotalValue = budget.total_with_margin || budget.total || budget.total_value || 0;
-    const mainTotalLabel = budget.apply_margin && Number(budget.total_with_margin) > 0
-      ? (budget.total_with_margin_label || 'Total Final:')
-      : 'Total:';
-
-    totals.forEach(([label, value]) => {
-      doc.rect(totalBoxX, y, totalBoxW, 18).fill(hexToRgb(COLORS.lightGray));
-      doc.fillColor(COLORS.gray).font('Helvetica').fontSize(8).text(label, totalBoxX + 8, y + 5, { width: totalBoxW / 2 });
-      doc.fillColor(COLORS.dark).font('Helvetica-Bold').fontSize(8).text(value, totalBoxX + 8, y + 5, { width: totalBoxW - 16, align: 'right' });
-      y += 18;
-    });
-
-    doc.rect(totalBoxX, y, totalBoxW, 28).fill(hexToRgb(COLORS.primary));
-    doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(10).text(mainTotalLabel, totalBoxX + 8, y + 9, { width: totalBoxW / 2 });
-    doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(12).text(fmtCurrency(mainTotalValue), totalBoxX + 8, y + 8, { width: totalBoxW - 16, align: 'right' });
-    y += 28;
-
-    // ── Payment terms ─────────────────────────────────────────────
-    if (budget.payment_terms) {
-      y += 15;
-      doc.fillColor(COLORS.gray).font('Helvetica-Bold').fontSize(8).text('CONDIÇÕES DE PAGAMENTO', 40, y);
-      y += 12;
-      doc.fillColor(COLORS.dark).font('Helvetica').fontSize(9).text(budget.payment_terms, 40, y, { width: PAGE_WIDTH });
-      y += doc.heightOfString(budget.payment_terms, { width: PAGE_WIDTH }) + 10;
-    }
-
-    // ── Notes ─────────────────────────────────────────────────────
+    // ── NOTES ────────────────────────────────────────────────────────────────
     if (budget.notes) {
-      y += 10;
-      doc.fillColor(COLORS.gray).font('Helvetica-Bold').fontSize(8).text('OBSERVAÇÕES', 40, y);
-      y += 12;
-      doc.fillColor(COLORS.dark).font('Helvetica').fontSize(9).text(budget.notes, 40, y, { width: PAGE_WIDTH });
+      doc.rect(ML, y, PW, 6 + doc.heightOfString(budget.notes, { width: PW - 16, size: 9 }) + 18)
+        .fillAndStroke(C.slate50, C.slate200);
+
+      y += 8;
+      doc.fillColor(C.slate700).font('Helvetica-Bold').fontSize(7)
+        .text('OBSERVAÇÕES', ML + 8, y);
+      y += 11;
+      doc.fillColor(C.slate700).font('Helvetica').fontSize(9)
+        .text(budget.notes, ML + 8, y, { width: PW - 16 });
+      y += doc.heightOfString(budget.notes, { width: PW - 16, size: 9 }) + 14;
     }
 
-    // ── Footer ────────────────────────────────────────────────────
-    const footerY = doc.page.height - 50;
-    doc.rect(0, footerY, doc.page.width, 50).fill(hexToRgb(COLORS.lightGray));
-    doc.fillColor(COLORS.gray).font('Helvetica').fontSize(7)
-      .text(
-        `Documento gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · ${companyName}`,
-        40, footerY + 18,
-        { width: PAGE_WIDTH, align: 'center' }
-      );
+    // ── FOOTER NOTES (ATENÇÃO) ────────────────────────────────────────────────
+    if (company.footer_notes) {
+      y += 6;
+      hLine(doc, ML, y, PW, C.slate300, 0.5);
+      y += 8;
+      doc.fillColor(C.red600).font('Helvetica-Bold').fontSize(9)
+        .text('ATENÇÃO ! LEIA AS INSTRUÇÕES ABAIXO', ML, y, { width: PW });
+      y += 13;
+      doc.fillColor(C.slate800).font('Helvetica').fontSize(8)
+        .text(company.footer_notes, ML, y, { width: PW });
+      y += doc.heightOfString(company.footer_notes, { width: PW, size: 8 }) + 10;
+    }
+
+    // ── THANK YOU FOOTER ──────────────────────────────────────────────────────
+    y += 14;
+    hLine(doc, ML, y, PW, C.slate200, 0.5);
+    y += 10;
+    doc.fillColor(C.slate500).font('Helvetica').fontSize(8)
+      .text('Caso você tenha alguma dúvida entre em contato conosco', ML, y, { width: PW, align: 'center' });
+    y += 12;
+    doc.fillColor(C.slate800).font('Helvetica-Bold').fontSize(9)
+      .text('AGRADECEMOS SUA PREFERÊNCIA!', ML, y, { width: PW, align: 'center' });
 
     doc.end();
   });
 }
 
+// ── Receipt PDF — same visual style ─────────────────────────────────────────
 export async function generateReceiptPDF(receipt, company = {}) {
   const logoBuffer = await fetchLogoBuffer(company.company_logo);
 
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({
-      margin: 40,
-      size: 'A4',
-      info: {
-        Title: `Recibo #${receipt.id}`,
-        Author: company.company_name || 'GestãoPro',
-      },
-    });
-
+    const doc = new PDFDocument({ margin: 0, size: 'A4' });
     const chunks = [];
-    doc.on('data', chunk => chunks.push(chunk));
+    doc.on('data', c => chunks.push(c));
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    const PAGE_WIDTH = doc.page.width - 80;
-    const companyName = company.company_name || 'GestãoPro';
+    const ML = 40;
+    const MR = 40;
+    const PW = doc.page.width - ML - MR;
+    const companyName = company.company_name || '';
 
-    const HEADER_H = 110;
+    let y = 40;
 
-    // ── Header background ──────────────────────────────────────────
-    doc.rect(0, 0, doc.page.width, HEADER_H)
-      .fill(hexToRgb(COLORS.primary));
+    // ── COMPANY HEADER ───────────────────────────────────────────────────────
+    const headerStartY = y;
+    const leftW = PW * 0.55;
+    const rightW = PW * 0.42;
+    const rightX = ML + PW - rightW;
 
-    // Logo or Company name
     if (logoBuffer) {
       try {
-        doc.image(logoBuffer, 40, 12, { fit: [160, 86], align: 'left', valign: 'center' });
+        doc.image(logoBuffer, ML, y, { fit: [leftW, 90], align: 'left' });
+        y += 96;
       } catch {
-        doc.fillColor(COLORS.white)
-          .font('Helvetica-Bold')
-          .fontSize(20)
-          .text(companyName, 40, 30, { width: PAGE_WIDTH / 2 });
+        doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(16)
+          .text(companyName, ML, y, { width: leftW });
+        y += 22;
       }
     } else {
-      doc.fillColor(COLORS.white)
-        .font('Helvetica-Bold')
-        .fontSize(20)
-        .text(companyName, 40, 30, { width: PAGE_WIDTH / 2 });
+      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(16)
+        .text(companyName, ML, y, { width: leftW });
+      y += 22;
     }
 
-    // Company info on right
-    const infoLines = [];
-    if (company.company_name) infoLines.push(company.company_name);
-    if (company.cnpj) infoLines.push(`CNPJ: ${company.cnpj}`);
-    if (company.company_phone) infoLines.push(`Tel: ${company.company_phone}`);
-    if (company.company_email) infoLines.push(company.company_email);
+    const contactY = logoBuffer ? headerStartY + 96 : y;
+    let cy = contactY;
+    if (companyName && logoBuffer) {
+      doc.fillColor(C.slate600).font('Helvetica-Bold').fontSize(8).text(companyName, ML, cy, { width: leftW });
+      cy += 11;
+    }
+    if (company.company_phone) {
+      doc.fillColor(C.slate700).font('Helvetica').fontSize(8).text(company.company_phone, ML, cy, { width: leftW });
+      cy += 11;
+    }
+    if (company.company_email) {
+      doc.fillColor(C.slate700).font('Helvetica').fontSize(8).text(company.company_email, ML, cy, { width: leftW });
+      cy += 11;
+    }
+    if (company.company_address) {
+      doc.fillColor(C.slate700).font('Helvetica').fontSize(8).text(company.company_address, ML, cy, { width: leftW });
+      cy += 11;
+    }
 
-    doc.font('Helvetica')
-      .fontSize(8)
-      .fillColor('#CBD5E1');
-    infoLines.forEach((line, i) => {
-      doc.text(line, doc.page.width / 2, 20 + (i * 13), {
-        width: PAGE_WIDTH / 2,
-        align: 'right',
-      });
-    });
+    const emissionDate = fmtDate(receipt.emission_date || receipt.created_date);
 
-    // ── Receipt title bar ──────────────────────────────────────────
-    doc.rect(0, HEADER_H, doc.page.width, 36)
-      .fill(hexToRgb(COLORS.dark));
+    doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(26)
+      .text('Recibo', rightX, headerStartY, { width: rightW, align: 'right' });
+    doc.fillColor(C.slate600).font('Helvetica').fontSize(9)
+      .text(`Data: ${emissionDate}`, rightX, headerStartY + 32, { width: rightW, align: 'right' });
+    if (receipt.due_date) {
+      doc.fillColor(C.slate500).font('Helvetica').fontSize(8)
+        .text(`Vencimento: ${fmtDate(receipt.due_date)}`, rightX, headerStartY + 44, { width: rightW, align: 'right' });
+    }
+    doc.fillColor(C.slate700).font('Helvetica').fontSize(8)
+      .text(`Nº ${receipt.id}`, rightX, headerStartY + 57, { width: rightW, align: 'right' });
 
-    doc.fillColor(COLORS.white)
-      .font('Helvetica-Bold')
-      .fontSize(14)
-      .text(`RECIBO Nº ${receipt.id}`, 40, HEADER_H + 11, { width: PAGE_WIDTH });
+    y = Math.max(cy, headerStartY + 70) + 10;
 
-    const statusText = fmtStatus(receipt.status);
-    doc.font('Helvetica')
-      .fontSize(9)
-      .text(statusText, 40, HEADER_H + 15, { width: PAGE_WIDTH, align: 'right' });
+    hLine(doc, ML, y, PW, C.slate800, 2);
+    y += 12;
 
-    let y = HEADER_H + 54;
+    // ── JOB / PRODUTOR / EMPRESA ─────────────────────────────────────────────
+    const labelW = 72;
+    const valW = PW - labelW;
 
-    // ── Info cards (two columns) ─────────────────────────────────
-    const col1X = 40;
-    const col2X = doc.page.width / 2 + 10;
-    const colW = doc.page.width / 2 - 50;
-    const cardH = 80;
-
-    doc.rect(col1X, y, colW, cardH).fill(hexToRgb(COLORS.lightGray));
-    doc.rect(col2X, y, colW, cardH).fill(hexToRgb(COLORS.lightGray));
-
-    // Left card: Client info
-    doc.fillColor(COLORS.gray).font('Helvetica-Bold').fontSize(7).text('CLIENTE', col1X + 10, y + 10);
-    doc.fillColor(COLORS.dark).font('Helvetica-Bold').fontSize(11).text(receipt.client_name || '-', col1X + 10, y + 22, { width: colW - 20 });
-    if (receipt.client_email) {
-      doc.fillColor(COLORS.gray).font('Helvetica').fontSize(8).text(receipt.client_email, col1X + 10, y + 37, { width: colW - 20 });
+    if (receipt.job) {
+      doc.fillColor(C.slate800).font('Helvetica-Bold').fontSize(9).text('JOB:', ML, y, { width: labelW });
+      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text(receipt.job, ML + labelW, y, { width: valW });
+      y += 14;
+    }
+    if (receipt.producer) {
+      doc.fillColor(C.slate700).font('Helvetica-Bold').fontSize(9).text('Produtor:', ML, y, { width: labelW });
+      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text(receipt.producer, ML + labelW, y, { width: valW });
+      y += 14;
+    }
+    if (receipt.client_name) {
+      doc.fillColor(C.slate700).font('Helvetica-Bold').fontSize(9).text('Empresa:', ML, y, { width: labelW });
+      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text(receipt.client_name, ML + labelW, y, { width: valW });
+      y += 14;
     }
     if (receipt.client_phone) {
-      doc.fillColor(COLORS.gray).font('Helvetica').fontSize(8).text(receipt.client_phone, col1X + 10, y + 49, { width: colW - 20 });
-    }
-
-    // Right card: Info
-    doc.fillColor(COLORS.gray).font('Helvetica-Bold').fontSize(7).text('INFORMAÇÕES', col2X + 10, y + 10);
-    const rightInfo = [
-      ['Emissão:', fmtDate(receipt.emission_date || receipt.created_date)],
-      ['Vencimento:', fmtDate(receipt.due_date)],
-      ['Job:', receipt.job || '-'],
-      ['Produtor:', receipt.producer || '-'],
-    ];
-    rightInfo.forEach(([label, value], i) => {
-      doc.fillColor(COLORS.gray).font('Helvetica-Bold').fontSize(8)
-        .text(label, col2X + 10, y + 22 + i * 13, { width: 55, continued: false });
-      doc.fillColor(COLORS.dark).font('Helvetica').fontSize(8)
-        .text(value, col2X + 65, y + 22 + i * 13, { width: colW - 75 });
-    });
-
-    y += cardH + 20;
-
-    // ── Description ──────────────────────────────────────────────
-    if (receipt.description) {
-      doc.fillColor(COLORS.gray).font('Helvetica-Bold').fontSize(8).text('DESCRIÇÃO', 40, y);
+      doc.fillColor(C.slate700).font('Helvetica').fontSize(8).text('Telefone:', ML, y, { width: labelW });
+      doc.fillColor(C.slate800).font('Helvetica').fontSize(8).text(receipt.client_phone, ML + labelW, y, { width: valW });
       y += 12;
-      doc.fillColor(COLORS.dark).font('Helvetica').fontSize(9)
-        .text(receipt.description, 40, y, { width: PAGE_WIDTH });
-      y += doc.heightOfString(receipt.description, { width: PAGE_WIDTH }) + 15;
+    }
+    if (receipt.client_email) {
+      doc.fillColor(C.slate700).font('Helvetica').fontSize(8).text('E-mail:', ML, y, { width: labelW });
+      doc.fillColor(C.slate800).font('Helvetica').fontSize(8).text(receipt.client_email, ML + labelW, y, { width: valW });
+      y += 12;
+    }
+    if (receipt.client_address) {
+      doc.fillColor(C.slate700).font('Helvetica').fontSize(8).text('Endereço:', ML, y, { width: labelW });
+      doc.fillColor(C.slate800).font('Helvetica').fontSize(8).text(receipt.client_address, ML + labelW, y, { width: valW });
+      y += 12;
     }
 
-    // ── Items table ──────────────────────────────────────────────
+    y += 4;
+    hLine(doc, ML, y, PW, C.slate300, 0.5);
+    y += 10;
+
+    // ── DESCRIPTION ──────────────────────────────────────────────────────────
+    if (receipt.description) {
+      doc.fillColor(C.slate600).font('Helvetica-Oblique').fontSize(9)
+        .text(receipt.description, ML, y, { width: PW });
+      y += doc.heightOfString(receipt.description, { width: PW, size: 9 }) + 10;
+    }
+
+    // ── ITEMS TABLE ───────────────────────────────────────────────────────────
     const items = Array.isArray(receipt.items) ? receipt.items : [];
     if (items.length > 0) {
-      doc.fillColor(COLORS.gray).font('Helvetica-Bold').fontSize(8).text('ITENS', 40, y);
-      y += 10;
-
-      const tableTop = y;
       const COL = {
-        num: { x: 40, w: 30 },
-        desc: { x: 75, w: 260 },
-        qty: { x: 340, w: 55 },
-        unit: { x: 400, w: 70 },
-        total: { x: 475, w: 75 },
+        item:  { x: ML,             w: PW * 0.50 },
+        qty:   { x: ML + PW * 0.50, w: PW * 0.12 },
+        unit:  { x: ML + PW * 0.62, w: PW * 0.19 },
+        total: { x: ML + PW * 0.81, w: PW * 0.19 },
       };
 
-      doc.rect(40, tableTop, PAGE_WIDTH, 20).fill(hexToRgb(COLORS.primary));
-      doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(8);
-      doc.text('#', COL.num.x + 4, tableTop + 6, { width: COL.num.w });
-      doc.text('Descrição', COL.desc.x + 4, tableTop + 6, { width: COL.desc.w });
-      doc.text('Qtd', COL.qty.x + 4, tableTop + 6, { width: COL.qty.w, align: 'center' });
-      doc.text('Unit.', COL.unit.x + 4, tableTop + 6, { width: COL.unit.w, align: 'right' });
-      doc.text('Total', COL.total.x + 4, tableTop + 6, { width: COL.total.w, align: 'right' });
+      doc.fillColor(C.slate800).font('Helvetica-Bold').fontSize(9)
+        .text('Item', COL.item.x, y, { width: COL.item.w })
+        .text('Qtd', COL.qty.x, y, { width: COL.qty.w, align: 'center' })
+        .text('Preço Unit.', COL.unit.x, y, { width: COL.unit.w, align: 'right' })
+        .text('Subtotal', COL.total.x, y, { width: COL.total.w, align: 'right' });
+      y += 13;
+      hLine(doc, ML, y, PW, C.slate800, 1.5);
+      y += 6;
 
-      y = tableTop + 20;
-
-      items.forEach((item, i) => {
-        const rowH = 22;
-        const bgColor = i % 2 === 0 ? COLORS.white : COLORS.lightGray;
-        doc.rect(40, y, PAGE_WIDTH, rowH).fill(hexToRgb(bgColor));
-
+      items.forEach((item) => {
         const qty = Number(item.quantity || 1);
         const unitPrice = Number(item.unit_price || 0);
         const lineTotal = qty * unitPrice;
 
-        doc.fillColor(COLORS.gray).font('Helvetica').fontSize(8)
-          .text(String(i + 1), COL.num.x + 4, y + 7, { width: COL.num.w });
-        doc.fillColor(COLORS.dark).font('Helvetica').fontSize(8)
-          .text(item.name || item.description || '-', COL.desc.x + 4, y + 7, { width: COL.desc.w });
-        doc.fillColor(COLORS.dark).font('Helvetica').fontSize(8)
-          .text(String(qty), COL.qty.x + 4, y + 7, { width: COL.qty.w, align: 'center' });
-        doc.fillColor(COLORS.dark).font('Helvetica').fontSize(8)
-          .text(unitPrice > 0 ? fmtCurrency(unitPrice) : '-', COL.unit.x + 4, y + 7, { width: COL.unit.w, align: 'right' });
-        doc.fillColor(COLORS.dark).font('Helvetica').fontSize(8)
-          .text(lineTotal > 0 ? fmtCurrency(lineTotal) : '-', COL.total.x + 4, y + 7, { width: COL.total.w, align: 'right' });
+        const rowText = item.name || item.description || '-';
+        const rowH = Math.max(doc.heightOfString(rowText, { width: COL.item.w - 4, size: 9 }), 14);
 
-        y += rowH;
+        doc.fillColor(C.slate800).font('Helvetica').fontSize(9)
+          .text(rowText, COL.item.x, y, { width: COL.item.w - 4 });
+        doc.fillColor(C.slate700).font('Helvetica').fontSize(9)
+          .text(String(qty), COL.qty.x, y, { width: COL.qty.w, align: 'center' })
+          .text(fmtCurrency(unitPrice), COL.unit.x, y, { width: COL.unit.w, align: 'right' })
+          .text(fmtCurrency(lineTotal), COL.total.x, y, { width: COL.total.w, align: 'right' });
+
+        y += rowH + 4;
+        hLine(doc, ML, y, PW, C.slate200, 0.5);
+        y += 5;
       });
 
-      doc.rect(40, y, PAGE_WIDTH, 1).fill(hexToRgb(COLORS.border));
-      y += 10;
+      y += 6;
     }
 
-    // ── Totals ────────────────────────────────────────────────────
-    const totalBoxX = doc.page.width / 2;
-    const totalBoxW = doc.page.width / 2 - 40;
+    // ── TOTALS ────────────────────────────────────────────────────────────────
+    const totalsX = ML + PW - 200;
+    const totalsW = 200;
 
     const subtotal = Number(receipt.subtotal || receipt.total_amount || 0);
     const discount = Number(receipt.discount || 0);
     const totalAmount = Number(receipt.total_amount || 0);
     const totalWithMargin = Number(receipt.total_with_margin || 0);
 
-    if (subtotal > 0 && discount > 0) {
-      doc.rect(totalBoxX, y, totalBoxW, 18).fill(hexToRgb(COLORS.lightGray));
-      doc.fillColor(COLORS.gray).font('Helvetica').fontSize(8).text('Subtotal:', totalBoxX + 8, y + 5, { width: totalBoxW / 2 });
-      doc.fillColor(COLORS.dark).font('Helvetica-Bold').fontSize(8).text(fmtCurrency(subtotal), totalBoxX + 8, y + 5, { width: totalBoxW - 16, align: 'right' });
-      y += 18;
-
-      doc.rect(totalBoxX, y, totalBoxW, 18).fill(hexToRgb(COLORS.lightGray));
-      doc.fillColor(COLORS.gray).font('Helvetica').fontSize(8).text(`Desconto (${discount}%):`, totalBoxX + 8, y + 5, { width: totalBoxW / 2 });
-      doc.fillColor(COLORS.dark).font('Helvetica-Bold').fontSize(8).text('-' + fmtCurrency(subtotal * discount / 100), totalBoxX + 8, y + 5, { width: totalBoxW - 16, align: 'right' });
-      y += 18;
+    if (discount > 0 && subtotal > 0) {
+      doc.fillColor(C.red600).font('Helvetica').fontSize(9)
+        .text(`Desconto (${discount}%):`, totalsX, y, { width: totalsW / 2 });
+      doc.fillColor(C.red600).font('Helvetica').fontSize(9)
+        .text(`- ${fmtCurrency(subtotal * discount / 100)}`, totalsX + totalsW / 2, y, { width: totalsW / 2, align: 'right' });
+      y += 13;
     }
 
-    const mainTotalLabel = receipt.total_label || 'Total sem Nota:';
-    doc.rect(totalBoxX, y, totalBoxW, 28).fill(hexToRgb(COLORS.primary));
-    doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(10).text(mainTotalLabel, totalBoxX + 8, y + 9, { width: totalBoxW / 2 });
-    doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(12).text(fmtCurrency(totalAmount), totalBoxX + 8, y + 8, { width: totalBoxW - 16, align: 'right' });
-    y += 28;
+    hLine(doc, totalsX, y, totalsW, C.slate800, 1.5);
+    y += 6;
+
+    const totalLabel = receipt.total_label || 'Total sem Nota';
+    doc.fillColor(C.slate800).font('Helvetica-Bold').fontSize(9)
+      .text(totalLabel, totalsX, y, { width: totalsW / 2 });
+    doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9)
+      .text(fmtCurrency(totalAmount), totalsX + totalsW / 2, y, { width: totalsW / 2, align: 'right' });
+    y += 14;
 
     if (totalWithMargin > 0) {
-      const marginLabel = receipt.total_with_margin_label || 'Total com Nota:';
-      doc.rect(totalBoxX, y, totalBoxW, 24).fill(hexToRgb(COLORS.dark));
-      doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(9).text(marginLabel, totalBoxX + 8, y + 7, { width: totalBoxW / 2 });
-      doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(11).text(fmtCurrency(totalWithMargin), totalBoxX + 8, y + 7, { width: totalBoxW - 16, align: 'right' });
-      y += 24;
+      hLine(doc, totalsX, y, totalsW, C.slate400, 0.5);
+      y += 6;
+      const marginLabel = receipt.total_with_margin_label || 'Total com Nota';
+      doc.fillColor(C.slate800).font('Helvetica-Bold').fontSize(9)
+        .text(marginLabel, totalsX, y, { width: totalsW / 2 });
+      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9)
+        .text(fmtCurrency(totalWithMargin), totalsX + totalsW / 2, y, { width: totalsW / 2, align: 'right' });
+      y += 14;
     }
 
-    // ── Payment method ─────────────────────────────────────────────
     if (receipt.payment_method) {
-      y += 15;
-      doc.fillColor(COLORS.gray).font('Helvetica-Bold').fontSize(8).text('FORMA DE PAGAMENTO', 40, y);
+      y += 4;
+      doc.fillColor(C.slate600).font('Helvetica').fontSize(8)
+        .text(`Forma de pagamento: ${receipt.payment_method}`, ML, y, { width: PW });
       y += 12;
-      doc.fillColor(COLORS.dark).font('Helvetica').fontSize(9).text(receipt.payment_method, 40, y, { width: PAGE_WIDTH });
-      y += 20;
     }
 
-    // ── Notes ─────────────────────────────────────────────────────
+    y += 10;
+
+    // ── NOTES ────────────────────────────────────────────────────────────────
     if (receipt.notes) {
-      y += 10;
-      doc.fillColor(COLORS.gray).font('Helvetica-Bold').fontSize(8).text('OBSERVAÇÕES', 40, y);
-      y += 12;
-      doc.fillColor(COLORS.dark).font('Helvetica').fontSize(9).text(receipt.notes, 40, y, { width: PAGE_WIDTH });
+      const noteH = 6 + doc.heightOfString(receipt.notes, { width: PW - 16, size: 9 }) + 18;
+      doc.rect(ML, y, PW, noteH).fillAndStroke(C.slate50, C.slate200);
+      y += 8;
+      doc.fillColor(C.slate700).font('Helvetica-Bold').fontSize(7).text('OBSERVAÇÕES', ML + 8, y);
+      y += 11;
+      doc.fillColor(C.slate700).font('Helvetica').fontSize(9).text(receipt.notes, ML + 8, y, { width: PW - 16 });
+      y += doc.heightOfString(receipt.notes, { width: PW - 16, size: 9 }) + 14;
     }
 
-    // ── Footer ────────────────────────────────────────────────────
-    const footerY = doc.page.height - 50;
-    doc.rect(0, footerY, doc.page.width, 50).fill(hexToRgb(COLORS.lightGray));
-    doc.fillColor(COLORS.gray).font('Helvetica').fontSize(7)
-      .text(
-        `Documento gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · ${companyName}`,
-        40, footerY + 18,
-        { width: PAGE_WIDTH, align: 'center' }
-      );
+    // ── FOOTER NOTES ─────────────────────────────────────────────────────────
+    if (company.footer_notes) {
+      y += 6;
+      hLine(doc, ML, y, PW, C.slate300, 0.5);
+      y += 8;
+      doc.fillColor(C.red600).font('Helvetica-Bold').fontSize(9)
+        .text('ATENÇÃO ! LEIA AS INSTRUÇÕES ABAIXO', ML, y, { width: PW });
+      y += 13;
+      doc.fillColor(C.slate800).font('Helvetica').fontSize(8)
+        .text(company.footer_notes, ML, y, { width: PW });
+      y += doc.heightOfString(company.footer_notes, { width: PW, size: 8 }) + 10;
+    }
+
+    // ── THANK YOU FOOTER ──────────────────────────────────────────────────────
+    y += 14;
+    hLine(doc, ML, y, PW, C.slate200, 0.5);
+    y += 10;
+    doc.fillColor(C.slate500).font('Helvetica').fontSize(8)
+      .text('Caso você tenha alguma dúvida entre em contato conosco', ML, y, { width: PW, align: 'center' });
+    y += 12;
+    doc.fillColor(C.slate800).font('Helvetica-Bold').fontSize(9)
+      .text('AGRADECEMOS SUA PREFERÊNCIA!', ML, y, { width: PW, align: 'center' });
 
     doc.end();
   });
