@@ -121,13 +121,18 @@ function fmtDate(d) {
 
 async function getLink(path) {
   if (!appUrl) return null;
-  let base = appUrl.replace(/\/$/, '');
-  
-  // Se a base já termina com o path solicitado, não adiciona novamente
-  if (path && base.endsWith(path)) {
-    return base;
+  let base = appUrl.trim().replace(/\/$/, '');
+
+  // Extract only the origin (protocol + host + port), stripping any accidental path
+  try {
+    const parsed = new URL(base);
+    base = parsed.origin;
+  } catch {
+    // If URL parsing fails, strip any path manually
+    const match = base.match(/^(https?:\/\/[^/]+)/);
+    if (match) base = match[1];
   }
-  
+
   return `${base}${path}`;
 }
 
