@@ -8,7 +8,7 @@ import QRCode from 'qrcode';
 import P from 'pino';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { generateBudgetPDF } from './pdfGenerator.js';
+import { generateBudgetPDF, generateWorkOrderPDF } from './pdfGenerator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -156,12 +156,8 @@ async function handleMessage(jid, text) {
       state.step = 'awaiting_cpf';
       await sendMsg(jid, '🔍 *Consultar Orçamentos*\n\nPor favor, informe seu *CPF ou CNPJ* (pode incluir pontuação ou somente números):\n\nExemplo: _123.456.789-00_ ou _12345678900_');
     } else if (input === '3') {
-      const link = await getLink('/ClientPortal');
-      const msg = link
-        ? `🔧 *Acompanhar Minhas O.S.*\n\nAcesse o link abaixo para acompanhar o status das suas Ordens de Serviço:\n\n🔗 ${link}\n\n_Faça login com suas credenciais para visualizar suas ordens._`
-        : `🔧 *Acompanhar Minhas O.S.*\n\nEntre em contato com nossa equipe para verificar o status da sua O.S. Responda com *4* para falar com o suporte.`;
-      await sendMsg(jid, msg);
-      conversations.delete(phone);
+      state.step = 'awaiting_cpf_os';
+      await sendMsg(jid, '🔧 *Acompanhar Status da Minha O.S.*\n\nPor favor, informe seu *CPF ou CNPJ* (pode incluir pontuação ou somente números):\n\nExemplo: _123.456.789-00_ ou _12345678900_\n\n_Digite *menu* a qualquer momento para voltar ao início._');
     } else if (input === '4') {
       await sendMsg(jid, '💬 *Suporte*\n\nObrigado por entrar em contato! ⏳\n\nUm membro da nossa equipe já vai te atender!\n\n_Horário de atendimento: Seg–Sex, 8h às 18h._');
       conversations.delete(phone);
@@ -254,6 +250,72 @@ async function handleMessage(jid, text) {
     } catch (e) {
       console.error('[WhatsApp Bot] CPF lookup error:', e.message);
       await sendMsg(jid, '⚠️ Erro ao consultar seus orçamentos. Por favor, tente novamente mais tarde ou contate o suporte (opção *4*).');
+    }
+    conversations.delete(phone);
+  } else if (state.step === 'awaiting_cpf_os') {
+    const digits = input.replace(/\D/g, '');
+    if (digits.length < 11) {
+      await sendMsg(jid, '⚠️ CPF/CNPJ inválido. Envie pelo menos 11 dígitos.\n\nExemplo: _12345678900_\n\nOu digite *menu* para voltar ao início.');
+      return;
+    }
+    try {
+      if (!dbPool) throw new Error('DB unavailable');
+
+      const clientResult = await dbPool.query(
+        `SELECT id, name FROM clients
+         WHERE replace(replace(replace(cpf_cnpj,'.',''),'-',''),'/','') = $1
+            OR replace(replace(cpf_cnpj,'.',''),'-','') = $1
+            OR cpf_cnpj ILIKE $2
+         LIMIT 1`,
+        [digits, `%${input}%`]
+      );
+
+      if (clientResult.rows.length === 0) {
+        await sendMsg(jid, `🔍 Nenhum cadastro encontrado para o CPF/CNPJ *${input}*.\n\nVerifique se o número está correto ou contate o suporte (opção *4*).\n\nDigite *menu* para voltar ao início.`);
+        conversations.delete(phone);
+        return;
+      }
+
+      const client = clientResult.rows[0];
+
+      const ordersResult = await dbPool.query(
+        `SELECT * FROM work_orders
+         WHERE (client_id = $1 OR client_name ILIKE $2)
+           AND status NOT IN ('cancelado')
+         ORDER BY created_date DESC
+         LIMIT 5`,
+        [client.id, `%${client.name}%`]
+      );
+
+      if (ordersResult.rows.length === 0) {
+        await sendMsg(jid, `🔍 Nenhuma Ordem de Serviço encontrada para *${client.name}*.\n\nDigite *menu* para voltar ao início.`);
+        conversations.delete(phone);
+        return;
+      }
+
+      const company = await getCompanySettings();
+      const count = ordersResult.rows.length;
+
+      await sendMsg(jid, `📋 *${count} Ordem(ns) de Serviço encontrada(s) para ${client.name}.*\n\nEnviando os PDFs agora, aguarde...`);
+
+      for (const order of ordersResult.rows) {
+        try {
+          const pdfBuffer = await generateWorkOrderPDF(order, company);
+          const statusLabel = fmtStatus(order.status);
+          const fileName = `OS_${order.id}_${(order.client_name || 'GestãoPro').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 30)}.pdf`;
+          const caption = `📋 *O.S. #${order.id}*\n• Cliente: ${order.client_name || '-'}\n• Status: ${statusLabel}\n• Data: ${fmtDate(order.created_date)}${order.delivery_date ? `\n• Entrega: ${fmtDate(order.delivery_date)}` : ''}`;
+          await sendDoc(jid, pdfBuffer, fileName, caption);
+          await new Promise(r => setTimeout(r, 800));
+        } catch (pdfErr) {
+          console.error(`[WhatsApp Bot] Work order PDF error for OS ${order.id}:`, pdfErr.message);
+          await sendMsg(jid, `⚠️ Não foi possível gerar o PDF da O.S. #${order.id}. Status: ${fmtStatus(order.status)}`);
+        }
+      }
+
+      await sendMsg(jid, `✅ PDFs enviados!\n\nDigite *menu* para outras opções.`);
+    } catch (e) {
+      console.error('[WhatsApp Bot] OS CPF lookup error:', e.message);
+      await sendMsg(jid, '⚠️ Erro ao consultar suas ordens de serviço. Por favor, tente novamente mais tarde ou contate o suporte (opção *4*).');
     }
     conversations.delete(phone);
   }

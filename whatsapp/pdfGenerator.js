@@ -316,6 +316,201 @@ export async function generateBudgetPDF(budget, company = {}) {
   });
 }
 
+// ── Work Order PDF — matches the admin panel print layout ────────────────────
+export async function generateWorkOrderPDF(order, company = {}) {
+  const logoBuffer = await fetchLogoBuffer(company.company_logo);
+
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 0, size: 'A4' });
+    const chunks = [];
+    doc.on('data', c => chunks.push(c));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    const ML = 40;
+    const MR = 40;
+    const PW = doc.page.width - ML - MR;
+    const companyName = company.company_name || '';
+
+    let y = 40;
+
+    // ── COMPANY HEADER ───────────────────────────────────────────────────────
+    const headerStartY = y;
+    const leftW = PW * 0.55;
+    const rightW = PW * 0.42;
+    const rightX = ML + PW - rightW;
+
+    if (logoBuffer) {
+      try {
+        doc.image(logoBuffer, ML, y, { fit: [leftW, 90], align: 'left' });
+        y += 96;
+      } catch {
+        doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(16)
+          .text(companyName, ML, y, { width: leftW });
+        y += 22;
+      }
+    } else {
+      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(16)
+        .text(companyName, ML, y, { width: leftW });
+      y += 22;
+    }
+
+    const contactY = logoBuffer ? headerStartY + 96 : y;
+    let cy = contactY;
+    if (companyName && logoBuffer) {
+      doc.fillColor(C.slate600).font('Helvetica-Bold').fontSize(8).text(companyName, ML, cy, { width: leftW });
+      cy += 11;
+    }
+    if (company.company_phone) {
+      doc.fillColor(C.slate700).font('Helvetica').fontSize(8).text(company.company_phone, ML, cy, { width: leftW });
+      cy += 11;
+    }
+    if (company.company_email) {
+      doc.fillColor(C.slate700).font('Helvetica').fontSize(8).text(company.company_email, ML, cy, { width: leftW });
+      cy += 11;
+    }
+    if (company.company_address) {
+      doc.fillColor(C.slate700).font('Helvetica').fontSize(8).text(company.company_address, ML, cy, { width: leftW });
+      cy += 11;
+    }
+
+    // Right: "Ordem de Serviço" + number + date
+    doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(20)
+      .text('Ordem de Serviço', rightX, headerStartY, { width: rightW, align: 'right' });
+    doc.fillColor(C.slate700).font('Helvetica').fontSize(9)
+      .text(`Nº ${order.id}`, rightX, headerStartY + 26, { width: rightW, align: 'right' });
+    doc.fillColor(C.slate600).font('Helvetica').fontSize(9)
+      .text(`Data: ${fmtDate(order.created_date)}`, rightX, headerStartY + 38, { width: rightW, align: 'right' });
+    if (order.delivery_date) {
+      doc.fillColor(C.slate500).font('Helvetica').fontSize(8)
+        .text(`Entrega: ${fmtDate(order.delivery_date)}`, rightX, headerStartY + 50, { width: rightW, align: 'right' });
+    }
+
+    y = Math.max(cy, headerStartY + 70) + 10;
+
+    hLine(doc, ML, y, PW, C.slate800, 2);
+    y += 12;
+
+    // ── STATUS BAR ────────────────────────────────────────────────────────────
+    const statusLabels = {
+      pendente: 'Pendente',
+      em_producao: 'Em Produção',
+      finalizado: 'Finalizado',
+      entregue: 'Entregue',
+    };
+    const statusLabel = statusLabels[order.status] || order.status || '-';
+
+    doc.fillColor(C.slate700).font('Helvetica-Bold').fontSize(9).text('Status:', ML, y, { width: 60 });
+    doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text(statusLabel, ML + 60, y, { width: PW - 60 });
+    y += 16;
+
+    hLine(doc, ML, y, PW, C.slate300, 0.5);
+    y += 10;
+
+    // ── CLIENT INFO ──────────────────────────────────────────────────────────
+    const labelW = 72;
+    const valW = PW - labelW;
+
+    if (order.client_name) {
+      doc.fillColor(C.slate700).font('Helvetica-Bold').fontSize(9).text('Cliente:', ML, y, { width: labelW });
+      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text(order.client_name, ML + labelW, y, { width: valW });
+      y += 14;
+    }
+    if (order.client_phone) {
+      doc.fillColor(C.slate700).font('Helvetica').fontSize(8).text('Telefone:', ML, y, { width: labelW });
+      doc.fillColor(C.slate800).font('Helvetica').fontSize(8).text(order.client_phone, ML + labelW, y, { width: valW });
+      y += 12;
+    }
+    if (order.client_address) {
+      doc.fillColor(C.slate700).font('Helvetica').fontSize(8).text('Endereço:', ML, y, { width: labelW });
+      doc.fillColor(C.slate800).font('Helvetica').fontSize(8).text(order.client_address, ML + labelW, y, { width: valW });
+      y += 12;
+    }
+    if (order.job) {
+      doc.fillColor(C.slate700).font('Helvetica-Bold').fontSize(9).text('Job:', ML, y, { width: labelW });
+      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text(order.job, ML + labelW, y, { width: valW });
+      y += 14;
+    }
+    if (order.producer) {
+      doc.fillColor(C.slate700).font('Helvetica').fontSize(8).text('Produtor:', ML, y, { width: labelW });
+      doc.fillColor(C.slate800).font('Helvetica').fontSize(8).text(order.producer, ML + labelW, y, { width: valW });
+      y += 12;
+    }
+
+    y += 4;
+    hLine(doc, ML, y, PW, C.slate300, 0.5);
+    y += 10;
+
+    // ── DESCRIPTION ──────────────────────────────────────────────────────────
+    if (order.description) {
+      doc.fillColor(C.slate600).font('Helvetica-Oblique').fontSize(9)
+        .text(order.description, ML, y, { width: PW });
+      y += doc.heightOfString(order.description, { width: PW, size: 9 }) + 12;
+    }
+
+    // ── ITEMS TABLE ───────────────────────────────────────────────────────────
+    const items = Array.isArray(order.items) ? order.items : [];
+    if (items.length > 0) {
+      const COL = {
+        num:  { x: ML,             w: PW * 0.08 },
+        item: { x: ML + PW * 0.08, w: PW * 0.72 },
+        qty:  { x: ML + PW * 0.80, w: PW * 0.20 },
+      };
+
+      doc.fillColor(C.slate800).font('Helvetica-Bold').fontSize(9)
+        .text('#', COL.num.x, y, { width: COL.num.w })
+        .text('Item', COL.item.x, y, { width: COL.item.w })
+        .text('Quantidade', COL.qty.x, y, { width: COL.qty.w, align: 'center' });
+      y += 13;
+      hLine(doc, ML, y, PW, C.slate800, 1.5);
+      y += 6;
+
+      items.forEach((item, i) => {
+        const rowText = item.name || item.description || '-';
+        const rowH = Math.max(doc.heightOfString(rowText, { width: COL.item.w - 4, size: 9 }), 14);
+
+        doc.fillColor(C.slate500).font('Helvetica').fontSize(9)
+          .text(String(i + 1), COL.num.x, y, { width: COL.num.w });
+        doc.fillColor(C.slate800).font('Helvetica').fontSize(9)
+          .text(rowText, COL.item.x, y, { width: COL.item.w - 4 });
+        doc.fillColor(C.slate700).font('Helvetica').fontSize(9)
+          .text(String(item.quantity || 1), COL.qty.x, y, { width: COL.qty.w, align: 'center' });
+
+        y += rowH + 4;
+        hLine(doc, ML, y, PW, C.slate200, 0.5);
+        y += 5;
+      });
+
+      y += 6;
+    }
+
+    // ── NOTES ────────────────────────────────────────────────────────────────
+    if (order.notes) {
+      doc.rect(ML, y, PW, 6 + doc.heightOfString(order.notes, { width: PW - 16, size: 9 }) + 18)
+        .fillAndStroke(C.slate50, C.slate200);
+
+      y += 8;
+      doc.fillColor(C.slate700).font('Helvetica-Bold').fontSize(7)
+        .text('OBSERVAÇÕES', ML + 8, y);
+      y += 11;
+      doc.fillColor(C.slate700).font('Helvetica').fontSize(9)
+        .text(order.notes, ML + 8, y, { width: PW - 16 });
+      y += doc.heightOfString(order.notes, { width: PW - 16, size: 9 }) + 14;
+    }
+
+    // ── SIGNATURE LINE ────────────────────────────────────────────────────────
+    y += 30;
+    const sigW = 160;
+    const sigX = (doc.page.width - sigW) / 2;
+    hLine(doc, sigX, y, sigW, C.slate400, 0.8);
+    y += 5;
+    doc.fillColor(C.slate500).font('Helvetica').fontSize(8)
+      .text('Assinatura do Responsável', sigX, y, { width: sigW, align: 'center' });
+
+    doc.end();
+  });
+}
+
 // ── Receipt PDF — same visual style ─────────────────────────────────────────
 export async function generateReceiptPDF(receipt, company = {}) {
   const logoBuffer = await fetchLogoBuffer(company.company_logo);

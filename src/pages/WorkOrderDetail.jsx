@@ -174,6 +174,7 @@ export default function WorkOrderDetail() {
                   { key: "created_date", label: "Criado", format: (v) => new Date(v).toLocaleDateString("pt-BR") },
                   { key: "status", label: "Status" },
                 ]}
+                onPDF={() => downloadPDF('order-content', `ordem-servico-${String(order.id ?? '')}.pdf`)}
               />
               <Button
                 variant="outline"
@@ -459,6 +460,24 @@ export default function WorkOrderDetail() {
       {/* Print version - only details */}
       <div className="hidden print:block bg-white p-8">
         <PrintHeader title="ORDEM DE SERVIÇO" number={String(order?.id ?? '')} />
+
+        <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
+          <div>
+            <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">Status</p>
+            <p className="text-sm font-semibold text-slate-800 mt-1">
+              {{ pendente: 'Pendente', em_producao: 'Em Produção', finalizado: 'Finalizado', entregue: 'Entregue' }[order?.status] || order?.status}
+            </p>
+          </div>
+          {order?.created_date && (
+            <p className="text-xs text-slate-400">Criado em {new Date(order.created_date).toLocaleDateString("pt-BR")}</p>
+          )}
+          {order?.delivery_date && (
+            <div className="text-right">
+              <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">Entrega</p>
+              <p className="text-sm text-slate-700">{new Date(order.delivery_date).toLocaleDateString("pt-BR")}</p>
+            </div>
+          )}
+        </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-6 border-b border-slate-100">
           <div>

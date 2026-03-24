@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Printer, Download } from "lucide-react";
 import { toast } from "sonner";
 
-export default function ExportTabs({ data, filename, columns }) {
+export default function ExportTabs({ data, filename, columns, onPDF }) {
   const [exporting, setExporting] = useState(false);
 
   const handlePrint = () => {
@@ -11,6 +11,20 @@ export default function ExportTabs({ data, filename, columns }) {
   };
 
   const handlePDF = async () => {
+    if (onPDF) {
+      setExporting(true);
+      try {
+        await onPDF();
+        toast.success("PDF gerado com sucesso");
+      } catch (error) {
+        console.error(error);
+        toast.error("Erro ao gerar PDF");
+      } finally {
+        setExporting(false);
+      }
+      return;
+    }
+
     setExporting(true);
     try {
       const { jsPDF } = await import("jspdf");
