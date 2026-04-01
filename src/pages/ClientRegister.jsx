@@ -36,11 +36,20 @@ export default function ClientRegister() {
   const [registered, setRegistered] = useState(false);
   const [fetchingCep, setFetchingCep] = useState(false);
 
+  const formatPhone = (raw) => {
+    if (!raw) return "";
+    const digits = raw.replace(/\D/g, "");
+    const local = digits.startsWith("55") && digits.length > 11 ? digits.slice(2) : digits;
+    if (local.length === 11) return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
+    if (local.length === 10) return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
+    return local;
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const whatsapp = params.get("whatsapp");
     if (whatsapp) {
-      setForm(prev => ({ ...prev, mobile: whatsapp }));
+      setForm(prev => ({ ...prev, mobile: formatPhone(whatsapp) }));
     }
   }, []);
 

@@ -23,6 +23,20 @@ export default function ClientBudgetRequest() {
   const [submitted, setSubmitted] = useState(false);
   const fileInputRef = useRef(null);
 
+  const formatPhone = (raw) => {
+    if (!raw) return "";
+    const digits = raw.replace(/\D/g, "");
+    // Remove country code 55 (Brazil) if present and number is long enough
+    const local = digits.startsWith("55") && digits.length > 11 ? digits.slice(2) : digits;
+    if (local.length === 11) {
+      return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
+    }
+    if (local.length === 10) {
+      return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
+    }
+    return local;
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const name = params.get("name");
@@ -34,7 +48,7 @@ export default function ClientBudgetRequest() {
         ...prev,
         client_name: name || prev.client_name,
         client_email: email || prev.client_email,
-        client_phone: whatsapp || prev.client_phone,
+        client_phone: whatsapp ? formatPhone(whatsapp) : prev.client_phone,
       }));
     }
   }, []);
