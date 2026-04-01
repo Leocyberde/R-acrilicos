@@ -3,7 +3,7 @@ import makeWASocket, {
   DisconnectReason,
   fetchLatestBaileysVersion,
 } from '@whiskeysockets/baileys';
-import { Boom } from '@hapi_boom';
+import { Boom } from '@hapi/boom';
 import QRCode from 'qrcode';
 import P from 'pino';
 import path from 'path';
