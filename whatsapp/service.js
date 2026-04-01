@@ -3,7 +3,7 @@ import makeWASocket, {
   DisconnectReason,
   fetchLatestBaileysVersion,
 } from '@whiskeysockets/baileys';
-import { Boom } from '@hapi/boom';
+import { Boom } from '@hapi_boom';
 import QRCode from 'qrcode';
 import P from 'pino';
 import path from 'path';
@@ -123,17 +123,34 @@ async function getLink(path) {
   if (!appUrl) return null;
   let base = appUrl.trim().replace(/\/$/, '');
 
-  // Extract only the origin (protocol + host + port), stripping any accidental path
   try {
     const parsed = new URL(base);
     base = parsed.origin;
   } catch {
-    // If URL parsing fails, strip any path manually
     const match = base.match(/^(https?:\/\/[^/]+)/);
     if (match) base = match[1];
   }
 
   return `${base}${path}`;
+}
+
+async function findClientByPhone(phone) {
+  if (!dbPool) return null;
+  try {
+    // Procura por mobile ou phone que contenha o número do WhatsApp
+    const result = await dbPool.query(
+      `SELECT * FROM clients 
+       WHERE mobile LIKE $1 OR phone LIKE $1 
+       OR replace(replace(replace(replace(mobile, ' ', ''), '-', ''), '(', ''), ')', '') LIKE $2
+       OR replace(replace(replace(replace(phone, ' ', ''), '-', ''), '(', ''), ')', '') LIKE $2
+       LIMIT 1`,
+      [`%${phone}%`, `%${phone.slice(-8)}%`]
+    );
+    return result.rows[0] || null;
+  } catch (e) {
+    console.error('[WhatsApp Bot] Error finding client:', e.message);
+    return null;
+  }
 }
 
 async function handleMessage(jid, text) {
@@ -144,144 +161,124 @@ async function handleMessage(jid, text) {
 
   const RESET_WORDS = ['oi', 'olá', 'ola', 'menu', 'início', 'inicio', 'comecar', 'começar', '0'];
 
+  // Verifica se o cliente já existe pelo número de WhatsApp
+  const client = await findClientByPhone(phone);
+
   if (!conversations.has(phone) || RESET_WORDS.includes(lc)) {
-    conversations.set(phone, { step: 'menu', lastActivity: now, data: {} });
-    await sendMenu(jid);
+    conversations.set(phone, { step: 'menu', lastActivity: now, data: { client } });
+    
+    if (client) {
+      // Se já tem cadastro, chama pelo nome e manda o menu diretamente
+      const name = client.person_type === 'juridica' ? client.name : client.name.split(' ')[0];
+      await sendMsg(jid, `Olá! 👋 *${name}*, bem-vindo ao atendimento automático!`);
+      await sendMenu(jid, true);
+    } else {
+      // Se não tem cadastro, pergunta
+      await sendMsg(jid, 'Olá! 👋 Seja bem-vindo, escolha uma das opções abaixo:\n\n1️⃣ *Tenho cadastro*\n2️⃣ *Não tenho cadastro*');
+      conversations.get(phone).step = 'initial_check';
+    }
     return;
   }
 
   const state = conversations.get(phone);
   state.lastActivity = now;
 
-  if (state.step === 'menu') {
+  if (state.step === 'initial_check') {
     if (input === '1') {
-      state.step = 'awaiting_has_registration';
-      await sendMsg(jid, '📋 *Solicitar Orçamento*\n\nVocê já tem cadastro conosco?\n\nResponda *sim* ou *não*.\n\n_Digite *menu* a qualquer momento para voltar ao início._');
+      // O usuário diz que tem cadastro, mas não identificamos pelo número
+      state.step = 'awaiting_cpf_identification';
+      await sendMsg(jid, 'Para eu te identificar, por favor informe seu *CPF ou CNPJ*:');
     } else if (input === '2') {
-      state.step = 'awaiting_cpf';
-      await sendMsg(jid, '🔍 *Consultar Orçamentos*\n\nPor favor, informe seu *CPF ou CNPJ* (pode incluir pontuação ou somente números):\n\nExemplo: _123.456.789-00_ ou _12345678900_');
-    } else if (input === '3') {
-      state.step = 'awaiting_cpf_os';
-      await sendMsg(jid, '🔧 *Acompanhar Status da Minha O.S.*\n\nPor favor, informe seu *CPF ou CNPJ* (pode incluir pontuação ou somente números):\n\nExemplo: _123.456.789-00_ ou _12345678900_\n\n_Digite *menu* a qualquer momento para voltar ao início._');
-    } else if (input === '4') {
-      await sendMsg(jid, '💬 *Suporte*\n\nObrigado por entrar em contato! ⏳\n\nUm membro da nossa equipe já vai te atender!\n\n_Horário de atendimento: Seg–Sex, 8h às 18h._');
+      const link = await getLink(`/ClientRegister?whatsapp=${phone}`);
+      await sendMsg(jid, `Acesse o link abaixo e realize seu cadastro:\n\n🔗 Link: ${link}`);
       conversations.delete(phone);
     } else {
-      await sendMsg(jid, '❓ Opção não reconhecida. Responda com *1*, *2*, *3* ou *4*.\n\nDigite *menu* para ver o cardápio novamente.');
+      await sendMsg(jid, 'Opção inválida. Escolha *1* ou *2*.');
     }
-  } else if (state.step === 'awaiting_has_registration') {
-    const YES = ['sim', 's', 'yes', '1', 'tenho', 'já tenho', 'ja tenho'];
-    const NO = ['não', 'nao', 'n', 'no', 'não tenho', 'nao tenho', 'nunca', 'novo'];
-
-    if (YES.includes(lc)) {
-      const link = await getLink('/ClientBudgetRequest');
-      const msg = link
-        ? `✅ Perfeito! Acesse o link abaixo para preencher seu pedido de orçamento:\n\n🔗 ${link}\n\nNossos especialistas analisarão e entrarão em contato em breve! 😊`
-        : `✅ Perfeito! Entre em contato conosco diretamente para solicitar seu orçamento. Responda com *4* para falar com nossa equipe!`;
-      await sendMsg(jid, msg);
-      conversations.delete(phone);
-    } else if (NO.includes(lc)) {
-      const link = await getLink('/ClientRegister');
-      const msg = link
-        ? `👤 *Novo Cadastro*\n\nSem problema! Primeiro faça seu cadastro acessando o link abaixo:\n\n🔗 ${link}\n\nApós o cadastro, você poderá solicitar seu orçamento diretamente pelo formulário! 😊`
-        : `👤 *Novo Cadastro*\n\nEntre em contato com nossa equipe para realizar seu cadastro. Responda com *4* para falar com o suporte.`;
-      await sendMsg(jid, msg);
-      conversations.delete(phone);
-    } else {
-      await sendMsg(jid, '❓ Não entendi. Responda *sim* se já tem cadastro ou *não* se for novo cliente.\n\nDigite *menu* para voltar ao início.');
-    }
-  } else if (state.step === 'awaiting_cpf') {
+  } else if (state.step === 'awaiting_cpf_identification') {
     const digits = input.replace(/\D/g, '');
     if (digits.length < 11) {
-      await sendMsg(jid, '⚠️ CPF/CNPJ inválido. Envie pelo menos 11 dígitos.\n\nExemplo: _12345678900_\n\nOu digite *menu* para voltar ao início.');
+      await sendMsg(jid, '⚠️ CPF/CNPJ inválido. Envie pelo menos 11 dígitos.');
       return;
     }
-    try {
-      if (!dbPool) throw new Error('DB unavailable');
+    
+    const clientResult = await dbPool.query(
+      `SELECT * FROM clients
+       WHERE replace(replace(replace(cpf_cnpj,'.',''),'-',''),'/','') = $1
+          OR replace(replace(cpf_cnpj,'.',''),'-','') = $1
+       LIMIT 1`,
+      [digits]
+    );
 
-      const clientResult = await dbPool.query(
-        `SELECT id, name FROM clients
-         WHERE replace(replace(replace(cpf_cnpj,'.',''),'-',''),'/','') = $1
-            OR replace(replace(cpf_cnpj,'.',''),'-','') = $1
-            OR cpf_cnpj ILIKE $2
-         LIMIT 1`,
-        [digits, `%${input}%`]
-      );
-
-      if (clientResult.rows.length === 0) {
-        await sendMsg(jid, `🔍 Nenhum cadastro encontrado para o CPF/CNPJ *${input}*.\n\nVerifique se o número está correto ou contate o suporte (opção *4*).\n\nDigite *menu* para voltar ao início.`);
+    if (clientResult.rows.length > 0) {
+      const foundClient = clientResult.rows[0];
+      state.data.client = foundClient;
+      // Vincula o WhatsApp ao cadastro
+      await dbPool.query('UPDATE clients SET mobile = $1 WHERE id = $2', [phone, foundClient.id]);
+      
+      const name = foundClient.person_type === 'juridica' ? foundClient.name : foundClient.name.split(' ')[0];
+      await sendMsg(jid, `Cadastro localizado! Olá *${name}*.`);
+      await sendMenu(jid, true);
+      state.step = 'menu';
+    } else {
+      await sendMsg(jid, 'Não encontrei seu cadastro com esse CPF/CNPJ. Deseja tentar novamente ou fazer um novo cadastro?\n\n1️⃣ Tentar CPF/CNPJ novamente\n2️⃣ Fazer novo cadastro');
+      state.step = 'initial_check';
+    }
+  } else if (state.step === 'menu') {
+    const currentClient = state.data.client;
+    
+    if (input === '1') {
+      // Solicitar orçamento
+      const params = currentClient ? `?name=${encodeURIComponent(currentClient.name)}&whatsapp=${encodeURIComponent(phone)}&email=${encodeURIComponent(currentClient.email || '')}` : '';
+      const link = await getLink(`/ClientBudgetRequest${params}`);
+      await sendMsg(jid, `✅ Acesse o link abaixo para preencher seu pedido de orçamento:\n\n🔗 ${link}`);
+      conversations.delete(phone);
+    } else if (input === '2') {
+      // Consultar orçamentos
+      if (!currentClient) {
+        await sendMsg(jid, '⚠️ Para consultar orçamentos, você precisa estar cadastrado.');
         conversations.delete(phone);
         return;
       }
-
-      const client = clientResult.rows[0];
-
+      
+      await sendMsg(jid, `📊 Buscando orçamentos para *${currentClient.name}*...`);
+      
       const budgetsResult = await dbPool.query(
         `SELECT * FROM budgets
          WHERE (client_id = $1 OR client_name ILIKE $2)
            AND status NOT IN ('cancelado', 'recusado')
          ORDER BY created_date DESC
          LIMIT 5`,
-        [client.id, `%${client.name}%`]
+        [currentClient.id, `%${currentClient.name}%`]
       );
 
       if (budgetsResult.rows.length === 0) {
-        await sendMsg(jid, `🔍 Nenhum orçamento em aberto para *${client.name}*.\n\nPara solicitar um novo orçamento, responda com *1*.\n\nDigite *menu* para voltar ao início.`);
-        conversations.delete(phone);
-        return;
-      }
-
-      const company = await getCompanySettings();
-      const count = budgetsResult.rows.length;
-
-      await sendMsg(jid, `📊 *${count} orçamento(s) encontrado(s) para ${client.name}.*\n\nEnviando os PDFs agora, aguarde...`);
-
-      for (const budget of budgetsResult.rows) {
-        try {
-          const pdfBuffer = await generateBudgetPDF(budget, company);
-          const valor = fmtCurrency(budget.total_with_margin || budget.total);
-          const status = fmtStatus(budget.status);
-          const fileName = `Orcamento_${budget.id}_${(budget.job || 'GestãoPro').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 30)}.pdf`;
-          const caption = `📄 *Orçamento #${budget.id}*\n• Job: ${budget.job || '-'}\n• Status: ${status}\n• Valor: ${valor}\n• Emissão: ${fmtDate(budget.emission_date)}\n• Validade: ${fmtDate(budget.validity_date)}`;
-          await sendDoc(jid, pdfBuffer, fileName, caption);
-          await new Promise(r => setTimeout(r, 800));
-        } catch (pdfErr) {
-          console.error(`[WhatsApp Bot] PDF generation error for budget ${budget.id}:`, pdfErr.message);
-          await sendMsg(jid, `⚠️ Não foi possível gerar o PDF do Orçamento #${budget.id}. Status: ${fmtStatus(budget.status)} — Valor: ${fmtCurrency(budget.total_with_margin || budget.total)}`);
+        await sendMsg(jid, `🔍 Nenhum orçamento em aberto encontrado.`);
+      } else {
+        const company = await getCompanySettings();
+        for (const budget of budgetsResult.rows) {
+          try {
+            const pdfBuffer = await generateBudgetPDF(budget, company);
+            const valor = fmtCurrency(budget.total_with_margin || budget.total);
+            const status = fmtStatus(budget.status);
+            const fileName = `Orcamento_${budget.id}.pdf`;
+            const caption = `📄 *Orçamento #${budget.id}*\n• Job: ${budget.job || '-'}\n• Status: ${status}\n• Valor: ${valor}`;
+            await sendDoc(jid, pdfBuffer, fileName, caption);
+          } catch (e) {
+            await sendMsg(jid, `⚠️ Erro ao gerar PDF do Orçamento #${budget.id}`);
+          }
         }
       }
-
-      await sendMsg(jid, `✅ PDFs enviados!\n\nDigite *menu* para outras opções ou *1* para solicitar um novo orçamento.`);
-    } catch (e) {
-      console.error('[WhatsApp Bot] CPF lookup error:', e.message);
-      await sendMsg(jid, '⚠️ Erro ao consultar seus orçamentos. Por favor, tente novamente mais tarde ou contate o suporte (opção *4*).');
-    }
-    conversations.delete(phone);
-  } else if (state.step === 'awaiting_cpf_os') {
-    const digits = input.replace(/\D/g, '');
-    if (digits.length < 11) {
-      await sendMsg(jid, '⚠️ CPF/CNPJ inválido. Envie pelo menos 11 dígitos.\n\nExemplo: _12345678900_\n\nOu digite *menu* para voltar ao início.');
-      return;
-    }
-    try {
-      if (!dbPool) throw new Error('DB unavailable');
-
-      const clientResult = await dbPool.query(
-        `SELECT id, name FROM clients
-         WHERE replace(replace(replace(cpf_cnpj,'.',''),'-',''),'/','') = $1
-            OR replace(replace(cpf_cnpj,'.',''),'-','') = $1
-            OR cpf_cnpj ILIKE $2
-         LIMIT 1`,
-        [digits, `%${input}%`]
-      );
-
-      if (clientResult.rows.length === 0) {
-        await sendMsg(jid, `🔍 Nenhum cadastro encontrado para o CPF/CNPJ *${input}*.\n\nVerifique se o número está correto ou contate o suporte (opção *4*).\n\nDigite *menu* para voltar ao início.`);
+      conversations.delete(phone);
+    } else if (input === '3') {
+      // Acompanhar O.S.
+      if (!currentClient) {
+        await sendMsg(jid, '⚠️ Para acompanhar suas O.S., você precisa estar cadastrado.');
         conversations.delete(phone);
         return;
       }
 
-      const client = clientResult.rows[0];
+      await sendMsg(jid, `🔧 Buscando Ordens de Serviço para *${currentClient.name}*...`);
 
       const ordersResult = await dbPool.query(
         `SELECT * FROM work_orders
@@ -289,45 +286,37 @@ async function handleMessage(jid, text) {
            AND status NOT IN ('cancelado')
          ORDER BY created_date DESC
          LIMIT 5`,
-        [client.id, `%${client.name}%`]
+        [currentClient.id, `%${currentClient.name}%`]
       );
 
       if (ordersResult.rows.length === 0) {
-        await sendMsg(jid, `🔍 Nenhuma Ordem de Serviço encontrada para *${client.name}*.\n\nDigite *menu* para voltar ao início.`);
-        conversations.delete(phone);
-        return;
-      }
-
-      const company = await getCompanySettings();
-      const count = ordersResult.rows.length;
-
-      await sendMsg(jid, `📋 *${count} Ordem(ns) de Serviço encontrada(s) para ${client.name}.*\n\nEnviando os PDFs agora, aguarde...`);
-
-      for (const order of ordersResult.rows) {
-        try {
-          const pdfBuffer = await generateWorkOrderPDF(order, company);
-          const statusLabel = fmtStatus(order.status);
-          const fileName = `OS_${order.id}_${(order.client_name || 'GestãoPro').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 30)}.pdf`;
-          const caption = `📋 *O.S. #${order.id}*\n• Cliente: ${order.client_name || '-'}\n• Status: ${statusLabel}\n• Data: ${fmtDate(order.created_date)}${order.delivery_date ? `\n• Entrega: ${fmtDate(order.delivery_date)}` : ''}`;
-          await sendDoc(jid, pdfBuffer, fileName, caption);
-          await new Promise(r => setTimeout(r, 800));
-        } catch (pdfErr) {
-          console.error(`[WhatsApp Bot] Work order PDF error for OS ${order.id}:`, pdfErr.message);
-          await sendMsg(jid, `⚠️ Não foi possível gerar o PDF da O.S. #${order.id}. Status: ${fmtStatus(order.status)}`);
+        await sendMsg(jid, `🔍 Nenhuma Ordem de Serviço encontrada.`);
+      } else {
+        const company = await getCompanySettings();
+        for (const order of ordersResult.rows) {
+          try {
+            const pdfBuffer = await generateWorkOrderPDF(order, company);
+            const statusLabel = fmtStatus(order.status);
+            const fileName = `OS_${order.id}.pdf`;
+            const caption = `📋 *O.S. #${order.id}*\n• Status: ${statusLabel}\n• Data: ${fmtDate(order.created_date)}`;
+            await sendDoc(jid, pdfBuffer, fileName, caption);
+          } catch (e) {
+            await sendMsg(jid, `⚠️ Erro ao gerar PDF da O.S. #${order.id}`);
+          }
         }
       }
-
-      await sendMsg(jid, `✅ PDFs enviados!\n\nDigite *menu* para outras opções.`);
-    } catch (e) {
-      console.error('[WhatsApp Bot] OS CPF lookup error:', e.message);
-      await sendMsg(jid, '⚠️ Erro ao consultar suas ordens de serviço. Por favor, tente novamente mais tarde ou contate o suporte (opção *4*).');
+      conversations.delete(phone);
+    } else if (input === '4') {
+      await sendMsg(jid, '💬 *Suporte*\n\nUm membro da nossa equipe já vai te atender! ⏳');
+      conversations.delete(phone);
+    } else {
+      await sendMsg(jid, '❓ Opção inválida. Responda com *1*, *2*, *3* ou *4*.');
     }
-    conversations.delete(phone);
   }
 }
 
-async function sendMenu(jid) {
-  const menu = `Olá! 👋 Bem-vindo ao atendimento automático!\n\nEscolha uma opção:\n\n1️⃣ *Solicitar orçamento*\n2️⃣ *Consultar meus orçamentos* (via CPF/CNPJ)\n3️⃣ *Acompanhar status da minha O.S.*\n4️⃣ *Falar com suporte*\n\n_Responda com o número da opção desejada._\n_Digite *menu* a qualquer momento para voltar aqui._`;
+async function sendMenu(jid, isRegistered = false) {
+  const menu = `Escolha uma opção:\n\n1️⃣ *Solicitar orçamento*\n2️⃣ *Consultar meus orçamentos*\n3️⃣ *Acompanhar status da minha O.S.*\n4️⃣ *Falar com suporte*`;
   await sendMsg(jid, menu);
 }
 
@@ -364,10 +353,7 @@ export async function connect() {
 
       if (connection === 'close') {
         const reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
-        console.log('[WhatsApp] Conexão encerrada, código:', reason);
-
         if (reason === DisconnectReason.loggedOut) {
-          console.log('[WhatsApp] Deslogado. Sessão removida.');
           status = 'disconnected';
           sock = null;
           qrData = null;
@@ -378,10 +364,7 @@ export async function connect() {
         } else {
           status = 'disconnected';
           sock = null;
-          if (reason !== DisconnectReason.timedOut) {
-            console.log('[WhatsApp] Reconectando em 5s...');
-            setTimeout(connect, 5000);
-          }
+          setTimeout(connect, 5000);
         }
       } else if (connection === 'open') {
         status = 'connected';
@@ -404,7 +387,6 @@ export async function connect() {
           '';
         if (!text) continue;
 
-        console.log(`[WhatsApp Bot] Mensagem de ${jid}: ${text}`);
         await handleMessage(jid, text);
       }
     });
@@ -413,7 +395,6 @@ export async function connect() {
   } catch (e) {
     status = 'disconnected';
     sock = null;
-    console.error('[WhatsApp] Falha ao conectar:', e.message);
     return { success: false, message: e.message };
   }
 }

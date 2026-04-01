@@ -334,10 +334,10 @@ export default function WhatsAppSettings() {
         </CardHeader>
         <CardContent>
           <div className="bg-slate-800 text-green-400 rounded-lg p-4 font-mono text-xs leading-relaxed space-y-1">
-            <p className="text-white">Olá! 👋 Bem-vindo ao atendimento automático!</p>
+            <p className="text-white">Olá! 👋 (Nome do Cliente), bem-vindo ao atendimento automático!</p>
             <p className="text-slate-400 mt-1">Escolha uma opção:</p>
             <p className="mt-1">1️⃣ Solicitar orçamento</p>
-            <p>2️⃣ Consultar meus orçamentos (via CPF/CNPJ)</p>
+            <p>2️⃣ Consultar meus orçamentos</p>
             <p>3️⃣ Acompanhar status da minha O.S.</p>
             <p>4️⃣ Falar com suporte</p>
             <p className="text-slate-500 mt-1 italic">Responda com o número da opção desejada.</p>

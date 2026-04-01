@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Send, CheckCircle2, X } from "lucide-react";
+import { Plus, Trash2, Send, CheckCircle2, X, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 
 export default function ClientBudgetRequest() {
@@ -18,8 +18,26 @@ export default function ClientBudgetRequest() {
     notes: "",
   });
   const [items, setItems] = useState([{ name: "", quantity: 1 }]);
+  const [attachments, setAttachments] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const name = params.get("name");
+    const email = params.get("email");
+    const whatsapp = params.get("whatsapp");
+    
+    if (name || email || whatsapp) {
+      setForm(prev => ({
+        ...prev,
+        client_name: name || prev.client_name,
+        client_email: email || prev.client_email,
+        client_phone: whatsapp || prev.client_phone,
+      }));
+    }
+  }, []);
 
   const handleChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -37,13 +55,23 @@ export default function ClientBudgetRequest() {
     setItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
   };
 
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (attachments.length + files.length > 10) {
+      toast.error("Você pode anexar no máximo 10 arquivos.");
+      return;
+    }
+    setAttachments(prev => [...prev, ...files]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeAttachment = (idx) => {
+    setAttachments(prev => prev.filter((_, i) => i !== idx));
+  };
+
   const handleSubmit = async () => {
     if (!form.client_name.trim()) {
       toast.error("Por favor, informe seu nome.");
-      return;
-    }
-    if (!form.client_phone.trim() && !form.client_email.trim()) {
-      toast.error("Informe pelo menos um contato (telefone ou email).");
       return;
     }
     const validItems = items.filter(i => i.name.trim());
@@ -51,24 +79,30 @@ export default function ClientBudgetRequest() {
       toast.error("Adicione pelo menos um item ao pedido.");
       return;
     }
+    
     setSubmitting(true);
     try {
+      const formData = new FormData();
+      formData.append("client_name", form.client_name);
+      formData.append("client_email", form.client_email);
+      formData.append("client_phone", form.client_phone);
+      formData.append("job", form.job);
+      formData.append("producer", form.producer);
+      formData.append("delivery_date", form.delivery_date || "");
+      formData.append("description", form.description);
+      formData.append("notes", form.notes);
+      formData.append("items", JSON.stringify(validItems));
+      formData.append("status", "nova");
+      
+      attachments.forEach((file) => {
+        formData.append("files", file);
+      });
+
       const res = await fetch('/api/public/budget-requests', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          client_name: form.client_name,
-          client_email: form.client_email,
-          client_phone: form.client_phone,
-          job: form.job,
-          producer: form.producer,
-          delivery_date: form.delivery_date || null,
-          description: form.description,
-          notes: form.notes,
-          items: validItems,
-          status: "nova",
-        }),
+        body: formData,
       });
+      
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || 'Erro ao enviar');
@@ -96,6 +130,7 @@ export default function ClientBudgetRequest() {
               setSubmitted(false);
               setForm({ client_name: "", client_email: "", client_phone: "", job: "", producer: "", delivery_date: "", description: "", notes: "" });
               setItems([{ name: "", quantity: 1 }]);
+              setAttachments([]);
             }}
             className="mt-4"
           >
@@ -117,17 +152,17 @@ export default function ClientBudgetRequest() {
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
           <h2 className="font-semibold text-slate-800 text-base border-b pb-2">Seus Dados</h2>
           <div>
-            <Label>Nome / Empresa <span className="text-red-500">*</span></Label>
+            <Label>Nome / Razão Social <span className="text-red-500">*</span></Label>
             <Input
               className="mt-1"
-              placeholder="Seu nome ou nome da empresa"
+              placeholder="Seu nome ou razão social"
               value={form.client_name}
               onChange={e => handleChange("client_name", e.target.value)}
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <Label>Telefone / WhatsApp</Label>
+              <Label>WhatsApp</Label>
               <Input
                 className="mt-1"
                 placeholder="(11) 99999-0000"
@@ -164,7 +199,7 @@ export default function ClientBudgetRequest() {
               <Label>Produtor</Label>
               <Input
                 className="mt-1"
-                placeholder="Nome do produtor"
+                placeholder="Digite seu nome"
                 value={form.producer}
                 onChange={e => handleChange("producer", e.target.value)}
               />
@@ -216,6 +251,48 @@ export default function ClientBudgetRequest() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+          <h2 className="font-semibold text-slate-800 text-base border-b pb-2">Anexos <span className="text-sm font-normal text-slate-500">(máx 10 arquivos)</span></h2>
+          <div className="space-y-4">
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:border-indigo-300 hover:bg-indigo-50/30 transition-all cursor-pointer group"
+            >
+              <Paperclip className="h-8 w-8 text-slate-400 mx-auto mb-2 group-hover:text-indigo-500 transition-colors" />
+              <p className="text-sm text-slate-600 font-medium">Clique para anexar arquivos</p>
+              <p className="text-xs text-slate-400 mt-1">JPG, PNG, PDF, CDR, PPTX, DXF, AI, DOCX, ZIP, PSD, etc.</p>
+              <input 
+                type="file" 
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                multiple
+                className="hidden"
+                accept=".jpg,.jpeg,.png,.pdf,.cdr,.pptx,.ppsx,.potx,.pptm,.dxf,.ai,.docx,.zip,.rar,.xls,.xlsx,.psd"
+              />
+            </div>
+
+            {attachments.length > 0 && (
+              <div className="grid grid-cols-1 gap-2">
+                {attachments.map((file, idx) => (
+                  <div key={idx} className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-100">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <Paperclip className="h-4 w-4 text-slate-400 shrink-0" />
+                      <span className="text-sm text-slate-700 truncate">{file.name}</span>
+                      <span className="text-xs text-slate-400 shrink-0">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                    </div>
+                    <button 
+                      onClick={() => removeAttachment(idx)}
+                      className="text-slate-400 hover:text-red-500 p-1 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
           <h2 className="font-semibold text-slate-800 text-base border-b pb-2">Detalhes</h2>
           <div>
             <Label>Descrição</Label>
@@ -244,17 +321,7 @@ export default function ClientBudgetRequest() {
           onClick={handleSubmit}
           disabled={submitting}
         >
-          {submitting ? (
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Enviando...
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Send className="h-5 w-5" />
-              Enviar Solicitação
-            </div>
-          )}
+          {submitting ? "Enviando..." : "Enviar Solicitação"}
         </Button>
       </div>
     </div>

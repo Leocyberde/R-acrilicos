@@ -654,7 +654,7 @@ function buildEntityRoutes(tableName, orderDefault = '-created_date') {
 app.post('/api/public/clients/register', async (req, res) => {
   try {
     const {
-      name, person_type, phone, mobile, email,
+      name, person_type, phone, mobile, email, password,
       cpf, cnpj, cpf_cnpj,
       address_zip_code, address_street, address_number,
       address_complement, address_city, address_state, notes,
@@ -663,11 +663,22 @@ app.post('/api/public/clients/register', async (req, res) => {
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Nome é obrigatório.' });
     }
-    if (!phone && !mobile && !email) {
-      return res.status(400).json({ error: 'Informe pelo menos um contato (telefone, celular ou email).' });
-    }
 
     const docValue = cpf_cnpj || cnpj || cpf || null;
+    
+    // Se tiver senha, cria um usuário também
+    let userId = null;
+    if (password && email) {
+      const existingUser = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+      if (existingUser.rows.length === 0) {
+        const hash = await bcrypt.hash(password, 10);
+        const userResult = await pool.query(
+          'INSERT INTO users (email, password_hash, full_name, role) VALUES ($1, $2, $3, $4) RETURNING id',
+          [email, hash, name, 'client']
+        );
+        userId = userResult.rows[0].id;
+      }
+    }
 
     const result = await pool.query(
       `INSERT INTO clients
@@ -693,31 +704,38 @@ app.post('/api/public/clients/register', async (req, res) => {
   }
 });
 
-app.post('/api/public/budget-requests', async (req, res) => {
+app.post('/api/public/budget-requests', upload.array('files', 10), async (req, res) => {
   try {
-    const {
-      client_name, client_email, client_phone,
-      job, producer, delivery_date, description, notes, items, status,
-    } = req.body;
+    const data = req.body;
+    const files = req.files || [];
+    
+    const client_name = data.client_name;
+    const client_email = data.client_email;
+    const client_phone = data.client_phone;
+    const job = data.job;
+    const producer = data.producer;
+    const delivery_date = data.delivery_date;
+    const description = data.description;
+    const notes = data.notes;
+    const items = data.items ? JSON.parse(data.items) : [];
+    const status = data.status || 'nova';
 
     if (!client_name || !client_name.trim()) {
       return res.status(400).json({ error: 'Nome do cliente é obrigatório.' });
     }
 
-    let clientId = null;
-    if (client_email) {
-      const existing = await pool.query(
-        'SELECT id FROM clients WHERE email = $1 LIMIT 1',
-        [client_email]
-      );
-      if (existing.rows.length > 0) clientId = existing.rows[0].id;
-    }
+    const attachments = files.map(f => ({
+      name: f.originalname,
+      url: `/uploads/${f.filename}`,
+      type: f.mimetype,
+      size: f.size
+    }));
 
     const result = await pool.query(
       `INSERT INTO budget_requests
         (client_name, client_email, job, producer, delivery_date,
          description, notes, items, attachments, status, created_date, updated_date)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'[]',$9,NOW(),NOW())
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW(),NOW())
        RETURNING *`,
       [
         client_name.trim(),
@@ -727,18 +745,11 @@ app.post('/api/public/budget-requests', async (req, res) => {
         delivery_date || null,
         description || null,
         notes || null,
-        JSON.stringify(items || []),
-        status || 'nova',
+        JSON.stringify(items),
+        JSON.stringify(attachments),
+        status,
       ]
     );
-
-    if (client_phone && !clientId) {
-      const byPhone = await pool.query(
-        `SELECT id FROM clients WHERE phone = $1 OR mobile = $1 LIMIT 1`,
-        [client_phone]
-      );
-      if (byPhone.rows.length > 0) clientId = byPhone.rows[0].id;
-    }
 
     res.status(201).json(result.rows[0]);
   } catch (e) {

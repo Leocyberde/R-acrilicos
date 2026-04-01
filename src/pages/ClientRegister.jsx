@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,8 @@ export default function ClientRegister() {
     phone: "",
     mobile: "",
     email: "",
+    password: "",
+    confirm_password: "",
     address_zip_code: "",
     address_street: "",
     address_number: "",
@@ -33,6 +35,14 @@ export default function ClientRegister() {
   const [saving, setSaving] = useState(false);
   const [registered, setRegistered] = useState(false);
   const [fetchingCep, setFetchingCep] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const whatsapp = params.get("whatsapp");
+    if (whatsapp) {
+      setForm(prev => ({ ...prev, mobile: whatsapp }));
+    }
+  }, []);
 
   const set = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
 
@@ -67,10 +77,15 @@ export default function ClientRegister() {
       toast.error("Nome é obrigatório.");
       return;
     }
-    if (!form.phone.trim() && !form.mobile.trim() && !form.email.trim()) {
-      toast.error("Informe pelo menos um contato (telefone, celular ou email).");
+    if (form.password !== form.confirm_password) {
+      toast.error("As senhas não coincidem.");
       return;
     }
+    if (form.password.length < 6) {
+      toast.error("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+    
     setSaving(true);
     try {
       const res = await fetch('/api/public/clients/register', {
@@ -82,6 +97,7 @@ export default function ClientRegister() {
           phone: form.phone,
           mobile: form.mobile,
           email: form.email,
+          password: form.password,
           cpf: form.person_type === "fisica" ? form.cpf : null,
           cnpj: form.person_type === "juridica" ? form.cnpj : null,
           cpf_cnpj: form.person_type === "fisica" ? form.cpf : form.cnpj,
@@ -182,7 +198,7 @@ export default function ClientRegister() {
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-            <h2 className="font-semibold text-slate-800 text-base border-b pb-2">Contato <span className="text-sm font-normal text-slate-500">(preencha ao menos um)</span></h2>
+            <h2 className="font-semibold text-slate-800 text-base border-b pb-2">Contato</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label>Telefone</Label>
@@ -194,7 +210,7 @@ export default function ClientRegister() {
                 />
               </div>
               <div>
-                <Label>Celular / WhatsApp</Label>
+                <Label>Número do WhatsApp</Label>
                 <Input
                   value={form.mobile}
                   onChange={e => set("mobile", e.target.value)}
@@ -210,6 +226,32 @@ export default function ClientRegister() {
                   onChange={e => set("email", e.target.value)}
                   className="mt-1"
                   placeholder="email@exemplo.com"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+            <h2 className="font-semibold text-slate-800 text-base border-b pb-2">Segurança</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label>Senha</Label>
+                <Input
+                  type="password"
+                  value={form.password}
+                  onChange={e => set("password", e.target.value)}
+                  className="mt-1"
+                  required
+                />
+              </div>
+              <div>
+                <Label>Confirmar Senha</Label>
+                <Input
+                  type="password"
+                  value={form.confirm_password}
+                  onChange={e => set("confirm_password", e.target.value)}
+                  className="mt-1"
+                  required
                 />
               </div>
             </div>
@@ -239,7 +281,6 @@ export default function ClientRegister() {
                     <Search className="h-4 w-4" />
                   </Button>
                 </div>
-                {fetchingCep && <p className="text-xs text-indigo-600 mt-1">Buscando endereço...</p>}
               </div>
               <div>
                 <Label>Estado</Label>
@@ -306,17 +347,7 @@ export default function ClientRegister() {
             disabled={saving}
             className="w-full bg-indigo-600 hover:bg-indigo-700 h-12 text-base"
           >
-            {saving ? (
-              <div className="flex items-center gap-2">
-                <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Cadastrando...
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <UserPlus className="h-5 w-5" />
-                Realizar Cadastro
-              </div>
-            )}
+            {saving ? "Cadastrando..." : "Realizar Cadastro"}
           </Button>
         </form>
       </div>
