@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,10 +12,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, AlertCircle } from "lucide-react";
+
+function FieldError({ message }) {
+  if (!message) return null;
+  return (
+    <p className="flex items-center gap-1 text-xs text-red-600 mt-1">
+      <AlertCircle className="h-3 w-3 shrink-0" />
+      {message}
+    </p>
+  );
+}
 
 export default function BudgetForm({ initialData, onSubmit, onCancel, loading }) {
   const [clients, setClients] = useState([]);
+  const [errors, setErrors] = useState({});
+  const firstErrorRef = useRef(null);
+
   const [form, setForm] = useState({
     client_name: initialData?.client_name || "",
     client_phone: initialData?.client_phone || "",
@@ -44,7 +57,10 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
     loadClients();
   }, []);
 
-  const updateField = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
+  const updateField = (field, value) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: "" }));
+  };
 
   const handleClientSelect = (clientId) => {
     const selectedClient = clients.find(c => String(c.id) === String(clientId));
@@ -69,6 +85,7 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
         client_email: selectedClient.email || "",
         client_address: composedAddress,
       }));
+      setErrors(prev => ({ ...prev, client_name: "" }));
     }
   };
 
@@ -76,6 +93,9 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
     const items = [...form.items];
     items[index] = { ...items[index], [field]: value };
     setForm(prev => ({ ...prev, items }));
+    if (errors[`item_${index}_name`]) {
+      setErrors(prev => ({ ...prev, [`item_${index}_name`]: "" }));
+    }
   };
 
   const addItem = () => setForm(prev => ({ ...prev, items: [...prev.items, { name: "", quantity: 1, unit_price: 0 }] }));
@@ -90,17 +110,54 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
   const total = subtotal - discountAmount;
   const totalWithMargin = form.apply_margin ? total * (1 + form.margin_percentage / 100) : null;
 
+  const validate = () => {
+    const newErrors = {};
+
+    if (!form.client_name?.trim()) {
+      newErrors.client_name = "Nome do cliente é obrigatório.";
+    }
+    if (!form.validity_date) {
+      newErrors.validity_date = "Data de validade é obrigatória.";
+    }
+    if (!form.emission_date) {
+      newErrors.emission_date = "Data de emissão é obrigatória.";
+    }
+
+    form.items.forEach((item, i) => {
+      if (!item.name?.trim()) {
+        newErrors[`item_${i}_name`] = "Informe o nome do produto/serviço.";
+      }
+    });
+
+    return newErrors;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit({ 
-      ...form, 
+    const newErrors = validate();
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setTimeout(() => {
+        if (firstErrorRef.current) {
+          firstErrorRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+          firstErrorRef.current.focus?.();
+        }
+      }, 50);
+      return;
+    }
+
+    onSubmit({
+      ...form,
       subtotal,
-      total, 
+      total,
       margin_percentage: form.apply_margin ? form.margin_percentage : null,
       total_with_margin: totalWithMargin,
-      status: initialData?.status || "pendente" 
+      status: initialData?.status || "pendente"
     });
   };
+
+  const errorFieldRef = (field) => errors[field] ? firstErrorRef : undefined;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -126,8 +183,15 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <Label>Nome do Cliente *</Label>
-          <Input value={form.client_name} onChange={e => updateField("client_name", e.target.value)} required className="mt-1" />
+          <Label>Nome do Cliente <span className="text-red-500">*</span></Label>
+          <Input
+            ref={errors.client_name ? firstErrorRef : undefined}
+            value={form.client_name}
+            onChange={e => updateField("client_name", e.target.value)}
+            className={`mt-1 ${errors.client_name ? "border-red-500 focus-visible:ring-red-400" : ""}`}
+            placeholder="Nome do cliente"
+          />
+          <FieldError message={errors.client_name} />
         </div>
         <div>
           <Label>Telefone</Label>
@@ -146,12 +210,26 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
           <Input value={form.producer} onChange={e => updateField("producer", e.target.value)} className="mt-1" />
         </div>
         <div>
-          <Label>Data de Emissão</Label>
-          <Input type="date" value={form.emission_date} onChange={e => updateField("emission_date", e.target.value)} className="mt-1" />
+          <Label>Data de Emissão <span className="text-red-500">*</span></Label>
+          <Input
+            ref={!errors.client_name && errors.emission_date ? firstErrorRef : undefined}
+            type="date"
+            value={form.emission_date}
+            onChange={e => updateField("emission_date", e.target.value)}
+            className={`mt-1 ${errors.emission_date ? "border-red-500 focus-visible:ring-red-400" : ""}`}
+          />
+          <FieldError message={errors.emission_date} />
         </div>
         <div>
-          <Label>Validade</Label>
-          <Input type="date" value={form.validity_date} onChange={e => updateField("validity_date", e.target.value)} className="mt-1" />
+          <Label>Validade <span className="text-red-500">*</span></Label>
+          <Input
+            ref={!errors.client_name && !errors.emission_date && errors.validity_date ? firstErrorRef : undefined}
+            type="date"
+            value={form.validity_date}
+            onChange={e => updateField("validity_date", e.target.value)}
+            className={`mt-1 ${errors.validity_date ? "border-red-500 focus-visible:ring-red-400" : ""}`}
+          />
+          <FieldError message={errors.validity_date} />
         </div>
         <div>
           <Label>Data de Entrega</Label>
@@ -179,10 +257,16 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
         </div>
         <div className="space-y-3">
           {form.items.map((item, i) => (
-            <div key={i} className="grid grid-cols-12 gap-2 items-end bg-slate-50 p-3 rounded-lg">
+            <div key={i} className={`grid grid-cols-12 gap-2 items-end p-3 rounded-lg ${errors[`item_${i}_name`] ? "bg-red-50 border border-red-200" : "bg-slate-50"}`}>
               <div className="col-span-12 sm:col-span-5">
-                <Label className="text-xs">Produto/Serviço</Label>
-                <Input value={item.name} onChange={e => updateItem(i, "name", e.target.value)} placeholder="Nome do item" className="mt-1" />
+                <Label className="text-xs">Produto/Serviço <span className="text-red-500">*</span></Label>
+                <Input
+                  value={item.name}
+                  onChange={e => updateItem(i, "name", e.target.value)}
+                  placeholder="Nome do item"
+                  className={`mt-1 ${errors[`item_${i}_name`] ? "border-red-500 focus-visible:ring-red-400" : ""}`}
+                />
+                <FieldError message={errors[`item_${i}_name`]} />
               </div>
               <div className="col-span-4 sm:col-span-2">
                 <Label className="text-xs">Qtd</Label>
@@ -203,75 +287,75 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
             </div>
           ))}
         </div>
-        
+
         {/* Totals Section */}
         <div className="mt-4 space-y-2 bg-slate-50 p-4 rounded-lg">
           <div className="flex justify-between text-sm">
             <span className="text-slate-600">Subtotal:</span>
             <span className="font-medium">R$ {subtotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
           </div>
-          
+
           <div className="flex items-center justify-between gap-4">
             <Label className="text-sm">Desconto (%):</Label>
-            <Input 
-              type="number" 
-              min="0" 
-              max="100" 
+            <Input
+              type="number"
+              min="0"
+              max="100"
               step="0.01"
-              value={form.discount} 
-              onChange={e => updateField("discount", Number(e.target.value))} 
+              value={form.discount}
+              onChange={e => updateField("discount", Number(e.target.value))}
               className="w-24 text-right"
             />
           </div>
-          
+
           {form.discount > 0 && (
             <div className="flex justify-between text-sm text-red-600">
               <span>Desconto aplicado:</span>
               <span>- R$ {discountAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
             </div>
           )}
-          
+
           <div className="flex justify-between items-center text-base font-bold border-t pt-2">
-            <Input 
-              type="text" 
-              value={form.total_label} 
-              onChange={e => updateField("total_label", e.target.value)} 
+            <Input
+              type="text"
+              value={form.total_label}
+              onChange={e => updateField("total_label", e.target.value)}
               className="w-40 text-base font-bold text-slate-900"
             />
             <span className="text-slate-900">R$ {total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
           </div>
-          
+
           <div className="flex items-center gap-4 border-t pt-2">
             <div className="flex items-center gap-2">
-              <Checkbox 
-                id="apply_margin" 
-                checked={form.apply_margin} 
-                onCheckedChange={(checked) => updateField("apply_margin", checked)} 
+              <Checkbox
+                id="apply_margin"
+                checked={form.apply_margin}
+                onCheckedChange={(checked) => updateField("apply_margin", checked)}
               />
               <Label htmlFor="apply_margin" className="text-sm cursor-pointer">Aplicar margem</Label>
             </div>
             {form.apply_margin && (
               <div className="flex items-center gap-2">
                 <Label className="text-sm">Margem (%):</Label>
-                <Input 
-                  type="number" 
-                  min="0" 
-                  max="100" 
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
                   step="0.01"
-                  value={form.margin_percentage} 
-                  onChange={e => updateField("margin_percentage", Number(e.target.value))} 
+                  value={form.margin_percentage}
+                  onChange={e => updateField("margin_percentage", Number(e.target.value))}
                   className="w-20 text-right"
                 />
               </div>
             )}
           </div>
-          
+
           {form.apply_margin && (
             <div className="flex justify-between items-center text-base font-bold">
-              <Input 
-                type="text" 
-                value={form.total_with_margin_label} 
-                onChange={e => updateField("total_with_margin_label", e.target.value)} 
+              <Input
+                type="text"
+                value={form.total_with_margin_label}
+                onChange={e => updateField("total_with_margin_label", e.target.value)}
                 className="w-40 text-base font-bold text-slate-900"
               />
               <span className="text-slate-900">R$ {totalWithMargin.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
