@@ -146,7 +146,13 @@ export default function ClientRegister() {
           </p>
           <Button
             className="w-full bg-indigo-600 hover:bg-indigo-700 mt-2"
-            onClick={() => window.location.href = '/ClientBudgetRequest'}
+            onClick={() => {
+              const params = new URLSearchParams();
+              if (form.name) params.set('name', form.name);
+              if (form.email) params.set('email', form.email);
+              if (form.mobile) params.set('whatsapp', form.mobile);
+              window.location.href = '/ClientBudgetRequest?' + params.toString();
+            }}
           >
             Solicitar Orçamento Agora
           </Button>
