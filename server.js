@@ -1035,10 +1035,12 @@ app.post('/api/whatsapp/settings', authMiddleware, async (req, res) => {
   }
 });
 
-app.use(express.static(path.join(__dirname, 'dist')));
-app.get('/{*path}', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'dist')));
+  app.get('/{*path}', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  });
+}
 
 initDB().then(async () => {
   whatsappService.setPool(pool);
