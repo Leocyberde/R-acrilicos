@@ -90,6 +90,16 @@ function normPhone(jid) {
   return jid.split('@')[0];
 }
 
+function formatPhone(raw) {
+  if (!raw) return "";
+  const cleanRaw = raw.includes("@") ? raw.split("@")[0] : raw;
+  const digits = cleanRaw.replace(/\D/g, "");
+  const local = digits.startsWith("55") && digits.length >= 12 ? digits.slice(2) : digits;
+  if (local.length === 11) return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
+  if (local.length === 10) return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
+  return local;
+}
+
 function fmtCurrency(value) {
   return `R$ ${Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -214,7 +224,7 @@ async function handleMessage(jid, text) {
       const foundClient = clientResult.rows[0];
       state.data.client = foundClient;
       // Vincula o WhatsApp ao cadastro
-      await dbPool.query('UPDATE clients SET mobile = $1 WHERE id = $2', [phone, foundClient.id]);
+      await dbPool.query('UPDATE clients SET mobile = $1 WHERE id = $2', [formatPhone(phone), foundClient.id]);
       
       const name = foundClient.person_type === 'juridica' ? foundClient.name : foundClient.name.split(' ')[0];
       await sendMsg(jid, `Cadastro localizado! Olá *${name}*.`);
