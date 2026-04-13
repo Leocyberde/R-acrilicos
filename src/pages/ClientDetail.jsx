@@ -30,9 +30,11 @@ import { toast } from "sonner";
 
 const formatPhone = (raw) => {
   if (!raw) return raw;
-  const digits = raw.replace(/\D/g, "");
+  // Se for um JID do WhatsApp (ex: 5511910509385@s.whatsapp.net), pega apenas os números
+  const cleanRaw = raw.includes("@") ? raw.split("@")[0] : raw;
+  const digits = cleanRaw.replace(/\D/g, "");
   if (digits.length < 10) return raw;
-  const local = digits.startsWith("55") && digits.length > 11 ? digits.slice(2) : digits;
+  const local = digits.startsWith("55") && digits.length >= 12 ? digits.slice(2) : digits;
   if (local.length === 11) return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
   if (local.length === 10) return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
   return raw;
@@ -263,11 +265,11 @@ export default function ClientDetail() {
                 </div>
                 <div>
                   <Label>Telefone</Label>
-                  <Input value={client.phone || ""} onChange={e => setClient(prev => ({ ...prev, phone: e.target.value }))} className="mt-1" />
+                  <Input value={client.phone || ""} onChange={e => setClient(prev => ({ ...prev, phone: e.target.value }))} className="mt-1" placeholder="(11) 3333-4444" />
                 </div>
                 <div>
                   <Label>WhatsApp</Label>
-                  <Input value={client.mobile || ""} onChange={e => setClient(prev => ({ ...prev, mobile: e.target.value }))} className="mt-1" placeholder="(11) 99999-0000" />
+                  <Input value={client.mobile || ""} onChange={e => setClient(prev => ({ ...prev, mobile: e.target.value }))} className="mt-1" placeholder="(11) 99999-8888" />
                 </div>
                 <div className="sm:col-span-2">
                   <Label>Email</Label>

@@ -38,8 +38,10 @@ export default function ClientRegister() {
 
   const formatPhone = (raw) => {
     if (!raw) return "";
-    const digits = raw.replace(/\D/g, "");
-    const local = digits.startsWith("55") && digits.length > 11 ? digits.slice(2) : digits;
+    // Se for um JID do WhatsApp (ex: 5511910509385@s.whatsapp.net), pega apenas os números
+    const cleanRaw = raw.includes("@") ? raw.split("@")[0] : raw;
+    const digits = cleanRaw.replace(/\D/g, "");
+    const local = digits.startsWith("55") && digits.length >= 12 ? digits.slice(2) : digits;
     if (local.length === 11) return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
     if (local.length === 10) return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
     return local;

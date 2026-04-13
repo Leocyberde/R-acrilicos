@@ -35,7 +35,8 @@ export default function Clients() {
   const filteredClients = clients.filter(c =>
     c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.phone?.includes(searchTerm)
+    c.phone?.includes(searchTerm) ||
+    c.mobile?.includes(searchTerm)
   );
 
   return (
@@ -94,7 +95,7 @@ export default function Clients() {
                         <p className="text-sm font-medium text-slate-800">{client.name}</p>
                       </td>
                       <td className="px-5 py-3">
-                        <span className="text-sm text-slate-600">{client.phone || "-"}</span>
+                        <span className="text-sm text-slate-600">{client.mobile || client.phone || "-"}</span>
                       </td>
                       <td className="px-5 py-3">
                         <span className="text-sm text-slate-600">{client.email || "-"}</span>

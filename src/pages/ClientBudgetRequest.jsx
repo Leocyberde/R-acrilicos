@@ -25,9 +25,11 @@ export default function ClientBudgetRequest() {
 
   const formatPhone = (raw) => {
     if (!raw) return "";
-    const digits = raw.replace(/\D/g, "");
+    // Se for um JID do WhatsApp (ex: 5511910509385@s.whatsapp.net), pega apenas os números
+    const cleanRaw = raw.includes("@") ? raw.split("@")[0] : raw;
+    const digits = cleanRaw.replace(/\D/g, "");
     // Remove country code 55 (Brazil) if present and number is long enough
-    const local = digits.startsWith("55") && digits.length > 11 ? digits.slice(2) : digits;
+    const local = digits.startsWith("55") && digits.length >= 12 ? digits.slice(2) : digits;
     if (local.length === 11) {
       return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
     }
