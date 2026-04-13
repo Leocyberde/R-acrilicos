@@ -28,6 +28,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
+const formatPhone = (raw) => {
+  if (!raw) return raw;
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length < 10) return raw;
+  const local = digits.startsWith("55") && digits.length > 11 ? digits.slice(2) : digits;
+  if (local.length === 11) return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
+  if (local.length === 10) return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
+  return raw;
+};
+
 export default function ClientDetail() {
   const [client, setClient] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -43,7 +53,7 @@ export default function ClientDetail() {
     async function load() {
       try {
         const found = await base44.entities.Client.get(id);
-        setClient(found);
+        setClient({ ...found, mobile: formatPhone(found.mobile) });
       } catch {
         toast.error("Erro ao carregar cliente.");
       }
@@ -256,8 +266,8 @@ export default function ClientDetail() {
                   <Input value={client.phone || ""} onChange={e => setClient(prev => ({ ...prev, phone: e.target.value }))} className="mt-1" />
                 </div>
                 <div>
-                  <Label>Celular</Label>
-                  <Input value={client.mobile || ""} onChange={e => setClient(prev => ({ ...prev, mobile: e.target.value }))} className="mt-1" />
+                  <Label>WhatsApp</Label>
+                  <Input value={client.mobile || ""} onChange={e => setClient(prev => ({ ...prev, mobile: e.target.value }))} className="mt-1" placeholder="(11) 99999-0000" />
                 </div>
                 <div className="sm:col-span-2">
                   <Label>Email</Label>

@@ -255,7 +255,7 @@ export default function ClientProfile() {
               <Input value={client?.phone || ""} onChange={e => setClient(prev => ({ ...prev, phone: e.target.value }))} className="mt-1" placeholder="(00) 0000-0000" />
             </div>
             <div>
-              <Label className="text-sm">Celular / WhatsApp</Label>
+              <Label className="text-sm">WhatsApp</Label>
               <Input value={client?.mobile || ""} onChange={e => setClient(prev => ({ ...prev, mobile: e.target.value }))} className="mt-1" placeholder="(00) 00000-0000" />
             </div>
           </div>

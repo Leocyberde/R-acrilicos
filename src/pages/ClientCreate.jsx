@@ -168,12 +168,12 @@ export default function ClientCreate() {
                   />
                 </div>
                 <div>
-                  <Label>Celular</Label>
+                  <Label>WhatsApp</Label>
                   <Input
                     value={form.mobile}
                     onChange={e => set("mobile", e.target.value)}
                     className="mt-1"
-                    placeholder="(11) 99999-8888"
+                    placeholder="(11) 99999-0000"
                   />
                 </div>
                 <div className="sm:col-span-2">
