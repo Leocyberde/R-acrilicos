@@ -5,6 +5,31 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, Send, CheckCircle2, X, Paperclip } from "lucide-react";
 import { toast } from "sonner";
+import { base44 } from "@/api/base44Client";
+
+function formatPhone(raw) {
+  if (!raw) return "";
+  const cleanRaw = raw.includes("@") ? raw.split("@")[0] : raw;
+  let digits = cleanRaw.replace(/\D/g, "");
+
+  // Remove Brazilian country code 55 if present
+  if (digits.startsWith("55") && digits.length >= 12) {
+    digits = digits.slice(2);
+  }
+
+  // If still too long (non-standard JID), take the last 11 digits
+  if (digits.length > 11) {
+    digits = digits.slice(-11);
+  }
+
+  if (digits.length === 11) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  }
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  return digits;
+}
 
 export default function ClientBudgetRequest() {
   const [form, setForm] = useState({
@@ -23,36 +48,53 @@ export default function ClientBudgetRequest() {
   const [submitted, setSubmitted] = useState(false);
   const fileInputRef = useRef(null);
 
-  const formatPhone = (raw) => {
-    if (!raw) return "";
-    // Se for um JID do WhatsApp (ex: 5511910509385@s.whatsapp.net), pega apenas os números
-    const cleanRaw = raw.includes("@") ? raw.split("@")[0] : raw;
-    const digits = cleanRaw.replace(/\D/g, "");
-    // Remove country code 55 (Brazil) if present and number is long enough
-    const local = digits.startsWith("55") && digits.length >= 12 ? digits.slice(2) : digits;
-    if (local.length === 11) {
-      return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
-    }
-    if (local.length === 10) {
-      return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
-    }
-    return local;
-  };
-
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const name = params.get("name");
-    const email = params.get("email");
-    const whatsapp = params.get("whatsapp");
-    
-    if (name || email || whatsapp) {
-      setForm(prev => ({
-        ...prev,
-        client_name: name || prev.client_name,
-        client_email: email || prev.client_email,
-        client_phone: whatsapp ? formatPhone(whatsapp) : prev.client_phone,
-      }));
+    const urlName = params.get("name");
+    const urlEmail = params.get("email");
+    const urlWhatsapp = params.get("whatsapp");
+
+    async function prefill() {
+      let name = urlName || "";
+      let email = urlEmail || "";
+      let phone = urlWhatsapp ? formatPhone(urlWhatsapp) : "";
+
+      // If logged in, fetch the client record for accurate data
+      try {
+        const user = await base44.auth.me();
+        if (user) {
+          if (!name) name = user.full_name || "";
+          if (!email) email = user.email || "";
+
+          // Fetch client record by email to get the registered phone
+          try {
+            const clients = await base44.entities.Client.filter({ email: user.email });
+            const client = clients?.[0];
+            if (client) {
+              if (!name) name = client.name || "";
+              // Always prefer the phone from the client record over the URL param
+              const clientPhone = client.mobile || client.phone || "";
+              if (clientPhone) phone = clientPhone;
+            }
+          } catch {
+            // Not logged in or no client record – keep URL param data
+          }
+        }
+      } catch {
+        // Not logged in – use URL params only
+      }
+
+      if (name || email || phone) {
+        setForm(prev => ({
+          ...prev,
+          client_name: name || prev.client_name,
+          client_email: email || prev.client_email,
+          client_phone: phone || prev.client_phone,
+        }));
+      }
     }
+
+    prefill();
   }, []);
 
   const handleChange = (field, value) => {
@@ -337,7 +379,7 @@ export default function ClientBudgetRequest() {
           onClick={handleSubmit}
           disabled={submitting}
         >
-          {submitting ? "Enviando..." : "Enviar Solicitação"}
+          {submitting ? "Enviando..." : <><Send className="h-4 w-4 mr-2" /> Enviar Solicitação</>}
         </Button>
       </div>
     </div>
