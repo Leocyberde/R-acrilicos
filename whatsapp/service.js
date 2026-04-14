@@ -200,7 +200,7 @@ async function handleMessage(jid, text) {
       await sendMsg(jid, 'Para eu te identificar, por favor informe seu *CPF ou CNPJ*:');
     } else if (input === '2') {
       const link = await getLink(`/ClientRegister?whatsapp=${phone}`);
-      await sendMsg(jid, `Acesse o link abaixo e realize seu cadastro:\n\n🔗 Link: ${link}`);
+      await new Promise(r => setTimeout(r, 2000)); await sendMsg(jid, `Clique no link para cadastrar: ${link}`);
       conversations.delete(phone);
     } else {
       await sendMsg(jid, 'Opção inválida. Escolha *1* ou *2*.');
@@ -241,7 +241,7 @@ async function handleMessage(jid, text) {
       // Solicitar orçamento
       const params = currentClient ? `?name=${encodeURIComponent(currentClient.name)}&whatsapp=${encodeURIComponent(phone)}&email=${encodeURIComponent(currentClient.email || '')}` : '';
       const link = await getLink(`/ClientBudgetRequest${params}`);
-      await sendMsg(jid, `✅ Acesse o link abaixo para preencher seu pedido de orçamento:\n\n🔗 ${link}`);
+      await new Promise(r => setTimeout(r, 2000)); await sendMsg(jid, `Clique no link para o orçamento: ${link}`);
       conversations.delete(phone);
     } else if (input === '2') {
       // Consultar orçamentos
