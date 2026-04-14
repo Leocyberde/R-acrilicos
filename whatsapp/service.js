@@ -90,11 +90,20 @@ function normPhone(jid) {
   return jid.split('@')[0];
 }
 
-function formatPhone(raw) {
+function cleanPhoneDigits(raw) {
   if (!raw) return "";
   const cleanRaw = raw.includes("@") ? raw.split("@")[0] : raw;
-  const digits = cleanRaw.replace(/\D/g, "");
-  const local = digits.startsWith("55") && digits.length >= 12 ? digits.slice(2) : digits;
+  let digits = cleanRaw.replace(/\D/g, "");
+  // Se for Brasil (55) e tiver código do país, removemos para manter padrão local (DDD + número)
+  if (digits.startsWith("55") && digits.length >= 12) {
+    digits = digits.slice(2);
+  }
+  return digits;
+}
+
+function formatPhone(raw) {
+  const local = cleanPhoneDigits(raw);
+  if (!local) return "";
   if (local.length === 11) return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
   if (local.length === 10) return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
   return local;
@@ -146,15 +155,17 @@ async function getLink(path) {
 
 async function findClientByPhone(phone) {
   if (!dbPool) return null;
+  const clean = cleanPhoneDigits(phone);
   try {
-    // Procura por mobile ou phone que contenha o número do WhatsApp
+    // Procura por mobile ou phone que contenha o número do WhatsApp normalizado
     const result = await dbPool.query(
       `SELECT * FROM clients 
-       WHERE mobile LIKE $1 OR phone LIKE $1 
-       OR replace(replace(replace(replace(mobile, ' ', ''), '-', ''), '(', ''), ')', '') LIKE $2
-       OR replace(replace(replace(replace(phone, ' ', ''), '-', ''), '(', ''), ')', '') LIKE $2
+       WHERE mobile = $1 OR phone = $1 
+       OR mobile LIKE $2 OR phone LIKE $2
+       OR replace(replace(replace(replace(mobile, ' ', ''), '-', ''), '(', ''), ')', '') = $1
+       OR replace(replace(replace(replace(phone, ' ', ''), '-', ''), '(', ''), ')', '') = $1
        LIMIT 1`,
-      [`%${phone}%`, `%${phone.slice(-8)}%`]
+      [clean, `%${clean.slice(-8)}`]
     );
     return result.rows[0] || null;
   } catch (e) {
@@ -223,8 +234,12 @@ async function handleMessage(jid, text) {
     if (clientResult.rows.length > 0) {
       const foundClient = clientResult.rows[0];
       state.data.client = foundClient;
-      // Vincula o WhatsApp ao cadastro
-      await dbPool.query('UPDATE clients SET mobile = $1 WHERE id = $2', [formatPhone(phone), foundClient.id]);
+      // Vincula o WhatsApp ao cadastro apenas se necessário (comparação por dígitos)
+      const currentMobile = cleanPhoneDigits(foundClient.mobile);
+      const newMobile = cleanPhoneDigits(phone);
+      if (!currentMobile || currentMobile !== newMobile) {
+        await dbPool.query('UPDATE clients SET mobile = $1 WHERE id = $2', [newMobile, foundClient.id]);
+      }
       
       const name = foundClient.person_type === 'juridica' ? foundClient.name : foundClient.name.split(' ')[0];
       await sendMsg(jid, `Cadastro localizado! Olá *${name}*.`);

@@ -40,6 +40,16 @@ app.use(cors());
 app.use(express.json({ limit: '20mb' }));
 app.use('/uploads', express.static(uploadsDir));
 
+function cleanPhoneDigits(raw) {
+  if (!raw) return "";
+  const cleanRaw = raw.includes("@") ? raw.split("@")[0] : raw;
+  let digits = cleanRaw.replace(/\D/g, "");
+  if (digits.startsWith("55") && digits.length >= 12) {
+    digits = digits.slice(2);
+  }
+  return digits;
+}
+
 async function initDB() {
   const client = await pool.connect();
   try {
@@ -690,7 +700,7 @@ app.post('/api/public/clients/register', async (req, res) => {
       [
         name.trim(),
         person_type || 'fisica',
-        phone || null, mobile || null, email || null,
+        cleanPhoneDigits(phone) || null, cleanPhoneDigits(mobile) || null, email || null,
         cpf || null, cnpj || null, docValue,
         address_zip_code || null, address_street || null, address_number || null,
         address_complement || null, address_city || null, address_state || null,
