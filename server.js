@@ -20,8 +20,8 @@ const PORT = 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'gestao-pro-secret-2024';
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  connectionString: process.env.VPS_DATABASE_URL || process.env.DATABASE_URL,
+  ssl: process.env.VPS_DATABASE_URL ? false : { rejectUnauthorized: false }
 });
 
 const uploadsDir = path.join(__dirname, 'uploads');
