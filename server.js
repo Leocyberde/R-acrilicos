@@ -315,6 +315,19 @@ async function initDB() {
       await client.query(sql);
     }
 
+    // Tabela de números WhatsApp vinculados a clientes
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS client_phones (
+        id SERIAL PRIMARY KEY,
+        client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+        phone VARCHAR(50) NOT NULL,
+        label VARCHAR(100) DEFAULT '',
+        created_date TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_client_phones_client_id ON client_phones(client_id);
+      CREATE INDEX IF NOT EXISTS idx_client_phones_phone ON client_phones(phone);
+    `);
+
     const seedUsers = [
       { email: 'admin@gestao.pro', password: 'demo', full_name: 'Administrador', role: 'admin' },
       { email: 'funcionario@gestao.pro', password: 'demo', full_name: 'Funcionário Demo', role: 'user' },
@@ -912,6 +925,61 @@ app.delete('/api/entities/WorkOrder/:id', optionalAuth, async (req, res) => {
 app.use('/api/entities/Receipt', buildEntityRoutes('receipts'));
 app.use('/api/entities/Financial', buildEntityRoutes('financial'));
 app.use('/api/entities/Client', buildEntityRoutes('clients'));
+
+// --- Números WhatsApp vinculados ao cliente ---
+function cleanPhone(raw) {
+  if (!raw) return '';
+  const cleanRaw = raw.includes('@') ? raw.split('@')[0] : raw;
+  let digits = cleanRaw.replace(/\D/g, '');
+  if (digits.startsWith('55') && digits.length >= 12) digits = digits.slice(2);
+  return digits;
+}
+
+app.get('/api/clients/:id/phones', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM client_phones WHERE client_id = $1 ORDER BY created_date ASC',
+      [req.params.id]
+    );
+    res.json(result.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/clients/:id/phones', authMiddleware, async (req, res) => {
+  try {
+    const { phone, label } = req.body;
+    const cleaned = cleanPhone(phone);
+    if (!cleaned) return res.status(400).json({ error: 'Número inválido.' });
+    // Verificar duplicata para este cliente
+    const dup = await pool.query(
+      'SELECT id FROM client_phones WHERE client_id = $1 AND phone = $2',
+      [req.params.id, cleaned]
+    );
+    if (dup.rows.length > 0) return res.status(400).json({ error: 'Este número já está vinculado.' });
+    const result = await pool.query(
+      'INSERT INTO client_phones (client_id, phone, label) VALUES ($1, $2, $3) RETURNING *',
+      [req.params.id, cleaned, label || '']
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/clients/:clientId/phones/:phoneId', authMiddleware, async (req, res) => {
+  try {
+    await pool.query(
+      'DELETE FROM client_phones WHERE id = $1 AND client_id = $2',
+      [req.params.phoneId, req.params.clientId]
+    );
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.use('/api/entities/Settings', buildEntityRoutes('settings'));
 app.use('/api/entities/LayoutSettings', buildEntityRoutes('layout_settings'));
 app.use('/api/entities/SectionStyles', buildEntityRoutes('section_styles'));

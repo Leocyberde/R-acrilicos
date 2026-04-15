@@ -179,6 +179,9 @@ async function findClientByPhone(phone) {
     variant = ddd + '9' + num;
   }
 
+  const numbersToSearch = [clean];
+  if (variant) numbersToSearch.push(variant);
+
   try {
     // Normaliza o campo do banco para comparar apenas dígitos
     const normalize = `regexp_replace(coalesce(mobile,''), '\\D', '', 'g')`;
@@ -191,6 +194,7 @@ async function findClientByPhone(phone) {
       variantClause = `OR ${normalize} = $2 OR ${normalizeP} = $2`;
     }
 
+    // 1. Busca nos campos mobile/phone do cliente
     const result = await dbPool.query(
       `SELECT *,
         CASE
@@ -205,7 +209,19 @@ async function findClientByPhone(phone) {
        LIMIT 1`,
       params
     );
-    return result.rows[0] || null;
+    if (result.rows.length > 0) return result.rows[0];
+
+    // 2. Se não encontrou, busca na tabela client_phones (números adicionais vinculados)
+    const phoneParams = numbersToSearch.map((_, i) => `$${i + 1}`).join(', ');
+    const linkedResult = await dbPool.query(
+      `SELECT c.* FROM clients c
+       INNER JOIN client_phones cp ON cp.client_id = c.id
+       WHERE cp.phone IN (${phoneParams})
+       ORDER BY c.id ASC
+       LIMIT 1`,
+      numbersToSearch
+    );
+    return linkedResult.rows[0] || null;
   } catch (e) {
     console.error('[WhatsApp Bot] Error finding client:', e.message);
     return null;

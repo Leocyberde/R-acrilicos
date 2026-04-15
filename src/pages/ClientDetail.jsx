@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Save, Upload, Download, Trash2, X, FileText, Search } from "lucide-react";
+import { ArrowLeft, Save, Upload, Download, Trash2, X, FileText, Search, Smartphone, Plus, UserCheck } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +47,10 @@ export default function ClientDetail() {
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState("info");
   const [fetchingCep, setFetchingCep] = useState(false);
+  const [linkedPhones, setLinkedPhones] = useState([]);
+  const [newPhone, setNewPhone] = useState("");
+  const [newLabel, setNewLabel] = useState("");
+  const [addingPhone, setAddingPhone] = useState(false);
   const navigate = useNavigate();
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
@@ -62,7 +66,54 @@ export default function ClientDetail() {
       setLoading(false);
     }
     load();
+    loadLinkedPhones();
   }, [id]);
+
+  async function loadLinkedPhones() {
+    try {
+      const res = await fetch(`/api/clients/${id}/phones`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      if (res.ok) setLinkedPhones(await res.json());
+    } catch {}
+  }
+
+  async function handleAddPhone() {
+    if (!newPhone.trim()) return toast.error("Informe o número.");
+    setAddingPhone(true);
+    try {
+      const res = await fetch(`/api/clients/${id}/phones`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ phone: newPhone.trim(), label: newLabel.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao vincular número.');
+      setLinkedPhones(prev => [...prev, data]);
+      setNewPhone("");
+      setNewLabel("");
+      toast.success("Número vinculado com sucesso!");
+    } catch (e) {
+      toast.error(e.message);
+    }
+    setAddingPhone(false);
+  }
+
+  async function handleRemovePhone(phoneId) {
+    try {
+      await fetch(`/api/clients/${id}/phones/${phoneId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      setLinkedPhones(prev => prev.filter(p => p.id !== phoneId));
+      toast.success("Número removido.");
+    } catch {
+      toast.error("Erro ao remover número.");
+    }
+  }
 
   const handleCepLookup = async (cep) => {
     const cleaned = cep.replace(/\D/g, "");
@@ -224,6 +275,12 @@ export default function ClientDetail() {
             <TabsTrigger value="info" className="rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-600 data-[state=active]:bg-white">
               Informações
             </TabsTrigger>
+            <TabsTrigger value="phones" className="rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-600 data-[state=active]:bg-white flex items-center gap-2">
+              <Smartphone className="h-4 w-4" /> WhatsApp Vinculados
+              {linkedPhones.length > 0 && (
+                <span className="ml-1 bg-green-100 text-green-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">{linkedPhones.length}</span>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="files" className="rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-600 data-[state=active]:bg-white flex items-center gap-2">
               <FileText className="h-4 w-4" /> FICHA CADASTRAL
             </TabsTrigger>
@@ -329,6 +386,88 @@ export default function ClientDetail() {
                 <Label>Observações</Label>
                 <Textarea value={client.notes || ""} onChange={e => setClient(prev => ({ ...prev, notes: e.target.value }))} rows={3} className="mt-1" />
               </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="phones" className="p-6 space-y-6 mt-0">
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-1 flex items-center gap-2">
+                <Smartphone className="h-5 w-5 text-green-600" /> Números de WhatsApp Vinculados
+              </h3>
+              <p className="text-sm text-slate-500 mb-5">
+                Qualquer número vinculado aqui será reconhecido pelo bot como pertencente a este cliente — sem precisar digitar CPF/CNPJ.
+              </p>
+
+              {/* Formulário para adicionar */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-5">
+                <p className="text-sm font-medium text-slate-700 mb-3">Vincular novo número</p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1">
+                    <Label className="text-xs text-slate-500">Número WhatsApp (somente dígitos)</Label>
+                    <Input
+                      className="mt-1"
+                      placeholder="Ex: 11910509385"
+                      value={newPhone}
+                      onChange={e => setNewPhone(e.target.value.replace(/\D/g, ""))}
+                      maxLength={13}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Label className="text-xs text-slate-500">Identificação (opcional)</Label>
+                    <Input
+                      className="mt-1"
+                      placeholder="Ex: João - Compras"
+                      value={newLabel}
+                      onChange={e => setNewLabel(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+                      onClick={handleAddPhone}
+                      disabled={addingPhone || !newPhone.trim()}
+                    >
+                      <Plus className="h-4 w-4 mr-1.5" />
+                      {addingPhone ? "Vinculando..." : "Vincular"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Lista de números vinculados */}
+              {linkedPhones.length === 0 ? (
+                <div className="text-center py-12 border border-dashed border-slate-200 rounded-xl text-slate-400 text-sm">
+                  <Smartphone className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                  Nenhum número adicional vinculado.<br />
+                  O número principal do cadastro ({formatPhone(client?.mobile) || "não definido"}) já é usado pelo bot.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {linkedPhones.map(p => (
+                    <div key={p.id} className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                          <UserCheck className="h-4 w-4 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="font-mono text-sm font-semibold text-slate-800">{p.phone}</p>
+                          {p.label && <p className="text-xs text-slate-500">{p.label}</p>}
+                          <p className="text-xs text-slate-400">Vinculado em {new Date(p.created_date).toLocaleDateString("pt-BR")}</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-red-400 hover:text-red-600 hover:bg-red-50"
+                        onClick={() => handleRemovePhone(p.id)}
+                        title="Remover vínculo"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </TabsContent>
 
