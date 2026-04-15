@@ -156,16 +156,51 @@ async function getLink(path) {
 async function findClientByPhone(phone) {
   if (!dbPool) return null;
   const clean = cleanPhoneDigits(phone);
+  if (!clean) return null;
+
+  // Gera variante com/sem o 9º dígito (padrão brasileiro)
+  // Ex: "11987654321" (11 dígitos) → variante sem 9: "1187654321"
+  // Ex: "1187654321"  (10 dígitos) → variante com 9: "11987654321"
+  let variant = null;
+  if (clean.length === 11) {
+    // Tem 9º dígito — tenta sem ele
+    const ddd = clean.slice(0, 2);
+    const num = clean.slice(2);
+    if (num.startsWith('9')) {
+      variant = ddd + num.slice(1); // remove o 9
+    }
+  } else if (clean.length === 10) {
+    // Sem 9º dígito — tenta com ele
+    const ddd = clean.slice(0, 2);
+    const num = clean.slice(2);
+    variant = ddd + '9' + num;
+  }
+
   try {
-    // Procura por mobile ou phone que contenha o número do WhatsApp normalizado
+    // Normaliza o campo do banco para comparar apenas dígitos
+    const normalize = `regexp_replace(coalesce(mobile,''), '\\D', '', 'g')`;
+    const normalizeP = `regexp_replace(coalesce(phone,''), '\\D', '', 'g')`;
+
+    const params = [clean];
+    let variantClause = '';
+    if (variant) {
+      params.push(variant);
+      variantClause = `OR ${normalize} = $2 OR ${normalizeP} = $2`;
+    }
+
     const result = await dbPool.query(
-      `SELECT * FROM clients 
-       WHERE mobile = $1 OR phone = $1 
-       OR mobile LIKE $2 OR phone LIKE $2
-       OR replace(replace(replace(replace(mobile, ' ', ''), '-', ''), '(', ''), ')', '') = $1
-       OR replace(replace(replace(replace(phone, ' ', ''), '-', ''), '(', ''), ')', '') = $1
+      `SELECT *,
+        CASE
+          WHEN ${normalize} = $1 OR ${normalizeP} = $1 THEN 1
+          ${variant ? `WHEN ${normalize} = $2 OR ${normalizeP} = $2 THEN 2` : ''}
+          ELSE 3
+        END AS match_priority
+       FROM clients
+       WHERE ${normalize} = $1 OR ${normalizeP} = $1
+         ${variantClause}
+       ORDER BY match_priority ASC, id ASC
        LIMIT 1`,
-      [clean, `%${clean.slice(-8)}`]
+      params
     );
     return result.rows[0] || null;
   } catch (e) {
@@ -234,10 +269,11 @@ async function handleMessage(jid, text) {
     if (clientResult.rows.length > 0) {
       const foundClient = clientResult.rows[0];
       state.data.client = foundClient;
-      // Vincula o WhatsApp ao cadastro apenas se necessário (comparação por dígitos)
+      // Vincula o WhatsApp ao cadastro SOMENTE se o mobile estiver vazio
+      // Nunca sobrescreve um número já cadastrado para evitar conflitos
       const currentMobile = cleanPhoneDigits(foundClient.mobile);
       const newMobile = cleanPhoneDigits(phone);
-      if (!currentMobile || currentMobile !== newMobile) {
+      if (!currentMobile) {
         await dbPool.query('UPDATE clients SET mobile = $1 WHERE id = $2', [newMobile, foundClient.id]);
       }
       
