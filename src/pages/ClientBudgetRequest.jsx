@@ -7,26 +7,12 @@ import { Plus, Trash2, Send, CheckCircle2, X, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 
-function formatPhone(raw) {
+function cleanPhoneDigits(raw) {
   if (!raw) return "";
   const cleanRaw = raw.includes("@") ? raw.split("@")[0] : raw;
   let digits = cleanRaw.replace(/\D/g, "");
-
-  // Remove Brazilian country code 55 if present
   if (digits.startsWith("55") && digits.length >= 12) {
     digits = digits.slice(2);
-  }
-
-  // If still too long (non-standard JID), take the last 11 digits
-  if (digits.length > 11) {
-    digits = digits.slice(-11);
-  }
-
-  if (digits.length === 11) {
-    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-  }
-  if (digits.length === 10) {
-    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
   }
   return digits;
 }
@@ -57,7 +43,7 @@ export default function ClientBudgetRequest() {
     async function prefill() {
       let name = urlName || "";
       let email = urlEmail || "";
-      let phone = urlWhatsapp ? formatPhone(urlWhatsapp) : "";
+      let phone = urlWhatsapp ? cleanPhoneDigits(urlWhatsapp) : "";
 
       // If logged in, fetch the client record for accurate data
       try {
@@ -72,8 +58,8 @@ export default function ClientBudgetRequest() {
             const client = clients?.[0];
             if (client) {
               if (!name) name = client.name || "";
-              // Always prefer the phone from the client record over the URL param
-              const clientPhone = client.mobile || client.phone || "";
+              // Sempre prefere o número cadastrado no banco (somente dígitos, sem formatação)
+              const clientPhone = cleanPhoneDigits(client.mobile || client.phone || "");
               if (clientPhone) phone = clientPhone;
             }
           } catch {
@@ -223,7 +209,7 @@ export default function ClientBudgetRequest() {
               <Label>WhatsApp</Label>
               <Input
                 className="mt-1"
-                placeholder="(11) 99999-0000"
+                placeholder="11999990000"
                 value={form.client_phone}
                 onChange={e => handleChange("client_phone", e.target.value)}
               />
