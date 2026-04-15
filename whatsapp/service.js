@@ -23,6 +23,9 @@ let status = 'disconnected';
 let qrData = null;
 let dbPool = null;
 let appUrl = '';
+let reconnectTimer = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 10;
 
 setInterval(() => {
   const now = Date.now();
@@ -382,9 +385,30 @@ async function sendMenu(jid, isRegistered = false) {
   await sendMsg(jid, menu);
 }
 
+function scheduleReconnect() {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+    console.log(`[WhatsApp] Limite de ${MAX_RECONNECT_ATTEMPTS} reconexões atingido. Reconexão manual necessária.`);
+    status = 'disconnected';
+    return;
+  }
+  const delay = Math.min(5000 * Math.pow(1.5, reconnectAttempts), 60000);
+  reconnectAttempts++;
+  console.log(`[WhatsApp] Reconectando em ${Math.round(delay / 1000)}s (tentativa ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+  reconnectTimer = setTimeout(connect, delay);
+}
+
 export async function connect() {
   if (status === 'connected' || status === 'connecting') {
     return { success: false, message: 'Já conectando ou conectado' };
+  }
+
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
   }
 
   status = 'connecting';
@@ -415,22 +439,28 @@ export async function connect() {
 
       if (connection === 'close') {
         const reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
+        sock = null;
+        qrData = null;
+
         if (reason === DisconnectReason.loggedOut) {
+          console.log('[WhatsApp] Sessão encerrada (logout). Limpando dados de autenticação...');
           status = 'disconnected';
-          sock = null;
-          qrData = null;
+          reconnectAttempts = 0;
           try {
             const { rm } = await import('fs/promises');
             await rm(AUTH_DIR, { recursive: true, force: true });
           } catch {}
         } else {
           status = 'disconnected';
-          sock = null;
-          setTimeout(connect, 5000);
+          scheduleReconnect();
         }
       } else if (connection === 'open') {
+        // Ignora eventos duplicados de 'open'
+        if (status === 'connected') return;
         status = 'connected';
         qrData = null;
+        reconnectAttempts = 0;
+        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
         console.log('[WhatsApp] Conectado com sucesso!');
       }
     });
@@ -462,6 +492,12 @@ export async function connect() {
 }
 
 export async function disconnect() {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  reconnectAttempts = 0;
+
   if (sock) {
     try {
       await sock.logout();
