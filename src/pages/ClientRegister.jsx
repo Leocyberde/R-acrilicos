@@ -48,11 +48,8 @@ export default function ClientRegister() {
   };
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const whatsapp = params.get("whatsapp");
-    if (whatsapp) {
-      setForm(prev => ({ ...prev, mobile: formatPhone(whatsapp) }));
-    }
+    // Não pré-preenchemos o campo de WhatsApp a partir da URL pois o bot
+    // já vincula o número automaticamente ao cadastro pelo contexto da sessão.
   }, []);
 
   const set = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
