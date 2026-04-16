@@ -72,7 +72,7 @@ export default function ClientDetail() {
   async function loadLinkedPhones() {
     try {
       const res = await fetch(`/api/clients/${id}/phones`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
       });
       if (res.ok) setLinkedPhones(await res.json());
     } catch {}
@@ -86,7 +86,7 @@ export default function ClientDetail() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
         },
         body: JSON.stringify({ phone: newPhone.trim(), label: newLabel.trim() }),
       });
@@ -106,7 +106,7 @@ export default function ClientDetail() {
     try {
       await fetch(`/api/clients/${id}/phones/${phoneId}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
       });
       setLinkedPhones(prev => prev.filter(p => p.id !== phoneId));
       toast.success("Número removido.");
