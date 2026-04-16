@@ -158,6 +158,7 @@ export default function ClientDetail() {
         address_state: client.address_state,
         cpf: client.person_type === "fisica" ? client.cpf : null,
         cnpj: client.person_type === "juridica" ? client.cnpj : null,
+        cpf_cnpj: client.person_type === "fisica" ? client.cpf : client.cnpj,
       };
       await base44.entities.Client.update(id, updateData);
       toast.success("Cliente salvo com sucesso!");

@@ -277,10 +277,16 @@ async function handleMessage(jid, text) {
       return;
     }
     
+    // Normaliza e compara nas colunas cpf_cnpj, cpf e cnpj
+    // (admin salva em cpf/cnpj; cadastro público salva também em cpf_cnpj)
+    const stripDoc = (col) =>
+      `regexp_replace(coalesce(${col},''), '[^0-9]', '', 'g')`;
+
     const clientResult = await dbPool.query(
       `SELECT * FROM clients
-       WHERE replace(replace(replace(cpf_cnpj,'.',''),'-',''),'/','') = $1
-          OR replace(replace(cpf_cnpj,'.',''),'-','') = $1
+       WHERE ${stripDoc('cpf_cnpj')} = $1
+          OR ${stripDoc('cpf')}     = $1
+          OR ${stripDoc('cnpj')}    = $1
        LIMIT 1`,
       [digits]
     );

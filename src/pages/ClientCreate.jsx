@@ -81,6 +81,7 @@ export default function ClientCreate() {
         email: form.email,
         cpf: form.person_type === "fisica" ? form.cpf : null,
         cnpj: form.person_type === "juridica" ? form.cnpj : null,
+        cpf_cnpj: form.person_type === "fisica" ? form.cpf : form.cnpj,
         address_zip_code: form.address_zip_code,
         address_street: form.address_street,
         address_number: form.address_number,

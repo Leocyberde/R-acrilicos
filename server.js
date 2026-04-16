@@ -315,6 +315,14 @@ async function initDB() {
       await client.query(sql);
     }
 
+    // Preenche cpf_cnpj para clientes cadastrados via admin que ficaram com o campo vazio
+    await client.query(`
+      UPDATE clients
+      SET cpf_cnpj = COALESCE(NULLIF(cpf,''), NULLIF(cnpj,''))
+      WHERE (cpf_cnpj IS NULL OR cpf_cnpj = '')
+        AND (cpf IS NOT NULL AND cpf <> '' OR cnpj IS NOT NULL AND cnpj <> '')
+    `);
+
     // Tabela de números WhatsApp vinculados a clientes
     await client.query(`
       CREATE TABLE IF NOT EXISTS client_phones (
