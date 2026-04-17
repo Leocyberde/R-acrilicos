@@ -294,12 +294,34 @@ async function handleMessage(jid, text) {
     if (clientResult.rows.length > 0) {
       const foundClient = clientResult.rows[0];
       state.data.client = foundClient;
-      // Vincula o WhatsApp ao cadastro SOMENTE se o mobile estiver vazio
-      // Nunca sobrescreve um número já cadastrado para evitar conflitos
       const currentMobile = cleanPhoneDigits(foundClient.mobile);
       const newMobile = cleanPhoneDigits(phone);
+
       if (!currentMobile) {
+        // Mobile vazio: salva o número diretamente no cadastro principal
         await dbPool.query('UPDATE clients SET mobile = $1 WHERE id = $2', [newMobile, foundClient.id]);
+      } else if (currentMobile !== newMobile) {
+        // Mobile já tem outro número: vincula como número adicional para reconhecimento futuro
+        try {
+          await dbPool.query(
+            `INSERT INTO client_phones (client_id, phone, label)
+             VALUES ($1, $2, 'Vinculado via bot')
+             ON CONFLICT DO NOTHING`,
+            [foundClient.id, newMobile]
+          );
+        } catch (_) {
+          // ON CONFLICT não funciona sem UNIQUE — tenta upsert manual
+          const existing = await dbPool.query(
+            'SELECT id FROM client_phones WHERE client_id = $1 AND phone = $2',
+            [foundClient.id, newMobile]
+          );
+          if (existing.rows.length === 0) {
+            await dbPool.query(
+              'INSERT INTO client_phones (client_id, phone, label) VALUES ($1, $2, $3)',
+              [foundClient.id, newMobile, 'Vinculado via bot']
+            );
+          }
+        }
       }
       
       const name = foundClient.person_type === 'juridica' ? foundClient.name : foundClient.name.split(' ')[0];
