@@ -212,6 +212,14 @@ export default function BudgetRequests() {
                   <p className="text-sm text-slate-800 font-medium mt-0.5">{selected.client_name}</p>
                 </div>
                 <div>
+                  <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">WhatsApp</p>
+                  <p className="text-sm text-slate-800 mt-0.5">{selected.client_phone || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Email</p>
+                  <p className="text-sm text-slate-800 mt-0.5">{selected.client_email || "—"}</p>
+                </div>
+                <div>
                   <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Job</p>
                   <p className="text-sm text-slate-800 mt-0.5">{selected.job || "—"}</p>
                 </div>

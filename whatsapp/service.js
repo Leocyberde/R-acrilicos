@@ -195,12 +195,15 @@ async function findClientByPhone(phone) {
     }
 
     // 1. Busca nos campos mobile/phone do cliente
+    // Priorizamos mobile (WhatsApp) sobre o telefone fixo
     const result = await dbPool.query(
       `SELECT *,
         CASE
-          WHEN ${normalize} = $1 OR ${normalizeP} = $1 THEN 1
-          ${variant ? `WHEN ${normalize} = $2 OR ${normalizeP} = $2 THEN 2` : ''}
-          ELSE 3
+          WHEN ${normalize} = $1 THEN 1
+          WHEN ${normalizeP} = $1 THEN 2
+          ${variant ? `WHEN ${normalize} = $2 THEN 3` : ''}
+          ${variant ? `WHEN ${normalizeP} = $2 THEN 4` : ''}
+          ELSE 5
         END AS match_priority
        FROM clients
        WHERE ${normalize} = $1 OR ${normalizeP} = $1

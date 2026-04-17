@@ -310,6 +310,7 @@ async function initDB() {
       "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS is_urgent BOOLEAN DEFAULT FALSE",
       "ALTER TABLE budgets ALTER COLUMN status SET DEFAULT 'em_aberto'",
       "ALTER TABLE receipts ALTER COLUMN status SET DEFAULT 'em_aberto'",
+      "ALTER TABLE budget_requests ADD COLUMN IF NOT EXISTS client_phone VARCHAR(100)",
     ];
     for (const sql of migrations) {
       await client.query(sql);
@@ -764,13 +765,14 @@ app.post('/api/public/budget-requests', upload.array('files', 10), async (req, r
 
     const result = await pool.query(
       `INSERT INTO budget_requests
-        (client_name, client_email, job, producer, delivery_date,
+        (client_name, client_email, client_phone, job, producer, delivery_date,
          description, notes, items, attachments, status, created_date, updated_date)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW(),NOW())
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW(),NOW())
        RETURNING *`,
       [
         client_name.trim(),
         client_email || null,
+        client_phone || null,
         job || null,
         producer || null,
         delivery_date || null,
