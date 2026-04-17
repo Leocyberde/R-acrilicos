@@ -196,7 +196,7 @@ export default function BudgetRequests() {
                   </SelectContent>
                 </Select>
                 <a
-                  href={createPageUrl(`BudgetCreate?client_name=${encodeURIComponent(selected.client_name || "")}&job=${encodeURIComponent(selected.job || "")}&producer=${encodeURIComponent(selected.producer || "")}&description=${encodeURIComponent(selected.description || "")}&notes=${encodeURIComponent(selected.notes || "")}&items=${encodeURIComponent(JSON.stringify(selected.items || []))}&delivery_date=${encodeURIComponent(selected.delivery_date || "")}`)}
+                  href={createPageUrl(`BudgetCreate?client_name=${encodeURIComponent(selected.client_name || "")}&job=${encodeURIComponent(selected.job || "")}&producer=${encodeURIComponent(selected.producer || "")}&description=${encodeURIComponent(selected.description || "")}&notes=${encodeURIComponent(selected.notes || "")}&items=${encodeURIComponent(JSON.stringify(selected.items || []))}&delivery_date=${encodeURIComponent(selected.delivery_date || "")}&client_phone=${encodeURIComponent(selected.client_phone || "")}&client_email=${encodeURIComponent(selected.client_email || "")}`)}
                   className="ml-auto flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
                   onClick={() => setSelected(null)}
                 >

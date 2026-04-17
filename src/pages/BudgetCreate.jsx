@@ -16,6 +16,8 @@ export default function BudgetCreate() {
   const fromRequest = searchParams.get("client_name");
   const prefill = fromRequest ? {
     client_name: searchParams.get("client_name") || "",
+    client_phone: searchParams.get("client_phone") || "",
+    client_email: searchParams.get("client_email") || "",
     job: searchParams.get("job") || "",
     producer: searchParams.get("producer") || "",
     description: searchParams.get("description") || "",

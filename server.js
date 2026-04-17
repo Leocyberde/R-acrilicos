@@ -315,19 +315,6 @@ async function initDB() {
       await client.query(sql);
     }
 
-    // Garante constraint única em client_phones (caso tabela já existisse sem ela)
-    await client.query(`
-      DO $$
-      BEGIN
-        IF NOT EXISTS (
-          SELECT 1 FROM pg_constraint
-          WHERE conname = 'client_phones_client_id_phone_key'
-        ) THEN
-          ALTER TABLE client_phones ADD CONSTRAINT client_phones_client_id_phone_key UNIQUE (client_id, phone);
-        END IF;
-      END$$;
-    `).catch(() => {});
-
     // Preenche cpf_cnpj para clientes cadastrados via admin que ficaram com o campo vazio
     await client.query(`
       UPDATE clients
@@ -343,8 +330,7 @@ async function initDB() {
         client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
         phone VARCHAR(50) NOT NULL,
         label VARCHAR(100) DEFAULT '',
-        created_date TIMESTAMP DEFAULT NOW(),
-        UNIQUE(client_id, phone)
+        created_date TIMESTAMP DEFAULT NOW()
       );
       CREATE INDEX IF NOT EXISTS idx_client_phones_client_id ON client_phones(client_id);
       CREATE INDEX IF NOT EXISTS idx_client_phones_phone ON client_phones(phone);

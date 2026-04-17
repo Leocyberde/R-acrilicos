@@ -81,7 +81,7 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
         ...prev,
         client_id: selectedClient.id,
         client_name: selectedClient.name || "",
-        client_phone: selectedClient.phone || selectedClient.mobile || "",
+        client_phone: prev.client_phone || selectedClient.phone || selectedClient.mobile || "",
         client_email: selectedClient.email || "",
         client_address: composedAddress,
       }));

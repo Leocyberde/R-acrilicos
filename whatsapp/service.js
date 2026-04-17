@@ -31,7 +31,7 @@ setInterval(() => {
   const now = Date.now();
   for (const [phone, state] of conversations) {
     if (now - state.lastActivity > CONVO_TIMEOUT_MS) {
-      conversations.delete(phone);
+      state.step = "menu";
     }
   }
 }, 5 * 60 * 1000);
@@ -266,7 +266,7 @@ async function handleMessage(jid, text) {
     } else if (input === '2') {
       const link = await getLink(`/ClientRegister?whatsapp=${phone}`);
       await sendMsg(jid, "Acesse o link abaixo para realizar seu cadastro:"); await new Promise(r => setTimeout(r, 1000)); await sendMsg(jid, link);
-      conversations.delete(phone);
+      state.step = "menu";
     } else {
       await sendMsg(jid, 'Opção inválida. Escolha *1* ou *2*.');
     }
@@ -342,12 +342,12 @@ async function handleMessage(jid, text) {
       const params = currentClient ? `?name=${encodeURIComponent(currentClient.name)}&whatsapp=${encodeURIComponent(sessionPhone)}&email=${encodeURIComponent(currentClient.email || '')}` : '';
       const link = await getLink(`/ClientBudgetRequest${params}`);
       await sendMsg(jid, "Acesse o link abaixo para preencher seu pedido de orçamento:"); await new Promise(r => setTimeout(r, 1000)); await sendMsg(jid, link);
-      conversations.delete(phone);
+      state.step = "menu";
     } else if (input === '2') {
       // Consultar orçamentos
       if (!currentClient) {
         await sendMsg(jid, '⚠️ Para consultar orçamentos, você precisa estar cadastrado.');
-        conversations.delete(phone);
+        state.step = "menu";
         return;
       }
       
@@ -379,12 +379,12 @@ async function handleMessage(jid, text) {
           }
         }
       }
-      conversations.delete(phone);
+      state.step = "menu";
     } else if (input === '3') {
       // Acompanhar O.S.
       if (!currentClient) {
         await sendMsg(jid, '⚠️ Para acompanhar suas O.S., você precisa estar cadastrado.');
-        conversations.delete(phone);
+        state.step = "menu";
         return;
       }
 
@@ -415,10 +415,10 @@ async function handleMessage(jid, text) {
           }
         }
       }
-      conversations.delete(phone);
+      state.step = "menu";
     } else if (input === '4') {
       await sendMsg(jid, '💬 *Suporte*\n\nUm membro da nossa equipe já vai te atender! ⏳');
-      conversations.delete(phone);
+      state.step = "menu";
     } else {
       await sendMsg(jid, '❓ Opção inválida. Responda com *1*, *2*, *3* ou *4*.');
     }
