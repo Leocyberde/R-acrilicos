@@ -52,15 +52,18 @@ export default function ClientBudgetRequest() {
           if (!name) name = user.full_name || "";
           if (!email) email = user.email || "";
 
-          // Fetch client record by email to get the registered phone
+          // Fetch client record by email to get name/data
           try {
             const clients = await base44.entities.Client.filter({ email: user.email });
             const client = clients?.[0];
             if (client) {
               if (!name) name = client.name || "";
-              // Sempre prefere o número cadastrado no banco (somente dígitos, sem formatação)
-              const clientPhone = cleanPhoneDigits(client.mobile || client.phone || "");
-              if (clientPhone) phone = clientPhone;
+              // Só usa o telefone do banco se NÃO veio número na URL
+              // (quando veio da URL é o número que está conversando, deve ser preservado)
+              if (!urlWhatsapp) {
+                const clientPhone = cleanPhoneDigits(client.mobile || client.phone || "");
+                if (clientPhone) phone = clientPhone;
+              }
             }
           } catch {
             // Not logged in or no client record – keep URL param data

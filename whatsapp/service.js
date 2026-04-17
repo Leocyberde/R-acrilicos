@@ -314,9 +314,10 @@ async function handleMessage(jid, text) {
     const currentClient = state.data.client;
     
     if (input === '1') {
-      // Solicitar orçamento — usa o número cadastrado do cliente, não o da sessão WhatsApp
-      const registeredPhone = cleanPhoneDigits(currentClient?.mobile || currentClient?.phone || phone);
-      const params = currentClient ? `?name=${encodeURIComponent(currentClient.name)}&whatsapp=${encodeURIComponent(registeredPhone)}&email=${encodeURIComponent(currentClient.email || '')}` : '';
+      // Usa o número da sessão atual (quem está conversando), não o número principal do cadastro
+      // Assim o formulário de orçamento já traz o WhatsApp correto de quem está pedindo
+      const sessionPhone = phone;
+      const params = currentClient ? `?name=${encodeURIComponent(currentClient.name)}&whatsapp=${encodeURIComponent(sessionPhone)}&email=${encodeURIComponent(currentClient.email || '')}` : '';
       const link = await getLink(`/ClientBudgetRequest${params}`);
       await sendMsg(jid, "Acesse o link abaixo para preencher seu pedido de orçamento:"); await new Promise(r => setTimeout(r, 1000)); await sendMsg(jid, link);
       conversations.delete(phone);
