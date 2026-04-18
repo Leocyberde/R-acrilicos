@@ -50,3 +50,4 @@ waitForPort = 5000
 
 [userenv.shared]
 JWT_SECRET = "0735b747d48de095cb8a8fa5860ade231f37115173b1e275667055a37d703e46bf289f3dcc7854a3a982d2c16c6e052f"
+VPS_DATABASE_URL = "postgresql://leouser:Leoluh10@201.76.43.98:5432/racrilicos"
