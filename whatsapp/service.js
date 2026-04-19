@@ -93,6 +93,28 @@ function normPhone(jid) {
   return jid.split('@')[0];
 }
 
+// Verifica se o valor extraído do JID é um número de telefone real (não LID interno do WhatsApp)
+// LIDs são identificadores internos do WhatsApp multi-device com mais de 15 dígitos
+function isValidPhoneFromJid(rawPhone) {
+  const digits = rawPhone.replace(/\D/g, '');
+  return digits.length >= 8 && digits.length <= 15;
+}
+
+// Retorna o número de telefone real para uso em formulários/banco de dados.
+// Se o JID retornar um LID (>15 dígitos), usa o telefone cadastrado do cliente como fallback.
+function resolveDisplayPhone(sessionPhone, client) {
+  const digits = sessionPhone.replace(/\D/g, '');
+  if (isValidPhoneFromJid(digits)) {
+    return cleanPhoneDigits(digits);
+  }
+  // Fallback: número cadastrado do cliente
+  if (client) {
+    const registered = cleanPhoneDigits(client.mobile || client.phone || '');
+    if (registered) return registered;
+  }
+  return ''; // não temos como inferir o número real
+}
+
 function cleanPhoneDigits(raw) {
   if (!raw) return "";
   const cleanRaw = raw.includes("@") ? raw.split("@")[0] : raw;
@@ -267,7 +289,9 @@ async function handleMessage(jid, text) {
       state.step = 'awaiting_cpf_identification';
       await sendMsg(jid, 'Para eu te identificar, por favor informe seu *CPF ou CNPJ*:');
     } else if (input === '2') {
-      const link = await getLink(`/ClientRegister?whatsapp=${phone}`);
+      const displayPhone = resolveDisplayPhone(phone, null);
+      const registerParams = displayPhone ? `?whatsapp=${displayPhone}` : '';
+      const link = await getLink(`/ClientRegister${registerParams}`);
       await sendMsg(jid, "Acesse o link abaixo para realizar seu cadastro:"); await new Promise(r => setTimeout(r, 1000)); await sendMsg(jid, link);
       state.step = "menu";
     } else {
@@ -298,7 +322,8 @@ async function handleMessage(jid, text) {
       const foundClient = clientResult.rows[0];
       state.data.client = foundClient;
       const currentMobile = cleanPhoneDigits(foundClient.mobile);
-      const newMobile = cleanPhoneDigits(phone);
+      // Usa o número real da sessão (ignora LIDs internos do WhatsApp multi-device)
+      const newMobile = resolveDisplayPhone(phone, foundClient);
 
       if (!currentMobile) {
         // Mobile vazio: salva o número diretamente no cadastro principal
@@ -339,9 +364,10 @@ async function handleMessage(jid, text) {
     const currentClient = state.data.client;
     
     if (input === '1') {
-      // Sempre usa o número da sessão atual (quem está chatando) como WhatsApp do formulário,
-      // seja o titular do cadastro ou um número vinculado da empresa
-      const params = currentClient ? `?name=${encodeURIComponent(currentClient.name)}&whatsapp=${encodeURIComponent(phone)}&email=${encodeURIComponent(currentClient.email || '')}` : '';
+      // Resolve o número real de quem está chatando (trata LIDs do WhatsApp multi-device)
+      // Se o JID for um LID (>15 dígitos), usa o telefone cadastrado do cliente como fallback
+      const displayPhone = resolveDisplayPhone(phone, currentClient);
+      const params = currentClient ? `?name=${encodeURIComponent(currentClient.name)}&whatsapp=${encodeURIComponent(displayPhone)}&email=${encodeURIComponent(currentClient.email || '')}` : '';
       const link = await getLink(`/ClientBudgetRequest${params}`);
       await sendMsg(jid, "Acesse o link abaixo para preencher seu pedido de orçamento:"); await new Promise(r => setTimeout(r, 1000)); await sendMsg(jid, link);
       state.step = "menu";
