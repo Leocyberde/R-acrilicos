@@ -361,12 +361,21 @@ async function handleMessage(jid, text) {
     const currentClient = state.data.client;
     
     if (input === '1') {
-      // CORREÇÃO: Usa o número de quem está ativo no chat (variável phone) em vez do banco
-      const displayPhone = cleanPhoneDigits(phone); 
       
+      // 1. Pega o número diretamente do banco de dados (mobile ou phone)
+      // Se por algum motivo bizarro não tiver, faz o fallback para o telefone da sessão
+      let phoneForLink = currentClient ? (currentClient.mobile || currentClient.phone || phone) : phone;
+      
+      // 2. Limpa qualquer lixo do Baileys (como @s.whatsapp.net ou IDs aleatórios) e tira o 55
+      phoneForLink = phoneForLink.toString().split('@')[0].replace(/\D/g, '');
+      if (phoneForLink.startsWith('55') && phoneForLink.length >= 12) {
+        phoneForLink = phoneForLink.slice(2);
+      }
+
+      // 3. Monta o link com os dados blindados do banco de dados
       const params = currentClient 
-        ? `?name=${encodeURIComponent(currentClient.name)}&whatsapp=${encodeURIComponent(displayPhone)}&email=${encodeURIComponent(currentClient.email || '')}` 
-        : `?whatsapp=${encodeURIComponent(displayPhone)}`;
+        ? `?name=${encodeURIComponent(currentClient.name)}&whatsapp=${encodeURIComponent(phoneForLink)}&email=${encodeURIComponent(currentClient.email || '')}` 
+        : `?whatsapp=${encodeURIComponent(phoneForLink)}`;
       
       const link = await getLink(`/ClientBudgetRequest${params}`);
       await sendMsg(jid, "Acesse o link abaixo para preencher seu pedido de orçamento:"); 
