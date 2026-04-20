@@ -364,13 +364,19 @@ async function handleMessage(jid, text) {
     const currentClient = state.data.client;
     
     if (input === '1') {
-      // Resolve o número real de quem está chatando (trata LIDs do WhatsApp multi-device)
-      // Se o JID for um LID (>15 dígitos), usa o telefone cadastrado do cliente como fallback
-      const displayPhone = resolveDisplayPhone(phone, currentClient);
-      const params = currentClient ? `?name=${encodeURIComponent(currentClient.name)}&whatsapp=${encodeURIComponent(displayPhone)}&email=${encodeURIComponent(currentClient.email || '')}` : '';
+      // CORREÇÃO: Usa o número de quem está ativo no chat (variável phone) em vez do banco
+      const displayPhone = cleanPhoneDigits(phone); 
+      
+      const params = currentClient 
+        ? `?name=${encodeURIComponent(currentClient.name)}&whatsapp=${encodeURIComponent(displayPhone)}&email=${encodeURIComponent(currentClient.email || '')}` 
+        : `?whatsapp=${encodeURIComponent(displayPhone)}`;
+      
       const link = await getLink(`/ClientBudgetRequest${params}`);
-      await sendMsg(jid, "Acesse o link abaixo para preencher seu pedido de orçamento:"); await new Promise(r => setTimeout(r, 1000)); await sendMsg(jid, link);
+      await sendMsg(jid, "Acesse o link abaixo para preencher seu pedido de orçamento:"); 
+      await new Promise(r => setTimeout(r, 1000)); 
+      await sendMsg(jid, link);
       state.step = "menu";
+      return;
     } else if (input === '2') {
       // Consultar orçamentos
       if (!currentClient) {
