@@ -239,13 +239,9 @@ async function findClientByPhone(phone) {
     if (result.rows.length > 0) return result.rows[0];
 
     // 2. Se não encontrou, busca na tabela client_phones (números adicionais vinculados)
-    // Retorna também os dados do contato vinculado (name, email) para personalizar o atendimento
     const phoneParams = numbersToSearch.map((_, i) => `$${i + 1}`).join(', ');
     const linkedResult = await dbPool.query(
-      `SELECT c.*,
-              NULLIF(TRIM(cp.name), '') AS _vinculado_name,
-              NULLIF(TRIM(cp.email), '') AS _vinculado_email
-       FROM clients c
+      `SELECT c.* FROM clients c
        INNER JOIN client_phones cp ON cp.client_id = c.id
        WHERE cp.phone IN (${phoneParams})
        ORDER BY c.id ASC
@@ -271,19 +267,21 @@ async function handleMessage(jid, text) {
   const client = await findClientByPhone(phone);
 
   if (!conversations.has(phone) || RESET_WORDS.includes(lc)) {
-    conversations.set(phone, { step: 'menu', lastActivity: now, data: { client } });
-    
     if (client) {
-      // Usa o nome do vinculado se disponível, senão usa o nome do cliente pai
-      const displayName = client._vinculado_name
-        ? client._vinculado_name.split(' ')[0]
-        : (client.person_type === 'juridica' ? client.name : client.name.split(' ')[0]);
+      // Número reconhecido — usa nome do cliente cadastrado (razão social se CNPJ, primeiro nome se CPF)
+      const displayName = client.person_type === 'juridica'
+        ? client.name
+        : client.name.split(' ')[0];
+      conversations.set(phone, { step: 'menu', lastActivity: now, data: { client } });
       await sendMsg(jid, `Olá! 👋 *${displayName}*, bem-vindo ao atendimento automático!`);
-      await sendMenu(jid, true);
+      await sendMenu(jid);
     } else {
-      // Se não tem cadastro, pergunta
-      await sendMsg(jid, 'Olá! 👋 Seja bem-vindo, escolha uma das opções abaixo:\n\n1️⃣ *Tenho cadastro*\n2️⃣ *Não tenho cadastro*');
-      conversations.get(phone).step = 'initial_check';
+      // Número não cadastrado — oferece link de cadastro
+      conversations.set(phone, { step: 'not_registered', lastActivity: now, data: {} });
+      const registerLink = await getLink(`/ClientRegister?whatsapp=${cleanPhoneDigits(phone)}`);
+      await sendMsg(jid, '⚠️ Olá! Seu número não está cadastrado em nosso sistema.\n\nAcesse o link abaixo para realizar seu cadastro:');
+      await new Promise(r => setTimeout(r, 800));
+      await sendMsg(jid, registerLink || 'Entre em contato com nossa equipe para realizar o cadastro.');
     }
     return;
   }
@@ -291,107 +289,20 @@ async function handleMessage(jid, text) {
   const state = conversations.get(phone);
   state.lastActivity = now;
 
-  if (state.step === 'initial_check') {
-    if (input === '1') {
-      // O usuário diz que tem cadastro, mas não identificamos pelo número
-      state.step = 'awaiting_cpf_identification';
-      await sendMsg(jid, 'Para eu te identificar, por favor informe seu *CPF ou CNPJ*:');
-    } else if (input === '2') {
-      const link = await getLink(`/ClientRegister?whatsapp=${cleanPhoneDigits(phone)}`);
-      await sendMsg(jid, "Acesse o link abaixo para realizar seu cadastro:"); 
-      await new Promise(r => setTimeout(r, 1000)); 
-      await sendMsg(jid, link);
-      state.step = "menu";
-    } else {
-      await sendMsg(jid, 'Opção inválida. Escolha *1* ou *2*.');
-    }
-  } else if (state.step === 'awaiting_cpf_identification') {
-    const digits = input.replace(/\D/g, '');
-    if (digits.length < 11) {
-      await sendMsg(jid, '⚠️ CPF/CNPJ inválido. Envie pelo menos 11 dígitos.');
-      return;
-    }
-    
-    // Normaliza e compara nas colunas cpf_cnpj, cpf e cnpj
-    // (admin salva em cpf/cnpj; cadastro público salva também em cpf_cnpj)
-    const stripDoc = (col) =>
-      `regexp_replace(coalesce(${col},''), '[^0-9]', '', 'g')`;
+  // Número não cadastrado — reenvia o link de cadastro a cada mensagem
+  if (state.step === 'not_registered') {
+    const registerLink = await getLink(`/ClientRegister?whatsapp=${cleanPhoneDigits(phone)}`);
+    await sendMsg(jid, '⚠️ Seu número não está cadastrado. Use o link abaixo para se cadastrar:');
+    await new Promise(r => setTimeout(r, 800));
+    await sendMsg(jid, registerLink || 'Entre em contato com nossa equipe para realizar o cadastro.');
+    return;
+  }
 
-    const clientResult = await dbPool.query(
-      `SELECT * FROM clients
-       WHERE ${stripDoc('cpf_cnpj')} = $1
-          OR ${stripDoc('cpf')}     = $1
-          OR ${stripDoc('cnpj')}    = $1
-       LIMIT 1`,
-      [digits]
-    );
-
-    if (clientResult.rows.length > 0) {
-      const foundClient = clientResult.rows[0];
-      state.data.client = foundClient;
-      
-      const currentMobile = cleanPhoneDigits(foundClient.mobile || '');
-      const newMobile = cleanPhoneDigits(phone);
-
-      // CORREÇÃO: Bloco IF restaurado para vincular o novo número apenas se for diferente do atual
-      if (currentMobile && currentMobile !== newMobile) {
-        try {
-          await dbPool.query(
-            `INSERT INTO client_phones (client_id, phone, label)
-             VALUES ($1, $2, 'Vinculado via bot')
-             ON CONFLICT DO NOTHING`,
-            [foundClient.id, newMobile]
-          );
-        } catch (_) {
-          const existing = await dbPool.query(
-            'SELECT id FROM client_phones WHERE client_id = $1 AND phone = $2',
-            [foundClient.id, newMobile]
-          );
-          if (existing.rows.length === 0) {
-            await dbPool.query(
-              'INSERT INTO client_phones (client_id, phone, label) VALUES ($1, $2, $3)',
-              [foundClient.id, newMobile, 'Vinculado via bot']
-            );
-          }
-        }
-      } // Fim do bloco de verificação
-      
-      const name = foundClient.person_type === 'juridica' ? foundClient.name : foundClient.name.split(' ')[0];
-      await sendMsg(jid, `Cadastro localizado! Olá *${name}*.`);
-      await sendMenu(jid, true);
-      state.step = 'menu';
-    } else {
-      await sendMsg(jid, 'Não encontrei seu cadastro com esse CPF/CNPJ. Deseja tentar novamente ou fazer um novo cadastro?\n\n1️⃣ Tentar CPF/CNPJ novamente\n2️⃣ Fazer novo cadastro');
-      state.step = 'initial_check';
-    }
-  } else if (state.step === 'menu') {
+  if (state.step === 'menu') {
     const currentClient = state.data.client;
     
     if (input === '1') {
-      const currentClient = state.data.client;
-      
-      // A variável 'phone' já tem o número de quem está conversando (ex: o vinculado)
-      let phoneForLink = phone; 
-
-      // Um número normal de WhatsApp no Brasil tem no máximo 13 dígitos (55 + DDD + 9 números).
-      // Se tiver mais de 13 dígitos (ex: 163883251708031), é um erro do Baileys (LID).
-      // Nesse caso específico, usamos o número principal da empresa para não enviar um link quebrado.
-      if (phoneForLink.length > 13 && currentClient) {
-        phoneForLink = currentClient.mobile || currentClient.phone || phoneForLink;
-      }
-
-      // Limpa e deixa no padrão correto (tirando o 55 da frente se tiver)
-      phoneForLink = cleanPhoneDigits(phoneForLink);
-
-      // Usa nome e e-mail do vinculado se disponíveis; caso contrário, usa os dados do cliente pai
-      const linkName = currentClient._vinculado_name || currentClient.name || '';
-      const linkEmail = currentClient._vinculado_email || currentClient.email || '';
-
-      const params = currentClient 
-        ? `?name=${encodeURIComponent(linkName)}&whatsapp=${encodeURIComponent(phoneForLink)}&email=${encodeURIComponent(linkEmail)}` 
-        : `?whatsapp=${encodeURIComponent(phoneForLink)}`;
-      
-      const link = await getLink(`/ClientBudgetRequest${params}`);
+      const link = await getLink(`/ClientBudgetRequest`);
       await sendMsg(jid, "Acesse o link abaixo para preencher seu pedido de orçamento:"); 
       await new Promise(r => setTimeout(r, 1000)); 
       await sendMsg(jid, link);

@@ -339,9 +339,9 @@ async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_client_phones_phone ON client_phones(phone);
     `);
 
-    // Migração: adiciona colunas name e email em client_phones (caso a tabela já exista)
-    await client.query(`ALTER TABLE client_phones ADD COLUMN IF NOT EXISTS name VARCHAR(255) DEFAULT ''`);
-    await client.query(`ALTER TABLE client_phones ADD COLUMN IF NOT EXISTS email VARCHAR(255) DEFAULT ''`);
+    // Migração: remove colunas name e email de client_phones (simplificação do modelo)
+    await client.query(`ALTER TABLE client_phones DROP COLUMN IF EXISTS name`);
+    await client.query(`ALTER TABLE client_phones DROP COLUMN IF EXISTS email`);
 
     const seedUsers = [
       { email: 'admin@gestao.pro', password: 'demo', full_name: 'Administrador', role: 'admin' },
@@ -965,7 +965,7 @@ app.get('/api/clients/:id/phones', authMiddleware, async (req, res) => {
 
 app.post('/api/clients/:id/phones', authMiddleware, async (req, res) => {
   try {
-    const { phone, label, name, email } = req.body;
+    const { phone, label } = req.body;
     const cleaned = cleanPhone(phone);
     if (!cleaned) return res.status(400).json({ error: 'Número inválido.' });
     // Verificar duplicata para este cliente
@@ -975,8 +975,8 @@ app.post('/api/clients/:id/phones', authMiddleware, async (req, res) => {
     );
     if (dup.rows.length > 0) return res.status(400).json({ error: 'Este número já está vinculado.' });
     const result = await pool.query(
-      'INSERT INTO client_phones (client_id, phone, label, name, email) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [req.params.id, cleaned, label || '', name || '', email || '']
+      'INSERT INTO client_phones (client_id, phone, label) VALUES ($1, $2, $3) RETURNING *',
+      [req.params.id, cleaned, label || '']
     );
     res.status(201).json(result.rows[0]);
   } catch (e) {

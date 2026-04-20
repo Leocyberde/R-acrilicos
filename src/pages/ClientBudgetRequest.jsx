@@ -7,21 +7,10 @@ import { Plus, Trash2, Send, CheckCircle2, X, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 
-function cleanPhoneDigits(raw) {
-  if (!raw) return "";
-  const cleanRaw = raw.includes("@") ? raw.split("@")[0] : raw;
-  let digits = cleanRaw.replace(/\D/g, "");
-  if (digits.startsWith("55") && digits.length >= 12) {
-    digits = digits.slice(2);
-  }
-  return digits;
-}
 
 export default function ClientBudgetRequest() {
   const [form, setForm] = useState({
     client_name: "",
-    client_email: "",
-    client_phone: "",
     job: "",
     producer: "",
     delivery_date: "",
@@ -35,54 +24,21 @@ export default function ClientBudgetRequest() {
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const urlName = params.get("name");
-    const urlEmail = params.get("email");
-    const urlWhatsapp = params.get("whatsapp");
-
     async function prefill() {
-      let name = urlName || "";
-      let email = urlEmail || "";
-      let phone = urlWhatsapp ? cleanPhoneDigits(urlWhatsapp) : "";
-
-      // If logged in, fetch the client record for accurate data
+      let name = "";
       try {
         const user = await base44.auth.me();
         if (user) {
-          if (!name) name = user.full_name || "";
-          if (!email) email = user.email || "";
-
-          // Fetch client record by email to get name/data
+          name = user.full_name || "";
           try {
             const clients = await base44.entities.Client.filter({ email: user.email });
             const client = clients?.[0];
-            if (client) {
-              if (!name) name = client.name || "";
-              // Só usa o telefone do banco se NÃO veio número na URL
-              // (quando veio da URL é o número que está conversando, deve ser preservado)
-              if (!urlWhatsapp) {
-                const clientPhone = cleanPhoneDigits(client.mobile || client.phone || "");
-                if (clientPhone) phone = clientPhone;
-              }
-            }
-          } catch {
-            // Not logged in or no client record – keep URL param data
-          }
+            if (client && client.name) name = client.name;
+          } catch {}
         }
-      } catch {
-        // Not logged in – use URL params only
-      }
-
-      if (name || email || phone) {
-        setForm(prev => ({
-          ...prev,
-          client_name: name || prev.client_name,
-          client_email: email || prev.client_email,
-          client_phone: phone || prev.client_phone,
-        }));
-      }
+      } catch {}
+      if (name) setForm(prev => ({ ...prev, client_name: name }));
     }
-
     prefill();
   }, []);
 
@@ -131,8 +87,6 @@ export default function ClientBudgetRequest() {
     try {
       const formData = new FormData();
       formData.append("client_name", form.client_name);
-      formData.append("client_email", form.client_email);
-      formData.append("client_phone", form.client_phone);
       formData.append("job", form.job);
       formData.append("producer", form.producer);
       formData.append("delivery_date", form.delivery_date || "");
@@ -175,7 +129,7 @@ export default function ClientBudgetRequest() {
             variant="outline"
             onClick={() => {
               setSubmitted(false);
-              setForm({ client_name: "", client_email: "", client_phone: "", job: "", producer: "", delivery_date: "", description: "", notes: "" });
+              setForm({ client_name: "", job: "", producer: "", delivery_date: "", description: "", notes: "" });
               setItems([{ name: "", quantity: 1 }]);
               setAttachments([]);
             }}
@@ -206,27 +160,6 @@ export default function ClientBudgetRequest() {
               value={form.client_name}
               onChange={e => handleChange("client_name", e.target.value)}
             />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label>WhatsApp</Label>
-              <Input
-                className="mt-1"
-                placeholder="11999990000"
-                value={form.client_phone}
-                onChange={e => handleChange("client_phone", e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>Email</Label>
-              <Input
-                className="mt-1"
-                type="email"
-                placeholder="email@exemplo.com"
-                value={form.client_email}
-                onChange={e => handleChange("client_email", e.target.value)}
-              />
-            </div>
           </div>
         </div>
 
