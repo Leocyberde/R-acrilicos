@@ -322,8 +322,7 @@ async function handleMessage(jid, text) {
       const foundClient = clientResult.rows[0];
       state.data.client = foundClient;
       
-      // Ajuste para garantir que pega o número corretamente
-      const currentMobile = cleanPhoneDigits(foundClient.mobile || foundClient.phone);
+      const currentMobile = cleanPhoneDigits(foundClient.mobile || '');
       const newMobile = cleanPhoneDigits(phone);
 
       // CORREÇÃO: Bloco IF restaurado para vincular o novo número apenas se for diferente do atual
@@ -362,17 +361,11 @@ async function handleMessage(jid, text) {
     
     if (input === '1') {
       
-      // 1. Pega o número diretamente do banco de dados (mobile ou phone)
-      // Se por algum motivo bizarro não tiver, faz o fallback para o telefone da sessão
-      let phoneForLink = currentClient ? (currentClient.mobile || currentClient.phone || phone) : phone;
-      
-      // 2. Limpa qualquer lixo do Baileys (como @s.whatsapp.net ou IDs aleatórios) e tira o 55
-      phoneForLink = phoneForLink.toString().split('@')[0].replace(/\D/g, '');
-      if (phoneForLink.startsWith('55') && phoneForLink.length >= 12) {
-        phoneForLink = phoneForLink.slice(2);
-      }
+      // 1. Usa a função inteligente que verifica se o número atual é válido.
+      // Se for um número vinculado válido, ele usa o vinculado. Se for um ID de erro do WhatsApp, ele usa o do banco.
+      const phoneForLink = resolveDisplayPhone(phone, currentClient);
 
-      // 3. Monta o link com os dados blindados do banco de dados
+      // 2. Monta o link com o número correto e os dados do cliente
       const params = currentClient 
         ? `?name=${encodeURIComponent(currentClient.name)}&whatsapp=${encodeURIComponent(phoneForLink)}&email=${encodeURIComponent(currentClient.email || '')}` 
         : `?whatsapp=${encodeURIComponent(phoneForLink)}`;
