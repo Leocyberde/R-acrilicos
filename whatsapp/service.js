@@ -321,15 +321,13 @@ async function handleMessage(jid, text) {
     if (clientResult.rows.length > 0) {
       const foundClient = clientResult.rows[0];
       state.data.client = foundClient;
-      const currentMobile = cleanPhoneDigits(foundClient.mobile);
-      // Usa o número real da sessão (ignora LIDs internos do WhatsApp multi-device)
-      const newMobile = resolveDisplayPhone(phone, foundClient);
+      
+      // Ajuste para garantir que pega o número corretamente
+      const currentMobile = cleanPhoneDigits(foundClient.mobile || foundClient.phone);
+      const newMobile = cleanPhoneDigits(phone);
 
-      if (!currentMobile) {
-        // Mobile vazio: salva o número diretamente no cadastro principal
-        await dbPool.query('UPDATE clients SET mobile = $1 WHERE id = $2', [newMobile, foundClient.id]);
-      } else if (currentMobile !== newMobile) {
-        // Mobile já tem outro número: vincula como número adicional para reconhecimento futuro
+      // CORREÇÃO: Bloco IF restaurado para vincular o novo número apenas se for diferente do atual
+      if (currentMobile && currentMobile !== newMobile) {
         try {
           await dbPool.query(
             `INSERT INTO client_phones (client_id, phone, label)
@@ -338,7 +336,6 @@ async function handleMessage(jid, text) {
             [foundClient.id, newMobile]
           );
         } catch (_) {
-          // ON CONFLICT não funciona sem UNIQUE — tenta upsert manual
           const existing = await dbPool.query(
             'SELECT id FROM client_phones WHERE client_id = $1 AND phone = $2',
             [foundClient.id, newMobile]
@@ -350,7 +347,7 @@ async function handleMessage(jid, text) {
             );
           }
         }
-      }
+      } // Fim do bloco de verificação
       
       const name = foundClient.person_type === 'juridica' ? foundClient.name : foundClient.name.split(' ')[0];
       await sendMsg(jid, `Cadastro localizado! Olá *${name}*.`);
