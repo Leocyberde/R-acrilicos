@@ -90,7 +90,9 @@ async function getCompanySettings() {
 }
 
 function normPhone(jid) {
-  return jid.split('@')[0];
+  const raw = jid.split('@')[0];
+  const base = raw.includes(':') ? raw.split(':')[0] : raw;
+  return base.replace(/\D/g, '');
 }
 
 // Verifica se o valor extraído do JID é um número de telefone real (não LID interno do WhatsApp)
