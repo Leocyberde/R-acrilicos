@@ -289,10 +289,10 @@ async function handleMessage(jid, text) {
       state.step = 'awaiting_cpf_identification';
       await sendMsg(jid, 'Para eu te identificar, por favor informe seu *CPF ou CNPJ*:');
     } else if (input === '2') {
-      const displayPhone = resolveDisplayPhone(phone, null);
-      const registerParams = displayPhone ? `?whatsapp=${displayPhone}` : '';
-      const link = await getLink(`/ClientRegister${registerParams}`);
-      await sendMsg(jid, "Acesse o link abaixo para realizar seu cadastro:"); await new Promise(r => setTimeout(r, 1000)); await sendMsg(jid, link);
+      const link = await getLink(`/ClientRegister?whatsapp=${cleanPhoneDigits(phone)}`);
+      await sendMsg(jid, "Acesse o link abaixo para realizar seu cadastro:"); 
+      await new Promise(r => setTimeout(r, 1000)); 
+      await sendMsg(jid, link);
       state.step = "menu";
     } else {
       await sendMsg(jid, 'Opção inválida. Escolha *1* ou *2*.');
