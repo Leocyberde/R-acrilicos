@@ -362,12 +362,21 @@ async function handleMessage(jid, text) {
     const currentClient = state.data.client;
     
     if (input === '1') {
+      const currentClient = state.data.client;
       
-      // 1. Usa a função inteligente que verifica se o número atual é válido.
-      // Se for um número vinculado válido, ele usa o vinculado. Se for um ID de erro do WhatsApp, ele usa o do banco.
-      const phoneForLink = resolveDisplayPhone(phone, currentClient);
+      // A variável 'phone' já tem o número de quem está conversando (ex: o vinculado)
+      let phoneForLink = phone; 
 
-      // 2. Monta o link com o número correto e os dados do cliente
+      // Um número normal de WhatsApp no Brasil tem no máximo 13 dígitos (55 + DDD + 9 números).
+      // Se tiver mais de 13 dígitos (ex: 163883251708031), é um erro do Baileys (LID).
+      // Nesse caso específico, usamos o número principal da empresa para não enviar um link quebrado.
+      if (phoneForLink.length > 13 && currentClient) {
+        phoneForLink = currentClient.mobile || currentClient.phone || phoneForLink;
+      }
+
+      // Limpa e deixa no padrão correto (tirando o 55 da frente se tiver)
+      phoneForLink = cleanPhoneDigits(phoneForLink);
+
       const params = currentClient 
         ? `?name=${encodeURIComponent(currentClient.name)}&whatsapp=${encodeURIComponent(phoneForLink)}&email=${encodeURIComponent(currentClient.email || '')}` 
         : `?whatsapp=${encodeURIComponent(phoneForLink)}`;
