@@ -239,9 +239,13 @@ async function findClientByPhone(phone) {
     if (result.rows.length > 0) return result.rows[0];
 
     // 2. Se não encontrou, busca na tabela client_phones (números adicionais vinculados)
+    // Retorna também os dados do contato vinculado (name, email) para personalizar o atendimento
     const phoneParams = numbersToSearch.map((_, i) => `$${i + 1}`).join(', ');
     const linkedResult = await dbPool.query(
-      `SELECT c.* FROM clients c
+      `SELECT c.*,
+              NULLIF(TRIM(cp.name), '') AS _vinculado_name,
+              NULLIF(TRIM(cp.email), '') AS _vinculado_email
+       FROM clients c
        INNER JOIN client_phones cp ON cp.client_id = c.id
        WHERE cp.phone IN (${phoneParams})
        ORDER BY c.id ASC
@@ -270,9 +274,11 @@ async function handleMessage(jid, text) {
     conversations.set(phone, { step: 'menu', lastActivity: now, data: { client } });
     
     if (client) {
-      // Se já tem cadastro, chama pelo nome e manda o menu diretamente
-      const name = client.person_type === 'juridica' ? client.name : client.name.split(' ')[0];
-      await sendMsg(jid, `Olá! 👋 *${name}*, bem-vindo ao atendimento automático!`);
+      // Usa o nome do vinculado se disponível, senão usa o nome do cliente pai
+      const displayName = client._vinculado_name
+        ? client._vinculado_name.split(' ')[0]
+        : (client.person_type === 'juridica' ? client.name : client.name.split(' ')[0]);
+      await sendMsg(jid, `Olá! 👋 *${displayName}*, bem-vindo ao atendimento automático!`);
       await sendMenu(jid, true);
     } else {
       // Se não tem cadastro, pergunta
@@ -377,8 +383,12 @@ async function handleMessage(jid, text) {
       // Limpa e deixa no padrão correto (tirando o 55 da frente se tiver)
       phoneForLink = cleanPhoneDigits(phoneForLink);
 
+      // Usa nome e e-mail do vinculado se disponíveis; caso contrário, usa os dados do cliente pai
+      const linkName = currentClient._vinculado_name || currentClient.name || '';
+      const linkEmail = currentClient._vinculado_email || currentClient.email || '';
+
       const params = currentClient 
-        ? `?name=${encodeURIComponent(currentClient.name)}&whatsapp=${encodeURIComponent(phoneForLink)}&email=${encodeURIComponent(currentClient.email || '')}` 
+        ? `?name=${encodeURIComponent(linkName)}&whatsapp=${encodeURIComponent(phoneForLink)}&email=${encodeURIComponent(linkEmail)}` 
         : `?whatsapp=${encodeURIComponent(phoneForLink)}`;
       
       const link = await getLink(`/ClientBudgetRequest${params}`);

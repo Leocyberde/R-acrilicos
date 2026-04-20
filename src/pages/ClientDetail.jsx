@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Save, Upload, Download, Trash2, X, FileText, Search, Smartphone, Plus, UserCheck } from "lucide-react";
+import { ArrowLeft, Save, Upload, Download, Trash2, X, FileText, Search, Smartphone, Plus, UserCheck, Mail } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,6 +50,8 @@ export default function ClientDetail() {
   const [linkedPhones, setLinkedPhones] = useState([]);
   const [newPhone, setNewPhone] = useState("");
   const [newLabel, setNewLabel] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
   const [addingPhone, setAddingPhone] = useState(false);
   const navigate = useNavigate();
   const params = new URLSearchParams(window.location.search);
@@ -88,14 +90,21 @@ export default function ClientDetail() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
         },
-        body: JSON.stringify({ phone: newPhone.trim(), label: newLabel.trim() }),
+        body: JSON.stringify({
+          phone: newPhone.trim(),
+          label: newLabel.trim(),
+          name: newName.trim(),
+          email: newEmail.trim(),
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao vincular número.');
       setLinkedPhones(prev => [...prev, data]);
       setNewPhone("");
       setNewLabel("");
-      toast.success("Número vinculado com sucesso!");
+      setNewName("");
+      setNewEmail("");
+      toast.success("Contato vinculado com sucesso!");
     } catch (e) {
       toast.error(e.message);
     }
@@ -401,10 +410,19 @@ export default function ClientDetail() {
 
               {/* Formulário para adicionar */}
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-5">
-                <p className="text-sm font-medium text-slate-700 mb-3">Vincular novo número</p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <div className="flex-1">
-                    <Label className="text-xs text-slate-500">Número WhatsApp (somente dígitos)</Label>
+                <p className="text-sm font-medium text-slate-700 mb-3">Vincular novo contato</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <Label className="text-xs text-slate-500">Nome do contato *</Label>
+                    <Input
+                      className="mt-1"
+                      placeholder="Ex: João Silva"
+                      value={newName}
+                      onChange={e => setNewName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-slate-500">WhatsApp (somente dígitos) *</Label>
                     <Input
                       className="mt-1"
                       placeholder="Ex: 11910509385"
@@ -413,53 +431,77 @@ export default function ClientDetail() {
                       maxLength={13}
                     />
                   </div>
-                  <div className="flex-1">
-                    <Label className="text-xs text-slate-500">Identificação (opcional)</Label>
+                  <div>
+                    <Label className="text-xs text-slate-500">E-mail do contato</Label>
                     <Input
                       className="mt-1"
-                      placeholder="Ex: João - Compras"
+                      type="email"
+                      placeholder="Ex: joao@empresa.com"
+                      value={newEmail}
+                      onChange={e => setNewEmail(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-slate-500">Cargo / Identificação (opcional)</Label>
+                    <Input
+                      className="mt-1"
+                      placeholder="Ex: Comprador, Gerente"
                       value={newLabel}
                       onChange={e => setNewLabel(e.target.value)}
                     />
                   </div>
-                  <div className="flex items-end">
-                    <Button
-                      className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
-                      onClick={handleAddPhone}
-                      disabled={addingPhone || !newPhone.trim()}
-                    >
-                      <Plus className="h-4 w-4 mr-1.5" />
-                      {addingPhone ? "Vinculando..." : "Vincular"}
-                    </Button>
-                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    className="bg-green-600 hover:bg-green-700"
+                    onClick={handleAddPhone}
+                    disabled={addingPhone || !newPhone.trim()}
+                  >
+                    <Plus className="h-4 w-4 mr-1.5" />
+                    {addingPhone ? "Vinculando..." : "Vincular Contato"}
+                  </Button>
                 </div>
               </div>
 
-              {/* Lista de números vinculados */}
+              {/* Lista de contatos vinculados */}
               {linkedPhones.length === 0 ? (
                 <div className="text-center py-12 border border-dashed border-slate-200 rounded-xl text-slate-400 text-sm">
                   <Smartphone className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                  Nenhum número adicional vinculado.<br />
+                  Nenhum contato adicional vinculado.<br />
                   O número principal do cadastro ({formatPhone(client?.mobile) || "não definido"}) já é usado pelo bot.
                 </div>
               ) : (
                 <div className="space-y-2">
                   {linkedPhones.map(p => (
-                    <div key={p.id} className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                    <div key={p.id} className="flex items-start justify-between bg-white border border-slate-200 rounded-lg px-4 py-3">
+                      <div className="flex items-start gap-3">
+                        <div className="h-9 w-9 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                           <UserCheck className="h-4 w-4 text-green-600" />
                         </div>
-                        <div>
-                          <p className="font-mono text-sm font-semibold text-slate-800">{p.phone}</p>
-                          {p.label && <p className="text-xs text-slate-500">{p.label}</p>}
+                        <div className="space-y-0.5">
+                          {p.name && (
+                            <p className="text-sm font-semibold text-slate-800">{p.name}</p>
+                          )}
+                          <div className="flex items-center gap-1.5">
+                            <Smartphone className="h-3 w-3 text-green-500" />
+                            <p className="font-mono text-sm text-slate-700">{formatPhone(p.phone)}</p>
+                          </div>
+                          {p.email && (
+                            <div className="flex items-center gap-1.5">
+                              <Mail className="h-3 w-3 text-blue-400" />
+                              <p className="text-xs text-slate-500">{p.email}</p>
+                            </div>
+                          )}
+                          {p.label && (
+                            <span className="inline-block text-xs bg-slate-100 text-slate-600 rounded px-1.5 py-0.5">{p.label}</span>
+                          )}
                           <p className="text-xs text-slate-400">Vinculado em {new Date(p.created_date).toLocaleDateString("pt-BR")}</p>
                         </div>
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="text-red-400 hover:text-red-600 hover:bg-red-50"
+                        className="text-red-400 hover:text-red-600 hover:bg-red-50 flex-shrink-0"
                         onClick={() => handleRemovePhone(p.id)}
                         title="Remover vínculo"
                       >
