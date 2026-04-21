@@ -278,7 +278,7 @@ async function handleMessage(jid, text) {
     } else {
       // Número não cadastrado — oferece link de cadastro
       conversations.set(phone, { step: 'not_registered', lastActivity: now, data: {} });
-      const registerLink = await getLink(`/ClientRegister?whatsapp=${cleanPhoneDigits(phone)}`);
+      const registerLink = await getLink(`/ClientRegister`);
       await sendMsg(jid, '⚠️ Olá! Seu número não está cadastrado em nosso sistema.\n\nAcesse o link abaixo para realizar seu cadastro:');
       await new Promise(r => setTimeout(r, 800));
       await sendMsg(jid, registerLink || 'Entre em contato com nossa equipe para realizar o cadastro.');
@@ -291,7 +291,7 @@ async function handleMessage(jid, text) {
 
   // Número não cadastrado — reenvia o link de cadastro a cada mensagem
   if (state.step === 'not_registered') {
-    const registerLink = await getLink(`/ClientRegister?whatsapp=${cleanPhoneDigits(phone)}`);
+    const registerLink = await getLink(`/ClientRegister`);
     await sendMsg(jid, '⚠️ Seu número não está cadastrado. Use o link abaixo para se cadastrar:');
     await new Promise(r => setTimeout(r, 800));
     await sendMsg(jid, registerLink || 'Entre em contato com nossa equipe para realizar o cadastro.');
