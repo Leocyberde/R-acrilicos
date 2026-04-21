@@ -26,14 +26,38 @@ export default function ClientBudgetRequest() {
   useEffect(() => {
     async function prefill() {
       let name = "";
+
+      // 1. Prioridade: parâmetro ?client=ID na URL (vindo do bot do WhatsApp)
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const clientId = params.get("client");
+        if (clientId) {
+          const res = await fetch(`/api/public/clients/${clientId}/display`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.display_name) {
+              setForm(prev => ({ ...prev, client_name: data.display_name }));
+              return;
+            }
+          }
+        }
+      } catch {}
+
+      // 2. Fallback: usuário logado vinculado a um cliente
       try {
         const user = await base44.auth.me();
         if (user) {
+          // Não usar o nome do usuário admin como prefill
+          if (user.role === "admin") return;
           name = user.full_name || "";
           try {
             const clients = await base44.entities.Client.filter({ email: user.email });
             const client = clients?.[0];
-            if (client && client.name) name = client.name;
+            if (client) {
+              name = client.person_type === "juridica"
+                ? (client.razao_social || client.name)
+                : client.name;
+            }
           } catch {}
         }
       } catch {}
