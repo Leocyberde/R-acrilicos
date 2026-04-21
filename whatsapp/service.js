@@ -270,7 +270,7 @@ async function handleMessage(jid, text) {
     if (client) {
       // Número reconhecido — usa nome do cliente cadastrado (razão social se CNPJ, primeiro nome se CPF)
       const displayName = client.person_type === 'juridica'
-        ? client.name
+        ? (client.razao_social || client.name) // Usa razão social se existir, senão cai para o nome/empresa
         : client.name.split(' ')[0];
       conversations.set(phone, { step: 'menu', lastActivity: now, data: { client } });
       await sendMsg(jid, `Olá! 👋 *${displayName}*, bem-vindo ao atendimento automático!`);
