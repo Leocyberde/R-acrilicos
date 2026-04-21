@@ -331,17 +331,13 @@ async function initDB() {
         client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
         phone VARCHAR(50) NOT NULL,
         label VARCHAR(100) DEFAULT '',
-        name VARCHAR(255) DEFAULT '',
-        email VARCHAR(255) DEFAULT '',
         created_date TIMESTAMP DEFAULT NOW()
       );
       CREATE INDEX IF NOT EXISTS idx_client_phones_client_id ON client_phones(client_id);
       CREATE INDEX IF NOT EXISTS idx_client_phones_phone ON client_phones(phone);
     `);
 
-    // Migração: remove colunas name e email de client_phones (simplificação do modelo)
-    await client.query(`ALTER TABLE client_phones DROP COLUMN IF EXISTS name`);
-    await client.query(`ALTER TABLE client_phones DROP COLUMN IF EXISTS email`);
+
 
     const seedUsers = [
       { email: 'admin@gestao.pro', password: 'demo', full_name: 'Administrador', role: 'admin' },
