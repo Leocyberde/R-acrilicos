@@ -690,14 +690,13 @@ app.get('/api/public/clients/:id/display', async (req, res) => {
     const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ error: 'ID inválido' });
     const result = await pool.query(
-      'SELECT id, name, razao_social, person_type FROM clients WHERE id = $1 LIMIT 1',
+      'SELECT id, name, person_type FROM clients WHERE id = $1 LIMIT 1',
       [id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Cliente não encontrado' });
     const c = result.rows[0];
-    const display_name = c.person_type === 'juridica'
-      ? (c.razao_social || c.name)
-      : c.name;
+    // O campo `name` armazena o nome (pessoa física) ou a razão social (pessoa jurídica).
+    const display_name = c.name;
     res.json({ id: c.id, display_name, person_type: c.person_type });
   } catch (e) {
     res.status(500).json({ error: e.message });
