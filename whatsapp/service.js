@@ -181,9 +181,15 @@ async function getLink(path) {
 }
 
 async function findClientByPhone(phone) {
-  if (!dbPool) return null;
+  if (!dbPool) {
+    console.warn('[WhatsApp Bot] findClientByPhone: DB pool não inicializado');
+    return null;
+  }
   const clean = cleanPhoneDigits(phone);
-  if (!clean) return null;
+  if (!clean) {
+    console.warn('[WhatsApp Bot] findClientByPhone: número vazio após normalização (raw=%s)', phone);
+    return null;
+  }
 
   // Gera variante com/sem o 9º dígito (padrão brasileiro)
   // Ex: "11987654321" (11 dígitos) → variante sem 9: "1187654321"
@@ -265,6 +271,7 @@ async function handleMessage(jid, text) {
 
   // Verifica se o cliente já existe pelo número de WhatsApp
   const client = await findClientByPhone(phone);
+  console.log('[WhatsApp Bot] Mensagem recebida — jid=%s phone=%s cliente=%s', jid, phone, client ? `${client.id}/${client.name}` : 'NÃO ENCONTRADO');
 
   if (!conversations.has(phone) || RESET_WORDS.includes(lc)) {
     if (client) {
@@ -480,14 +487,37 @@ export async function connect() {
       for (const msg of messages) {
         if (msg.key.fromMe) continue;
         if (!msg.message) continue;
-        const jid = msg.key.remoteJid;
-        if (!jid || jid.endsWith('@g.us')) continue;
+        const rawJid = msg.key.remoteJid;
+        if (!rawJid || rawJid.endsWith('@g.us')) continue;
 
         const text =
           msg.message?.conversation ||
           msg.message?.extendedTextMessage?.text ||
           '';
         if (!text) continue;
+
+        // Resolve LID (identificador interno do WhatsApp multi-device) para o número real
+        let jid = rawJid;
+        if (rawJid.endsWith('@lid')) {
+          // 1. Verifica se a própria chave já traz o número real (remoteJidAlt)
+          if (msg.key.remoteJidAlt && !msg.key.remoteJidAlt.endsWith('@lid')) {
+            jid = msg.key.remoteJidAlt;
+            console.log('[WhatsApp Bot] LID resolvido via remoteJidAlt: %s -> %s', rawJid, jid);
+          } else {
+            // 2. Tenta resolver via mapping interno do Baileys
+            try {
+              const pn = await sock.signalRepository?.lidMapping?.getPNForLID?.(rawJid);
+              if (pn) {
+                jid = pn;
+                console.log('[WhatsApp Bot] LID resolvido via lidMapping: %s -> %s', rawJid, jid);
+              } else {
+                console.warn('[WhatsApp Bot] Não foi possível resolver LID para PN: %s', rawJid);
+              }
+            } catch (e) {
+              console.warn('[WhatsApp Bot] Erro ao resolver LID:', e.message);
+            }
+          }
+        }
 
         await handleMessage(jid, text);
       }
