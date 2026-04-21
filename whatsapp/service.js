@@ -309,9 +309,12 @@ async function handleMessage(jid, text) {
     const currentClient = state.data.client;
     
     if (input === '1') {
-      const link = await getLink(`/ClientBudgetRequest`);
-      await sendMsg(jid, "Acesse o link abaixo para preencher seu pedido de orçamento:"); 
-      await new Promise(r => setTimeout(r, 1000)); 
+      const path = currentClient
+        ? `/ClientBudgetRequest?client=${currentClient.id}`
+        : `/ClientBudgetRequest`;
+      const link = await getLink(path);
+      await sendMsg(jid, "Acesse o link abaixo para preencher seu pedido de orçamento:");
+      await new Promise(r => setTimeout(r, 1000));
       await sendMsg(jid, link);
       state.step = "menu";
       return;
