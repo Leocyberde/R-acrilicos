@@ -193,14 +193,7 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
           />
           <FieldError message={errors.client_name} />
         </div>
-        <div>
-          <Label>Telefone</Label>
-          <Input value={form.client_phone} onChange={e => updateField("client_phone", e.target.value)} className="mt-1" />
-        </div>
-        <div>
-          <Label>Email</Label>
-          <Input type="email" value={form.client_email} onChange={e => updateField("client_email", e.target.value)} className="mt-1" />
-        </div>
+
         <div>
           <Label>Job</Label>
           <Input value={form.job} onChange={e => updateField("job", e.target.value)} className="mt-1" />
