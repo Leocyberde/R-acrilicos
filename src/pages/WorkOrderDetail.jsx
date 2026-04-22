@@ -480,7 +480,7 @@ export default function WorkOrderDetail() {
             }
           }
         `}</style>
-        <div className="p-8 sm:p-10">
+        <div className="p-8 sm:p-10 print-doc">
 
           {/* ── COMPANY HEADER ── */}
           <div className="flex items-start justify-between pb-4 mb-4 border-b-2 border-slate-800">

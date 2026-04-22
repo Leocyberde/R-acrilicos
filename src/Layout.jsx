@@ -99,12 +99,18 @@ export default function Layout({ children, currentPageName }) {
       <style>{`
         @page {
           size: A4;
-          margin: 1.3cm;
+          margin: 0.7cm 1cm;
         }
         @media print {
-          html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+          html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; font-size: 12px !important; }
           .no-print { display: none !important; }
           .print-only { display: block !important; }
+          main { margin: 0 !important; padding: 0 !important; min-height: unset !important; }
+          main > div { padding: 0 !important; max-width: 100% !important; }
+          .print-doc { padding: 0.4cm 0.5cm !important; }
+          .print-doc p, .print-doc span, .print-doc td, .print-doc th { font-size: 11px !important; }
+          .print-doc .space-y-6 > * + * { margin-top: 0.4rem !important; }
+          .print-doc table { margin-bottom: 0.3rem !important; }
         }
       `}</style>
 

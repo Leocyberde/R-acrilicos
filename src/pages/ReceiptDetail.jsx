@@ -216,7 +216,7 @@ export default function ReceiptDetail() {
         className="bg-white rounded-xl border border-slate-200 print:border-0 print:shadow-none print:rounded-none"
         style={{ fontFamily: '"Segoe UI", Arial, sans-serif', color: '#1a1a1a' }}
       >
-        <div className="p-8 sm:p-10">
+        <div className="p-8 sm:p-10 print-doc">
 
           {/* ── COMPANY HEADER ── */}
           <div className="flex items-start justify-between pb-4 mb-4 border-b-2 border-slate-800">
