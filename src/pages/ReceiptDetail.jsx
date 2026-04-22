@@ -261,8 +261,8 @@ export default function ReceiptDetail() {
           <div className="mb-5 pb-4 border-b border-slate-300">
             {receipt.job && (
               <div className="flex gap-2 mb-1">
-                <span className="text-sm font-bold text-slate-800 w-24 shrink-0">JOB:</span>
-                <span className="text-sm font-bold text-slate-900">{receipt.job}</span>
+                <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">JOB:</span>
+                <span className="text-sm text-slate-900">{receipt.job}</span>
               </div>
             )}
             <div className="flex gap-2 mb-1">

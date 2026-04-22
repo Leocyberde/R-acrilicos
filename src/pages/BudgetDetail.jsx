@@ -454,8 +454,8 @@ export default function BudgetDetail() {
           <div className="mb-5 pb-4 border-b border-slate-300">
             {budget.job && (
               <div className="flex gap-2 mb-1">
-                <span className="text-sm font-bold text-slate-800 w-24 shrink-0">JOB:</span>
-                <span className="text-sm font-bold text-slate-900">{budget.job}</span>
+                <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">JOB:</span>
+                <span className="text-sm text-slate-900">{budget.job}</span>
               </div>
             )}
             {budget.producer && (
