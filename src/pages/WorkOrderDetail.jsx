@@ -591,14 +591,6 @@ export default function WorkOrderDetail() {
             </div>
           )}
 
-          {/* ── ATENÇÃO / FOOTER NOTES ── */}
-          {companySettings?.footer_notes && (
-            <div className="mb-6 pt-4 border-t border-slate-300">
-              <p className="text-sm font-bold text-red-600 mb-2">ATENÇÃO ! LEIA AS INSTRUÇÕES ABAIXO</p>
-              <p className="text-sm text-slate-800 whitespace-pre-line">{companySettings.footer_notes}</p>
-            </div>
-          )}
-
           {/* ── THANK YOU FOOTER ── */}
           <div className="mt-8 pt-4 border-t border-slate-200 text-center">
             <p className="text-xs text-slate-500">Caso você tenha alguma dúvida entre em contato conosco</p>
