@@ -265,12 +265,10 @@ export default function ReceiptDetail() {
                 <span className="text-sm font-bold text-slate-900">{receipt.job}</span>
               </div>
             )}
-            {receipt.producer && (
-              <div className="flex gap-2 mb-1">
-                <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">Produtor:</span>
-                <span className="text-sm font-bold text-slate-900">{receipt.producer}</span>
-              </div>
-            )}
+            <div className="flex gap-2 mb-1">
+              <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">Produtor:</span>
+              <span className="text-sm font-bold text-slate-900">{receipt.producer || "—"}</span>
+            </div>
             {receipt.client_name && (
               <div className="flex gap-2">
                 <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">Empresa:</span>
