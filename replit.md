@@ -1,39 +1,43 @@
-# GestãoPro - Business Management System
+# GestãoPro — Business Management System
 
-## Overview
-A comprehensive ERP/CRM business management system for handling budgets, work orders, financial tracking, and client relationships. Built with React (frontend) and Express (backend).
+## Project Overview
+A full-stack business management system (ERP) for service providers. Manages clients, budgets, work orders, receipts, and financial records. Includes WhatsApp integration for sending PDFs and notifications.
 
 ## Architecture
-- **Frontend**: React 18 + Vite, served on port 5000
-- **Backend**: Express.js API server on port 3001
-- **Database**: PostgreSQL (Replit built-in, via DATABASE_URL)
-- **Auth**: JWT + BcryptJS
-
-## Key Files
-- `server.js` - Express backend with all API routes and DB initialization
-- `src/` - React frontend application
-- `src/pages/` - Application views (Dashboard, Budgets, WorkOrders, Clients, Financial, etc.)
-- `src/components/` - Reusable UI components (shadcn/ui-style)
-- `src/api/localClient.js` - API client for backend communication
-- `src/lib/` - Auth context, utilities
-- `vite.config.js` - Vite config with proxy to backend
-- `uploads/` - File upload storage
+- **Frontend**: React 18 + Vite (port 5000) — Tailwind CSS, Radix UI, TanStack Query, React Router
+- **Backend**: Express 5 (port 3001) — JWT auth, PostgreSQL via `pg`, Multer for file uploads
+- **Database**: Replit built-in PostgreSQL (DATABASE_URL env var auto-provided)
+- **WhatsApp**: `@whiskeysockets/baileys` — connects via QR code, sends PDFs
 
 ## Running the App
-```bash
+```
 npm run dev
 ```
-This uses `concurrently` to start both the Express server (port 3001) and Vite dev server (port 5000).
+Starts both the Express backend (port 3001) and Vite dev server (port 5000) concurrently. Vite proxies `/api` and `/uploads` requests to the backend.
 
-## Default Demo Accounts
-- `admin@gestao.pro` / `demo` — Administrator (full access)
-- `funcionario@gestao.pro` / `demo` — Employee (operational access)
-- `cliente@gestao.pro` / `demo` — Client (portal access)
+## Key Files
+- `server.js` — Express backend, DB schema init, all API routes
+- `src/App.jsx` — React root, routing, auth context
+- `src/api/localClient.js` — Frontend API client (relative `/api` paths)
+- `src/lib/AuthContext.jsx` — Auth state management
+- `whatsapp/service.js` — WhatsApp connection management
+- `whatsapp/pdfGenerator.js` — PDF generation with pdfkit
 
 ## Environment Variables
-- `DATABASE_URL` — PostgreSQL connection string (set by Replit)
-- `JWT_SECRET` — JWT signing secret (defaults to hardcoded value, should be set in production)
+- `DATABASE_URL` — Replit PostgreSQL connection string (auto-set)
+- `JWT_SECRET` — Secret for JWT token signing (set as Replit secret)
 
-## Dependencies
-- **Frontend**: React, React Router, TanStack Query, Tailwind CSS, Radix UI, Recharts, Lucide
-- **Backend**: Express 5, pg, jsonwebtoken, bcryptjs, multer, cors
+## Database
+- Auto-initialized on server start via `initDB()` in server.js
+- Tables: `users`, `user_permissions`, `clients`, `budgets`, `budget_requests`, `work_orders`, `receipts`, `financial`, `settings`, `layout_settings`, `section_styles`
+- Demo users seeded: Admin, Employee, Client
+
+## User Roles
+- **admin** — full access to all features
+- **employee** — access based on permissions set by admin
+- **client** — client portal only (request budgets, view work orders)
+
+## File Uploads
+- Stored in `uploads/` directory
+- Served statically by Express at `/uploads`
+- Max 20MB per file
