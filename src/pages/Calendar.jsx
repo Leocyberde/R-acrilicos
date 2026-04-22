@@ -79,19 +79,12 @@ export default function Calendar() {
   const eventsByDay = useMemo(() => {
     const map = {};
     orders.forEach(order => {
-      const startDate = parseLocalDate(order.start_date || order.start_datetime);
       const deliveryDate = parseLocalDate(order.delivery_date);
-
-      [
-        startDate ? { date: startDate, type: "start", order } : null,
-        deliveryDate ? { date: deliveryDate, type: "delivery", order } : null,
-      ].forEach(ev => {
-        if (!ev) return;
-        if (ev.date.getFullYear() !== viewYear || ev.date.getMonth() !== viewMonth) return;
-        const key = ev.date.getDate();
-        if (!map[key]) map[key] = [];
-        map[key].push(ev);
-      });
+      if (!deliveryDate) return;
+      if (deliveryDate.getFullYear() !== viewYear || deliveryDate.getMonth() !== viewMonth) return;
+      const key = deliveryDate.getDate();
+      if (!map[key]) map[key] = [];
+      map[key].push({ date: deliveryDate, type: "delivery", order });
     });
     return map;
   }, [orders, viewYear, viewMonth]);
@@ -130,7 +123,7 @@ export default function Calendar() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Calendário</h1>
-          <p className="text-slate-500 mt-0.5">Datas de início e entrega das ordens de serviço</p>
+          <p className="text-slate-500 mt-0.5">Datas de entrega das ordens de serviço</p>
         </div>
         <Button onClick={() => navigate(createPageUrl("WorkOrders"))} variant="outline" size="sm">
           Ver Todas as O.S.
@@ -190,8 +183,7 @@ export default function Calendar() {
               const isToday = isSameDay(new Date(viewYear, viewMonth, day), today);
               const isSelected = selectedDay === day;
               const dayEvents = eventsByDay[day] || [];
-              const startEvents = dayEvents.filter(e => e.type === "start");
-              const deliveryEvents = dayEvents.filter(e => e.type === "delivery");
+              const deliveryEvents = dayEvents;
               const hasUrgent = deliveryEvents.some(e =>
                 e.order.is_urgent || (e.order.status !== "entregue" && Math.ceil((new Date(viewYear, viewMonth, day) - new Date()) / 86400000) <= 0)
               );
@@ -211,20 +203,17 @@ export default function Calendar() {
                   </div>
 
                   <div className="space-y-0.5">
-                    {startEvents.slice(0, 2).map((ev, i) => (
-                      <div key={`s-${i}`} className="flex items-center gap-1 px-1 py-0.5 rounded bg-blue-50 overflow-hidden">
-                        <div className="h-1.5 w-1.5 rounded-full bg-blue-400 flex-shrink-0" />
-                        <p className="text-xs text-blue-700 truncate leading-none">{ev.order.job || ev.order.client_name || "O.S."}</p>
-                      </div>
-                    ))}
-                    {deliveryEvents.slice(0, 2).map((ev, i) => (
-                      <div key={`d-${i}`} className={`flex items-center gap-1 px-1 py-0.5 rounded overflow-hidden ${hasUrgent ? "bg-red-50" : "bg-orange-50"}`}>
-                        <div className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${hasUrgent ? "bg-red-500" : "bg-orange-400"}`} />
-                        <p className={`text-xs truncate leading-none ${hasUrgent ? "text-red-700" : "text-orange-700"}`}>{ev.order.job || ev.order.client_name || "O.S."}</p>
-                      </div>
-                    ))}
-                    {dayEvents.length > 4 && (
-                      <p className="text-xs text-slate-400 px-1">+{dayEvents.length - 4} mais</p>
+                    {deliveryEvents.slice(0, 3).map((ev, i) => {
+                      const evUrgent = ev.order.is_urgent || (ev.order.status !== "entregue" && Math.ceil((new Date(viewYear, viewMonth, day) - new Date()) / 86400000) <= 0);
+                      return (
+                        <div key={`d-${i}`} className={`flex items-center gap-1 px-1 py-0.5 rounded overflow-hidden ${evUrgent ? "bg-red-50" : "bg-orange-50"}`}>
+                          <div className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${evUrgent ? "bg-red-500" : "bg-orange-400"}`} />
+                          <p className={`text-xs truncate leading-none ${evUrgent ? "text-red-700" : "text-orange-700"}`}>{ev.order.job || ev.order.client_name || "O.S."}</p>
+                        </div>
+                      );
+                    })}
+                    {deliveryEvents.length > 3 && (
+                      <p className="text-xs text-slate-400 px-1">+{deliveryEvents.length - 3} mais</p>
                     )}
                   </div>
                 </div>
@@ -234,10 +223,6 @@ export default function Calendar() {
 
           {/* Legend */}
           <div className="flex items-center gap-4 px-6 py-3 border-t border-slate-100 bg-slate-50">
-            <div className="flex items-center gap-1.5">
-              <div className="h-2 w-2 rounded-full bg-blue-400" />
-              <span className="text-xs text-slate-500">Início</span>
-            </div>
             <div className="flex items-center gap-1.5">
               <div className="h-2 w-2 rounded-full bg-orange-400" />
               <span className="text-xs text-slate-500">Entrega</span>
@@ -271,8 +256,7 @@ export default function Calendar() {
                 <div className="divide-y divide-slate-50">
                   {selectedDayEvents.map((ev, i) => {
                     const cfg = STATUS_CONFIG[ev.order.status] || STATUS_CONFIG.pendente;
-                    const isDelivery = ev.type === "delivery";
-                    const isUrgent = ev.order.is_urgent || (isDelivery && ev.order.status !== "entregue" && Math.ceil((new Date(viewYear, viewMonth, selectedDay) - new Date()) / 86400000) <= 0);
+                    const isUrgent = ev.order.is_urgent || (ev.order.status !== "entregue" && Math.ceil((new Date(viewYear, viewMonth, selectedDay) - new Date()) / 86400000) <= 0);
                     return (
                       <div
                         key={i}
@@ -280,8 +264,8 @@ export default function Calendar() {
                         onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${ev.order.id}`)}
                       >
                         <div className="flex items-start gap-2">
-                          <div className={`mt-0.5 flex-shrink-0 h-5 w-5 rounded-full flex items-center justify-center ${isDelivery ? (isUrgent ? "bg-red-100" : "bg-orange-100") : "bg-blue-100"}`}>
-                            <div className={`h-2 w-2 rounded-full ${isDelivery ? (isUrgent ? "bg-red-500" : "bg-orange-400") : "bg-blue-400"}`} />
+                          <div className={`mt-0.5 flex-shrink-0 h-5 w-5 rounded-full flex items-center justify-center ${isUrgent ? "bg-red-100" : "bg-orange-100"}`}>
+                            <div className={`h-2 w-2 rounded-full ${isUrgent ? "bg-red-500" : "bg-orange-400"}`} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1">
@@ -294,8 +278,8 @@ export default function Calendar() {
                                 <Circle className="h-1.5 w-1.5 fill-current" />
                                 {cfg.label}
                               </span>
-                              <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${isDelivery ? (isUrgent ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700") : "bg-blue-100 text-blue-700"}`}>
-                                {isDelivery ? "Entrega" : "Início"}
+                              <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${isUrgent ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"}`}>
+                                {isUrgent ? "Entrega Urgente" : "Entrega"}
                               </span>
                             </div>
                           </div>

@@ -161,11 +161,6 @@ export async function generateBudgetPDF(budget, company = {}) {
       doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text(budget.client_name, ML + labelW, y, { width: valW });
       y += 14;
     }
-    if (budget.client_phone) {
-      doc.fillColor(C.slate700).font('Helvetica').fontSize(8).text('Telefone:', ML, y, { width: labelW, continued: false });
-      doc.fillColor(C.slate800).font('Helvetica').fontSize(8).text(budget.client_phone, ML + labelW, y, { width: valW });
-      y += 12;
-    }
     if (budget.client_email) {
       doc.fillColor(C.slate700).font('Helvetica').fontSize(8).text('E-mail:', ML, y, { width: labelW, continued: false });
       doc.fillColor(C.slate800).font('Helvetica').fontSize(8).text(budget.client_email, ML + labelW, y, { width: valW });
@@ -239,9 +234,9 @@ export async function generateBudgetPDF(budget, company = {}) {
 
     if (discount > 0 && subtotal > 0) {
       doc.fillColor(C.red600).font('Helvetica').fontSize(9)
-        .text(`Desconto (${discount}%):`, totalsX, y, { width: totalsW / 2 });
+        .text(`Desconto:`, totalsX, y, { width: totalsW / 2 });
       doc.fillColor(C.red600).font('Helvetica').fontSize(9)
-        .text(`- ${fmtCurrency(subtotal * discount / 100)}`, totalsX + totalsW / 2, y, { width: totalsW / 2, align: 'right' });
+        .text(`- ${fmtCurrency(discount)}`, totalsX + totalsW / 2, y, { width: totalsW / 2, align: 'right' });
       y += 13;
     }
 
@@ -267,11 +262,14 @@ export async function generateBudgetPDF(budget, company = {}) {
       y += 14;
     }
 
-    if (budget.producer) {
-      doc.fillColor(C.slate500).font('Helvetica-Oblique').fontSize(8)
-        .text(`Elaborado por: ${budget.producer}`, totalsX, y, { width: totalsW, align: 'right' });
-      y += 12;
-    }
+    doc.fillColor(C.slate500).font('Helvetica-Oblique').fontSize(8)
+      .text(`Elaborado por: Gleissa`, totalsX, y, { width: totalsW, align: 'right' });
+    y += 12;
+    // if (budget.producer) {
+    //   doc.fillColor(C.slate500).font('Helvetica-Oblique').fontSize(8)
+    //     .text(`Elaborado por: ${budget.producer}`, totalsX, y, { width: totalsW, align: 'right' });
+    //   y += 12;
+    // }
 
     y += 10;
 
@@ -606,11 +604,6 @@ export async function generateReceiptPDF(receipt, company = {}) {
       doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text(receipt.client_name, ML + labelW, y, { width: valW });
       y += 14;
     }
-    if (receipt.client_phone) {
-      doc.fillColor(C.slate700).font('Helvetica').fontSize(8).text('Telefone:', ML, y, { width: labelW });
-      doc.fillColor(C.slate800).font('Helvetica').fontSize(8).text(receipt.client_phone, ML + labelW, y, { width: valW });
-      y += 12;
-    }
     if (receipt.client_email) {
       doc.fillColor(C.slate700).font('Helvetica').fontSize(8).text('E-mail:', ML, y, { width: labelW });
       doc.fillColor(C.slate800).font('Helvetica').fontSize(8).text(receipt.client_email, ML + labelW, y, { width: valW });
@@ -686,9 +679,9 @@ export async function generateReceiptPDF(receipt, company = {}) {
 
     if (discount > 0 && subtotal > 0) {
       doc.fillColor(C.red600).font('Helvetica').fontSize(9)
-        .text(`Desconto (${discount}%):`, totalsX, y, { width: totalsW / 2 });
+        .text(`Desconto:`, totalsX, y, { width: totalsW / 2 });
       doc.fillColor(C.red600).font('Helvetica').fontSize(9)
-        .text(`- ${fmtCurrency(subtotal * discount / 100)}`, totalsX + totalsW / 2, y, { width: totalsW / 2, align: 'right' });
+        .text(`- ${fmtCurrency(discount)}`, totalsX + totalsW / 2, y, { width: totalsW / 2, align: 'right' });
       y += 13;
     }
 

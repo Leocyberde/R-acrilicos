@@ -38,6 +38,8 @@ export default function SettingsPage() {
         company_email2: "",
         company_logo: "",
         footer_notes: "",
+        app_name: "",
+        app_logo: "",
       });
     }
     setLoading(false);
@@ -59,6 +61,21 @@ export default function SettingsPage() {
     e.target.value = "";
   };
 
+  const handleAppLogoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setSettings(prev => ({ ...prev, app_logo: file_url }));
+      toast.success("Logo do sistema carregado com sucesso!");
+    } catch {
+      toast.error("Erro ao fazer upload. Tente novamente.");
+    }
+    setUploading(false);
+    e.target.value = "";
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -68,6 +85,7 @@ export default function SettingsPage() {
         const created = await base44.entities.Settings.create(settings);
         setSettings(created);
       }
+      try { localStorage.removeItem("appBrandingCache"); } catch {}
       toast.success("Configurações salvas com sucesso!");
     } catch {
       toast.error("Erro ao salvar configurações. Tente novamente.");
@@ -101,7 +119,56 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Logo da Empresa</CardTitle>
+          <CardTitle>Identidade do Sistema</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-xs text-slate-500">Personalize o nome e o logo que aparecem no menu lateral, na tela de login e na seleção de painel. As alterações aparecem para todos os usuários (admin, funcionários e clientes).</p>
+          <div>
+            <Label>Nome do Sistema</Label>
+            <Input
+              value={settings?.app_name || ""}
+              onChange={e => setSettings(prev => ({ ...prev, app_name: e.target.value }))}
+              className="mt-1"
+              placeholder="GestãoPro"
+            />
+            <p className="text-xs text-slate-500 mt-1">Deixe em branco para usar o nome padrão "GestãoPro".</p>
+          </div>
+          <div>
+            <Label>Logo do Sistema (menu, login e seleção de painel)</Label>
+            {settings?.app_logo && (
+              <div className="flex items-center justify-center p-4 bg-slate-50 rounded-lg border border-slate-200 mt-2">
+                <img src={settings.app_logo} alt="Logo do sistema" className="max-h-20" />
+              </div>
+            )}
+            <input
+              type="file"
+              id="app-logo-upload"
+              className="hidden"
+              accept="image/*"
+              onChange={handleAppLogoUpload}
+              disabled={uploading}
+            />
+            <div className="flex gap-2 mt-2">
+              <Button asChild variant="outline" disabled={uploading} className="flex-1">
+                <label htmlFor="app-logo-upload" className="cursor-pointer">
+                  <Upload className="h-4 w-4 mr-2" />
+                  {uploading ? "Enviando..." : "Fazer Upload do Logo do Sistema"}
+                </label>
+              </Button>
+              {settings?.app_logo && (
+                <Button variant="outline" type="button" onClick={() => setSettings(prev => ({ ...prev, app_logo: "" }))}>
+                  Remover
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 mt-2">Formatos aceitos: JPG, PNG. Recomendado: quadrado (ex: 128x128px).</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Logo da Empresa (documentos)</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {settings?.company_logo && (

@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StatusBadge from "@/components/StatusBadge";
 import PrintHeader from "@/components/PrintHeader";
 import ExportTabs from "@/components/ExportTabs";
+import { formatDateBR } from "@/utils/dateFormat";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,14 +36,18 @@ export default function WorkOrderDetail() {
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
 
+  const [companySettings, setCompanySettings] = useState(null);
+
   useEffect(() => {
     async function load() {
-      const [found, user] = await Promise.all([
+      const [found, user, settingsList] = await Promise.all([
         base44.entities.WorkOrder.get(id),
         base44.auth.me(),
+        base44.entities.Settings.list(),
       ]);
       setOrder(found);
       setIsClient(user?.role === "cliente");
+      if (settingsList.length > 0) setCompanySettings(settingsList[0]);
       setLoading(false);
     }
     load();
@@ -174,7 +179,7 @@ export default function WorkOrderDetail() {
                   { key: "created_date", label: "Criado", format: (v) => new Date(v).toLocaleDateString("pt-BR") },
                   { key: "status", label: "Status" },
                 ]}
-                onPDF={() => downloadPDF('order-content', `ordem-servico-${String(order.id ?? '')}.pdf`)}
+                onPDF={() => downloadPDF('order-print', `ordem-servico-${String(order.id ?? '')}.pdf`)}
               />
               <Button
                 variant="outline"
@@ -254,11 +259,7 @@ export default function WorkOrderDetail() {
         </TabsList>
 
         <TabsContent value="details" className="mt-4">
-          <div id="order-content" className="bg-white rounded-xl border border-slate-200 p-6 sm:p-8">
-        <div className="hidden print:block">
-          <PrintHeader title="ORDEM DE SERVIÇO" number={String(order.id ?? '')} />
-        </div>
-
+          <div className="bg-white rounded-xl border border-slate-200 p-6 sm:p-8">
         {/* Status progress */}
         <div className="no-print mb-6">
           <div className="flex items-center gap-1">
@@ -457,98 +458,151 @@ export default function WorkOrderDetail() {
         </TabsContent>
       </Tabs>
 
-      {/* Print version - only details */}
-      <div className="hidden print:block bg-white p-8">
-        <PrintHeader title="ORDEM DE SERVIÇO" number={String(order?.id ?? '')} />
+      {/* Print/PDF version - budget-style layout */}
+      <div
+        id="order-print"
+        className="bg-white print:block"
+        style={{
+          fontFamily: '"Segoe UI", Arial, sans-serif',
+          color: '#1a1a1a',
+          position: 'absolute',
+          left: '-99999px',
+          top: 0,
+          width: '794px',
+        }}
+      >
+        <style>{`
+          @media print {
+            #order-print {
+              position: static !important;
+              left: auto !important;
+              width: auto !important;
+            }
+          }
+        `}</style>
+        <div className="p-8 sm:p-10">
 
-        <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
-          <div>
-            <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">Status</p>
-            <p className="text-sm font-semibold text-slate-800 mt-1">
-              {{ pendente: 'Pendente', em_producao: 'Em Produção', finalizado: 'Finalizado', entregue: 'Entregue' }[order?.status] || order?.status}
-            </p>
-          </div>
-          {order?.created_date && (
-            <p className="text-xs text-slate-400">Criado em {new Date(order.created_date).toLocaleDateString("pt-BR")}</p>
-          )}
-          {order?.delivery_date && (
-            <div className="text-right">
-              <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">Entrega</p>
-              <p className="text-sm text-slate-700">{new Date(order.delivery_date).toLocaleDateString("pt-BR")}</p>
-            </div>
-          )}
-        </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-6 border-b border-slate-100">
-          <div>
-            <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">Cliente</p>
-            <p className="text-base font-semibold text-slate-900 mt-1">{order?.client_name}</p>
-          </div>
-          {order?.client_phone && (
-            <div>
-              <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">Telefone</p>
-              <p className="text-sm text-slate-700 mt-1">{order.client_phone}</p>
-            </div>
-          )}
-          {order?.job && (
-            <div>
-              <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">Job</p>
-              <p className="text-sm text-slate-700 mt-1">{order.job}</p>
-            </div>
-          )}
-          {order?.producer && (
-            <div>
-              <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">Produtor</p>
-              <p className="text-sm text-slate-700 mt-1">{order.producer}</p>
-            </div>
-          )}
-        </div>
-
-        {order?.description && (
-          <div className="py-4 border-b border-slate-100">
-            <p className="text-xs text-slate-400 uppercase tracking-wider font-medium mb-1">Descrição</p>
-            <p className="text-sm text-slate-700">{order.description}</p>
-          </div>
-        )}
-
-        {order?.items?.length > 0 && (
-          <div className="py-4">
-            <p className="text-xs text-slate-400 uppercase tracking-wider font-medium mb-3">Itens</p>
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-200">
-                  <th className="text-left text-xs font-semibold text-slate-500 uppercase py-2">#</th>
-                  <th className="text-left text-xs font-semibold text-slate-500 uppercase py-2">Item</th>
-                  <th className="text-center text-xs font-semibold text-slate-500 uppercase py-2">Quantidade</th>
-                </tr>
-              </thead>
-              <tbody>
-                {order.items.map((item, i) => (
-                  <tr key={i} className="border-b border-slate-50">
-                    <td className="py-2 text-sm text-slate-400">{i + 1}</td>
-                    <td className="py-2 text-sm text-slate-800">{item.name}</td>
-                    <td className="py-2 text-sm text-slate-600 text-center">{item.quantity}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {order?.notes && (
-          <div className="pt-4 border-t border-slate-100">
-            <p className="text-xs text-slate-400 uppercase tracking-wider font-medium mb-1">Observações</p>
-            <p className="text-sm text-slate-600">{order.notes}</p>
-          </div>
-        )}
-
-        <div className="mt-16 pt-8 border-t border-slate-300">
-          <div className="flex justify-center">
-            <div className="text-center">
-              <div className="w-48 border-t border-slate-400 pt-2">
-                <p className="text-xs text-slate-500">Assinatura do Responsável</p>
+          {/* ── COMPANY HEADER ── */}
+          <div className="flex items-start justify-between pb-4 mb-4 border-b-2 border-slate-800">
+            <div className="flex-1">
+              {companySettings?.company_logo ? (
+                <img src={companySettings.company_logo} alt="Logo" className="h-24 mb-2 object-contain" />
+              ) : (
+                <p className="text-xl font-bold text-slate-900">{companySettings?.company_name || "Minha Empresa"}</p>
+              )}
+              {companySettings?.company_logo && companySettings?.company_name && (
+                <p className="text-xs font-semibold text-slate-600">{companySettings.company_name}</p>
+              )}
+              <div className="mt-1 space-y-0.5">
+                {companySettings?.company_phone && (
+                  <p className="text-xs text-slate-700">{companySettings.company_phone}</p>
+                )}
+                {companySettings?.company_email && (
+                  <p className="text-xs text-slate-700">{companySettings.company_email}</p>
+                )}
+                {companySettings?.company_email2 && (
+                  <p className="text-xs text-slate-700">{companySettings.company_email2}</p>
+                )}
+                {companySettings?.company_address && (
+                  <p className="text-xs text-slate-700">{companySettings.company_address}</p>
+                )}
               </div>
             </div>
+            <div className="text-right ml-6">
+              <p className="text-3xl font-bold text-slate-900 tracking-tight">Ordem de Serviço</p>
+              <p className="text-sm text-slate-600 mt-1">
+                Nº {String(order?.id ?? '')}
+              </p>
+              <p className="text-sm text-slate-600 mt-1">
+                Data: {order?.created_date ? new Date(order.created_date).toLocaleDateString("pt-BR") : ''}
+              </p>
+              {order?.delivery_date && (
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Entrega: {formatDateBR(order.delivery_date)}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* ── JOB / PRODUTOR / EMPRESA ── */}
+          <div className="mb-5 pb-4 border-b border-slate-300">
+            {order?.job && (
+              <div className="flex gap-2 mb-1">
+                <span className="text-sm font-bold text-slate-800 w-24 shrink-0">JOB:</span>
+                <span className="text-sm font-bold text-slate-900">{order.job}</span>
+              </div>
+            )}
+            {order?.producer && (
+              <div className="flex gap-2 mb-1">
+                <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">Produtor:</span>
+                <span className="text-sm font-bold text-slate-900">{order.producer}</span>
+              </div>
+            )}
+            {order?.client_name && (
+              <div className="flex gap-2 mb-1">
+                <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">Empresa:</span>
+                <span className="text-sm font-bold text-slate-900">{order.client_name}</span>
+              </div>
+            )}
+            {order?.client_phone && (
+              <div className="flex gap-2">
+                <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">Telefone:</span>
+                <span className="text-sm text-slate-900">{order.client_phone}</span>
+              </div>
+            )}
+          </div>
+
+          {/* ── DESCRIPTION ── */}
+          {order?.description && (
+            <div className="mb-4 text-sm text-slate-600 italic">{order.description}</div>
+          )}
+
+          {/* ── ITEMS TABLE (without prices) ── */}
+          {order?.items?.length > 0 && (
+            <div className="mb-2">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="border-b-2 border-slate-800">
+                    <th className="text-left font-bold text-slate-800 py-2 pr-3">Item</th>
+                    <th className="text-center font-bold text-slate-800 py-2 px-3 w-24">Quantidade</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {order.items.map((item, i) => (
+                    <tr key={i} className="border-b border-slate-200">
+                      <td className="py-2 pr-3 text-slate-800">{item.name}</td>
+                      <td className="py-2 px-3 text-slate-700 text-center">{item.quantity}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="text-right mt-3 mb-6">
+            <span className="text-xs text-slate-500 italic">Elaborado por: Gleissa</span>
+          </div>
+
+          {/* ── NOTES ── */}
+          {order?.notes && (
+            <div className="mb-4 p-3 border border-slate-200 rounded text-sm text-slate-700 bg-slate-50">
+              <p className="font-semibold text-slate-700 mb-1 uppercase text-xs tracking-wide">Observações</p>
+              <p className="whitespace-pre-line">{order.notes}</p>
+            </div>
+          )}
+
+          {/* ── ATENÇÃO / FOOTER NOTES ── */}
+          {companySettings?.footer_notes && (
+            <div className="mb-6 pt-4 border-t border-slate-300">
+              <p className="text-sm font-bold text-red-600 mb-2">ATENÇÃO ! LEIA AS INSTRUÇÕES ABAIXO</p>
+              <p className="text-sm text-slate-800 whitespace-pre-line">{companySettings.footer_notes}</p>
+            </div>
+          )}
+
+          {/* ── THANK YOU FOOTER ── */}
+          <div className="mt-8 pt-4 border-t border-slate-200 text-center">
+            <p className="text-xs text-slate-500">Caso você tenha alguma dúvida entre em contato conosco</p>
+            <p className="text-sm font-bold text-slate-800 mt-1">AGRADECEMOS SUA PREFERÊNCIA!</p>
           </div>
         </div>
       </div>

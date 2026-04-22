@@ -5,8 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Wrench } from "lucide-react";
+import { useAppBranding } from "@/lib/useAppBranding";
 
 export default function Login() {
+  const { appName, appLogo } = useAppBranding();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,11 +33,15 @@ export default function Login() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center space-y-3">
           <div className="flex justify-center">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center">
-              <Wrench className="h-6 w-6 text-white" />
-            </div>
+            {appLogo ? (
+              <img src={appLogo} alt="" className="h-12 w-12 object-contain rounded-xl" />
+            ) : (
+              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center">
+                <Wrench className="h-6 w-6 text-white" />
+              </div>
+            )}
           </div>
-          <CardTitle className="text-2xl font-bold">GestãoPro</CardTitle>
+          <CardTitle className="text-2xl font-bold">{appName}</CardTitle>
           <CardDescription>Entre com sua conta para continuar</CardDescription>
         </CardHeader>
         <CardContent>

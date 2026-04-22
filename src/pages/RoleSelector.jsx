@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { localClient } from "@/api/localClient";
 import { Shield, UserCog, User } from "lucide-react";
+import { useAppBranding } from "@/lib/useAppBranding";
 
 const panels = [
   {
@@ -50,6 +51,7 @@ const panels = [
 export default function RoleSelector() {
   const [loading, setLoading] = useState(null);
   const [error, setError] = useState("");
+  const { appName, appLogo } = useAppBranding();
 
   const handleSelect = async (panel) => {
     setError("");
@@ -68,12 +70,16 @@ export default function RoleSelector() {
       <div className="w-full max-w-5xl">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 mb-5 shadow-lg shadow-indigo-500/30">
-            <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
-            </svg>
-          </div>
-          <h1 className="text-4xl font-bold text-white tracking-tight mb-2">GestãoPro</h1>
+          {appLogo ? (
+            <img src={appLogo} alt="" className="inline-block h-16 w-16 object-contain rounded-2xl mb-5 shadow-lg shadow-indigo-500/30 bg-white/10 p-2" />
+          ) : (
+            <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 mb-5 shadow-lg shadow-indigo-500/30">
+              <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
+              </svg>
+            </div>
+          )}
+          <h1 className="text-4xl font-bold text-white tracking-tight mb-2">{appName}</h1>
           <p className="text-slate-400 text-lg">Selecione o painel que deseja acessar</p>
         </div>
 
@@ -153,7 +159,7 @@ export default function RoleSelector() {
         </div>
 
         <p className="text-center text-slate-500 text-xs mt-10">
-          GestãoPro · Sistema de Gestão Empresarial
+          {appName} · Sistema de Gestão Empresarial
         </p>
       </div>
     </div>

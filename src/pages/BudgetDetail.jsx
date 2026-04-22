@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import StatusBadge from "@/components/StatusBadge";
 import BudgetForm from "@/components/BudgetForm";
 import { downloadPDF } from "@/components/DownloadPDF";
+import { formatDateBR } from "@/utils/dateFormat";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -435,12 +436,12 @@ export default function BudgetDetail() {
               <p className="text-3xl font-bold text-slate-900 tracking-tight">Orçamento</p>
               <p className="text-sm text-slate-600 mt-1">
                 Data: {budget.emission_date
-                  ? new Date(budget.emission_date).toLocaleDateString("pt-BR")
+                  ? formatDateBR(budget.emission_date)
                   : new Date(budget.created_date).toLocaleDateString("pt-BR")}
               </p>
               {budget.validity_date && (
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Válido até: {new Date(budget.validity_date).toLocaleDateString("pt-BR")}
+                  Válido até: {formatDateBR(budget.validity_date)}
                 </p>
               )}
               <div className="no-print mt-2">
@@ -511,8 +512,8 @@ export default function BudgetDetail() {
             <div className="w-64 space-y-1">
               {budget.discount > 0 && (
                 <div className="flex justify-between text-sm text-red-600 pb-1">
-                  <span>Desconto ({budget.discount}%):</span>
-                  <span>- R$ {((budget.subtotal || budget.total || 0) * (budget.discount / 100)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                  <span>Desconto:</span>
+                  <span>- R$ {Number(budget.discount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                 </div>
               )}
               <div className="flex justify-between border-t-2 border-slate-800 pt-2">
@@ -525,11 +526,14 @@ export default function BudgetDetail() {
                   <span className="font-bold text-sm text-slate-900">R${budget.total_with_margin.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                 </div>
               )}
-              {budget.producer && (
+              <div className="text-right pt-1">
+                <span className="text-xs text-slate-500 italic">Elaborado por: Gleissa</span>
+              </div>
+              {/* {budget.producer && (
                 <div className="text-right pt-1">
                   <span className="text-xs text-slate-500 italic">Elaborado por: {budget.producer}</span>
                 </div>
-              )}
+              )} */}
             </div>
           </div>
 

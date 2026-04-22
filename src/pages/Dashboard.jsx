@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { FileText, Wrench, Receipt, Factory, TrendingUp, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import ExportTabs from "@/components/ExportTabs";
+import { useAuth } from "@/lib/AuthContext";
 
 function StatCard({ icon: Icon, label, value, color, link }) {
   return (
@@ -23,6 +24,7 @@ function StatCard({ icon: Icon, label, value, color, link }) {
 }
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const [budgets, setBudgets] = useState([]);
   const [workOrders, setWorkOrders] = useState([]);
   const [receipts, setReceipts] = useState([]);
@@ -42,6 +44,10 @@ export default function Dashboard() {
     }
     load();
   }, []);
+
+  if (user && user.role !== "admin" && user.role !== "cliente") {
+    return <Navigate to={createPageUrl("WorkOrderDashboard")} replace />;
+  }
 
   if (loading) {
     return (

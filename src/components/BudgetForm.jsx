@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Trash2, AlertCircle } from "lucide-react";
+import { toDateInputValue } from "@/utils/dateFormat";
 
 function FieldError({ message }) {
   if (!message) return null;
@@ -37,9 +38,9 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
     job: initialData?.job || "",
     producer: initialData?.producer || "",
     description: initialData?.description || "",
-    emission_date: initialData?.emission_date || new Date().toISOString().split('T')[0],
-    validity_date: initialData?.validity_date || "",
-    delivery_date: initialData?.delivery_date || "",
+    emission_date: toDateInputValue(initialData?.emission_date) || new Date().toISOString().split('T')[0],
+    validity_date: toDateInputValue(initialData?.validity_date),
+    delivery_date: toDateInputValue(initialData?.delivery_date),
     notes: initialData?.notes || "",
     discount: initialData?.discount || 0,
     apply_margin: initialData?.apply_margin !== undefined ? initialData.apply_margin : true,
@@ -106,7 +107,7 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
   };
 
   const subtotal = form.items.reduce((sum, item) => sum + (item.quantity || 0) * (item.unit_price || 0), 0);
-  const discountAmount = subtotal * (form.discount / 100);
+  const discountAmount = Math.min(Number(form.discount) || 0, subtotal);
   const total = subtotal - discountAmount;
   const totalWithMargin = form.apply_margin ? total * (1 + form.margin_percentage / 100) : null;
 
@@ -263,11 +264,26 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
               </div>
               <div className="col-span-4 sm:col-span-2">
                 <Label className="text-xs">Qtd</Label>
-                <Input type="number" min="1" value={item.quantity} onChange={e => updateItem(i, "quantity", Number(e.target.value))} className="mt-1" />
+                <Input
+                  type="number"
+                  min="1"
+                  value={item.quantity === 0 || item.quantity === "" ? "" : item.quantity}
+                  onChange={e => updateItem(i, "quantity", e.target.value === "" ? 0 : Number(e.target.value))}
+                  placeholder="1"
+                  className="mt-1"
+                />
               </div>
               <div className="col-span-5 sm:col-span-3">
                 <Label className="text-xs">Preço Unit. (R$)</Label>
-                <Input type="number" min="0" step="0.01" value={item.unit_price} onChange={e => updateItem(i, "unit_price", Number(e.target.value))} className="mt-1" />
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={item.unit_price === 0 || item.unit_price === "" ? "" : item.unit_price}
+                  onChange={e => updateItem(i, "unit_price", e.target.value === "" ? 0 : Number(e.target.value))}
+                  placeholder="0,00"
+                  className="mt-1"
+                />
               </div>
               <div className="col-span-3 sm:col-span-2 flex items-center gap-2">
                 <span className="text-sm font-medium text-slate-600 whitespace-nowrap">
@@ -289,19 +305,19 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
           </div>
 
           <div className="flex items-center justify-between gap-4">
-            <Label className="text-sm">Desconto (%):</Label>
+            <Label className="text-sm">Desconto (R$):</Label>
             <Input
               type="number"
               min="0"
-              max="100"
               step="0.01"
-              value={form.discount}
-              onChange={e => updateField("discount", Number(e.target.value))}
-              className="w-24 text-right"
+              value={form.discount === 0 || form.discount === "" ? "" : form.discount}
+              onChange={e => updateField("discount", e.target.value === "" ? 0 : Number(e.target.value))}
+              placeholder="0,00"
+              className="w-32 text-right"
             />
           </div>
 
-          {form.discount > 0 && (
+          {discountAmount > 0 && (
             <div className="flex justify-between text-sm text-red-600">
               <span>Desconto aplicado:</span>
               <span>- R$ {discountAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>

@@ -122,7 +122,7 @@ function BudgetDocument({ budget, settings, onAccept, onRefuse, submitting }) {
               <div>
                 <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">Validade</p>
                 <p className="text-sm text-slate-700 mt-1">
-                  {format(new Date(budget.validity_date), "dd/MM/yyyy", { locale: ptBR })}
+                  {String(budget.validity_date).split("T")[0].split("-").reverse().join("/")}
                 </p>
               </div>
             )}
@@ -176,8 +176,8 @@ function BudgetDocument({ budget, settings, onAccept, onRefuse, submitting }) {
               )}
               {budget.discount > 0 && (
                 <div className="flex justify-between text-sm text-red-600">
-                  <span>Desconto ({budget.discount}%):</span>
-                  <span>- R$ {formatBRL((budget.subtotal || budget.total || 0) * (budget.discount / 100))}</span>
+                  <span>Desconto:</span>
+                  <span>- R$ {formatBRL(Number(budget.discount))}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm font-bold text-slate-900 border-t-2 border-slate-900 pt-3 mt-2">

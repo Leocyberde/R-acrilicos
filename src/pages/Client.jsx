@@ -157,7 +157,7 @@ export default function Client() {
                             {budget.validity_date && (
                               <div>
                                 <span className="text-slate-500">Validade: </span>
-                                <span className="font-medium">{format(new Date(budget.validity_date), "dd/MM/yyyy", { locale: ptBR })}</span>
+                                <span className="font-medium">{String(budget.validity_date).split("T")[0].split("-").reverse().join("/")}</span>
                               </div>
                             )}
                           </div>

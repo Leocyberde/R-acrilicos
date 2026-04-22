@@ -295,6 +295,8 @@ async function initDB() {
       "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS client_address TEXT",
       "ALTER TABLE settings ADD COLUMN IF NOT EXISTS company_email2 VARCHAR(255)",
       "ALTER TABLE settings ADD COLUMN IF NOT EXISTS footer_notes TEXT",
+      "ALTER TABLE settings ADD COLUMN IF NOT EXISTS app_name VARCHAR(100)",
+      "ALTER TABLE settings ADD COLUMN IF NOT EXISTS app_logo TEXT",
       "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS description TEXT",
       "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS subtotal DECIMAL(15,2) DEFAULT 0",
       "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS budget_id INTEGER",

@@ -8,6 +8,7 @@ import StatusBadge from "@/components/StatusBadge";
 import PrintHeader from "@/components/PrintHeader";
 import BudgetForm from "@/components/BudgetForm";
 import { downloadPDF } from "@/components/DownloadPDF";
+import { formatDateBR } from "@/utils/dateFormat";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -27,19 +28,22 @@ export default function ReceiptDetail() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [layoutSettings, setLayoutSettings] = useState(null);
+  const [companySettings, setCompanySettings] = useState(null);
   const navigate = useNavigate();
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
 
   useEffect(() => {
     async function load() {
-      const [found, layouts] = await Promise.all([
+      const [found, layouts, settingsList] = await Promise.all([
         base44.entities.Receipt.get(id),
         base44.entities.LayoutSettings.list(),
+        base44.entities.Settings.list(),
       ]);
       setReceipt(found);
       const receiptLayout = layouts.find(l => l.document_type === "receipt") || {};
       setLayoutSettings(receiptLayout);
+      if (settingsList.length > 0) setCompanySettings(settingsList[0]);
       setLoading(false);
     }
     load();
@@ -206,148 +210,157 @@ export default function ReceiptDetail() {
         </div>
       </div>
 
-      <div id="receipt-content" className="bg-white rounded-xl border border-slate-200 p-6 sm:p-8 print:border-0 print:shadow-none print:p-0" style={{
-        fontFamily: layoutSettings?.font_family === 'serif' ? 'Georgia, serif' : layoutSettings?.font_family === 'monospace' ? 'monospace' : '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-        fontSize: `${layoutSettings?.font_size || 14}px`,
-        color: layoutSettings?.text_color || '#1f2937'
-      }}>
-        <style>{`
-          #receipt-content * {
-            color: ${layoutSettings?.text_color || '#1f2937'} !important;
-          }
-          #receipt-content .theme-color {
-            background-color: ${layoutSettings?.theme_color || '#1e293b'} !important;
-            border-color: ${layoutSettings?.theme_color || '#1e293b'} !important;
-          }
-        `}</style>
-        <div className="hidden print:block">
-          <PrintHeader title="RECIBO" number={String(receipt.id ?? '')} />
-        </div>
+      {/* Receipt Document */}
+      <div
+        id="receipt-content"
+        className="bg-white rounded-xl border border-slate-200 print:border-0 print:shadow-none print:rounded-none"
+        style={{ fontFamily: '"Segoe UI", Arial, sans-serif', color: '#1a1a1a' }}
+      >
+        <div className="p-8 sm:p-10">
 
-        <div className="flex items-center justify-between mb-6 no-print">
-          <span className="text-xs text-slate-400">Criado em {new Date(receipt.created_date).toLocaleDateString("pt-BR")}</span>
-        </div>
-
-        {receipt.emission_date && (
-          <div className="mb-4 pb-4 border-b border-slate-100">
-            <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">Data de Emissão</p>
-            <p className="text-sm font-semibold text-slate-900 mt-1">{new Date(receipt.emission_date).toLocaleDateString("pt-BR")}</p>
-          </div>
-        )}
-
-        <div className="pb-6 border-b border-slate-100 space-y-4">
-          {/* First row: Cliente, Job, Produtor (lado a lado na impressão) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">Cliente</p>
-              <p className="text-base font-semibold text-slate-900 mt-1">{receipt.client_name}</p>
+          {/* ── COMPANY HEADER ── */}
+          <div className="flex items-start justify-between pb-4 mb-4 border-b-2 border-slate-800">
+            <div className="flex-1">
+              {companySettings?.company_logo ? (
+                <img src={companySettings.company_logo} alt="Logo" className="h-24 mb-2 object-contain" />
+              ) : (
+                <p className="text-xl font-bold text-slate-900">{companySettings?.company_name || "Minha Empresa"}</p>
+              )}
+              {companySettings?.company_logo && companySettings?.company_name && (
+                <p className="text-xs font-semibold text-slate-600">{companySettings.company_name}</p>
+              )}
+              <div className="mt-1 space-y-0.5">
+                {companySettings?.company_phone && (
+                  <p className="text-xs text-slate-700">{companySettings.company_phone}</p>
+                )}
+                {companySettings?.company_email && (
+                  <p className="text-xs text-slate-700">{companySettings.company_email}</p>
+                )}
+                {companySettings?.company_email2 && (
+                  <p className="text-xs text-slate-700">{companySettings.company_email2}</p>
+                )}
+                {companySettings?.company_address && (
+                  <p className="text-xs text-slate-700">{companySettings.company_address}</p>
+                )}
+              </div>
             </div>
+            <div className="text-right ml-6">
+              <p className="text-3xl font-bold text-slate-900 tracking-tight">Recibo</p>
+              <p className="text-sm text-slate-600 mt-1">
+                Data: {receipt.emission_date
+                  ? formatDateBR(receipt.emission_date)
+                  : new Date(receipt.created_date).toLocaleDateString("pt-BR")}
+              </p>
+              <div className="no-print mt-2">
+                <StatusBadge status={receipt.status || "em_aberto"} />
+              </div>
+            </div>
+          </div>
+
+          {/* ── JOB / PRODUTOR / EMPRESA ── */}
+          <div className="mb-5 pb-4 border-b border-slate-300">
             {receipt.job && (
-              <div>
-                <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">Job</p>
-                <p className="text-sm text-slate-700 mt-1">{receipt.job}</p>
+              <div className="flex gap-2 mb-1">
+                <span className="text-sm font-bold text-slate-800 w-24 shrink-0">JOB:</span>
+                <span className="text-sm font-bold text-slate-900">{receipt.job}</span>
               </div>
             )}
             {receipt.producer && (
-              <div>
-                <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">Produtor</p>
-                <p className="text-sm text-slate-700 mt-1">{receipt.producer}</p>
+              <div className="flex gap-2 mb-1">
+                <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">Produtor:</span>
+                <span className="text-sm font-bold text-slate-900">{receipt.producer}</span>
+              </div>
+            )}
+            {receipt.client_name && (
+              <div className="flex gap-2">
+                <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">Empresa:</span>
+                <span className="text-sm font-bold text-slate-900">{receipt.client_name}</span>
               </div>
             )}
           </div>
 
-          {/* Other fields below */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {receipt.client_phone && (
-              <div>
-                <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">Telefone</p>
-                <p className="text-sm text-slate-700 mt-1">{receipt.client_phone}</p>
-              </div>
-            )}
-            {receipt.client_email && (
-              <div>
-                <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">Email</p>
-                <p className="text-sm text-slate-700 mt-1">{receipt.client_email}</p>
-              </div>
-            )}
-            {receipt.client_address && (
-              <div>
-                <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">Endereço</p>
-                <p className="text-sm text-slate-700 mt-1">{receipt.client_address}</p>
-              </div>
-            )}
-          </div>
-        </div>
+          {/* ── DESCRIPTION (if any) ── */}
+          {receipt.description && (
+            <div className="mb-4 text-sm text-slate-600 italic">{receipt.description}</div>
+          )}
 
-        {receipt.description && (
-          <div className="py-4 border-b border-slate-100">
-            <p className="text-xs text-slate-400 uppercase tracking-wider font-medium mb-1">Descrição</p>
-            <p className="text-sm text-slate-700">{receipt.description}</p>
-          </div>
-        )}
-
-        {receipt.items && receipt.items.length > 0 && (
-          <div className="py-4 border-b border-slate-100">
-            <p className="text-xs text-slate-400 uppercase tracking-wider font-medium mb-3">Itens</p>
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-200">
-                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider py-2">#</th>
-                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider py-2">Item</th>
-                  <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider py-2">Qtd</th>
-                  <th className="text-right text-xs font-semibold text-slate-500 uppercase tracking-wider py-2">Preço Unit.</th>
-                  <th className="text-right text-xs font-semibold text-slate-500 uppercase tracking-wider py-2">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {receipt.items.map((item, i) => (
-                  <tr key={i} className="border-b border-slate-50">
-                    <td className="py-2 text-sm text-slate-400">{i + 1}</td>
-                    <td className="py-2 text-sm text-slate-800">{item.name}</td>
-                    <td className="py-2 text-sm text-slate-600 text-center">{item.quantity}</td>
-                    <td className="py-2 text-sm text-slate-600 text-right">R$ {(item.unit_price || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
-                    <td className="py-2 text-sm font-semibold text-slate-800 text-right">R$ {((item.quantity || 0) * (item.unit_price || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+          {/* ── ITEMS TABLE ── */}
+          {receipt.items?.length > 0 && (
+            <div className="mb-2">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="border-b-2 border-slate-800">
+                    <th className="text-left font-bold text-slate-800 py-2 pr-3">Item</th>
+                    <th className="text-center font-bold text-slate-800 py-2 px-3 w-16">Qtd</th>
+                    <th className="text-right font-bold text-slate-800 py-2 px-3 w-28">Preco.Uni</th>
+                    <th className="text-right font-bold text-slate-800 py-2 pl-3 w-28">Subtotal</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </thead>
+                <tbody>
+                  {receipt.items.map((item, i) => (
+                    <tr key={i} className="border-b border-slate-200">
+                      <td className="py-2 pr-3 text-slate-800">{item.name}</td>
+                      <td className="py-2 px-3 text-slate-700 text-center">{item.quantity}</td>
+                      <td className="py-2 px-3 text-slate-700 text-right">
+                        R$ {(item.unit_price || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-2 pl-3 text-slate-800 text-right">
+                        R$ {((item.quantity || 0) * (item.unit_price || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-        <div className="pt-4 space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-600">Subtotal:</span>
-            <span className="font-medium">R$ {(receipt.subtotal || receipt.total_amount || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+          {/* ── TOTALS ── */}
+          <div className="flex justify-end mt-3 mb-6">
+            <div className="w-64 space-y-1">
+              {receipt.discount > 0 && (
+                <div className="flex justify-between text-sm text-red-600 pb-1">
+                  <span>Desconto:</span>
+                  <span>- R$ {Number(receipt.discount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                </div>
+              )}
+              <div className="flex justify-between border-t-2 border-slate-800 pt-2">
+                <span className="font-semibold text-sm text-slate-800">{receipt.total_label || "Sem Nota Total"}</span>
+                <span className="font-bold text-sm text-slate-900">R${(receipt.total_amount || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+              </div>
+              {receipt.total_with_margin > 0 && (
+                <div className="flex justify-between border-t border-slate-400 pt-1">
+                  <span className="font-semibold text-sm text-slate-800">{receipt.total_with_margin_label || "Com Nota Total"}</span>
+                  <span className="font-bold text-sm text-slate-900">R${receipt.total_with_margin.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                </div>
+              )}
+              <div className="text-right pt-1">
+                <span className="text-xs text-slate-500 italic">Elaborado por: Gleissa</span>
+              </div>
+            </div>
           </div>
-          
-          {receipt.discount > 0 && (
-            <div className="flex justify-between text-sm text-red-600">
-              <span className="no-print">Desconto ({receipt.discount}%):</span>
-              <span className="print-only">Desconto:</span>
-              <span>- R$ {((receipt.subtotal || receipt.total_amount || 0) * (receipt.discount / 100)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+
+          {/* ── NOTES (receipt-specific) ── */}
+          {receipt.notes && (
+            <div className="mb-4 p-3 border border-slate-200 rounded text-sm text-slate-700 bg-slate-50">
+              <p className="font-semibold text-slate-700 mb-1 uppercase text-xs tracking-wide">Observações</p>
+              <p className="whitespace-pre-line">{receipt.notes}</p>
             </div>
           )}
-          
-          <div className="flex justify-between text-base font-bold border-t-2 border-slate-900 pt-3">
-            <span className="text-slate-900">{receipt.total_label || "Total sem Nota"}:</span>
-            <span className="text-slate-900">R$ {(receipt.total_amount || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-          </div>
-          
-          {receipt.total_with_margin && (
-            <div className="flex justify-between text-base font-bold border-t pt-2">
-              <span className="text-slate-900 no-print">{receipt.total_with_margin_label || "Total com Nota"} (+{receipt.margin_percentage || 15}%):</span>
-              <span className="text-slate-900 print-only">{receipt.total_with_margin_label || "Total com Nota"}:</span>
-              <span className="text-slate-900">R$ {receipt.total_with_margin.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+
+          {/* ── ATENÇÃO / FOOTER NOTES (from settings) ── */}
+          {companySettings?.footer_notes && (
+            <div className="mb-6 pt-4 border-t border-slate-300">
+              <p className="text-sm font-bold text-red-600 mb-2">ATENÇÃO ! LEIA AS INSTRUÇÕES ABAIXO</p>
+              <p className="text-sm text-slate-800 whitespace-pre-line">{companySettings.footer_notes}</p>
             </div>
           )}
+
+          {/* ── THANK YOU FOOTER ── */}
+          <div className="mt-8 pt-4 border-t border-slate-200 text-center">
+            <p className="text-xs text-slate-500">Caso você tenha alguma dúvida entre em contato conosco</p>
+            <p className="text-sm font-bold text-slate-800 mt-1">AGRADECEMOS SUA PREFERÊNCIA!</p>
+          </div>
         </div>
-
-        {receipt.notes && (
-          <div className="mt-6 pt-6 border-t border-slate-100">
-            <p className="text-xs text-slate-400 uppercase tracking-wider font-medium mb-1">Observações</p>
-            <p className="text-sm text-slate-700">{receipt.notes}</p>
-          </div>
-        )}
       </div>
     </div>
   );

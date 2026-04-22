@@ -22,6 +22,7 @@ import {
   Smartphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAppBranding } from "@/lib/useAppBranding";
 
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, page: "Dashboard" },
@@ -53,6 +54,7 @@ export default function Layout({ children, currentPageName }) {
   const [permissions, setPermissions] = useState({});
   const [budgetRequestCount, setBudgetRequestCount] = useState(0);
   const { user, logout } = useAuth();
+  const { appName, appLogo } = useAppBranding();
 
   useEffect(() => {
     async function loadPermissions() {
@@ -95,7 +97,12 @@ export default function Layout({ children, currentPageName }) {
   return (
     <div className="min-h-screen bg-slate-50 print:bg-white">
       <style>{`
+        @page {
+          size: A4;
+          margin: 1.3cm;
+        }
         @media print {
+          html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
           .no-print { display: none !important; }
           .print-only { display: block !important; }
         }
@@ -106,7 +113,10 @@ export default function Layout({ children, currentPageName }) {
         <button onClick={() => setSidebarOpen(true)} className="p-2 -ml-2 rounded-lg hover:bg-slate-100">
           <Menu className="h-5 w-5 text-slate-700" />
         </button>
-        <span className="font-semibold text-slate-900 tracking-tight">GestãoPro</span>
+        <div className="flex items-center gap-2">
+          {appLogo && <img src={appLogo} alt="" className="h-7 w-7 object-contain rounded-md" />}
+          <span className="font-semibold text-slate-900 tracking-tight">{appName}</span>
+        </div>
         <div className="w-9" />
       </div>
 
@@ -122,10 +132,14 @@ export default function Layout({ children, currentPageName }) {
       )}>
         <div className="h-16 flex items-center justify-between px-6 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center">
-              <Wrench className="h-4 w-4 text-white" />
-            </div>
-            <span className="font-bold text-lg text-slate-900 tracking-tight">GestãoPro</span>
+            {appLogo ? (
+              <img src={appLogo} alt="" className="h-8 w-8 object-contain rounded-lg" />
+            ) : (
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center">
+                <Wrench className="h-4 w-4 text-white" />
+              </div>
+            )}
+            <span className="font-bold text-lg text-slate-900 tracking-tight">{appName}</span>
           </div>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-1 rounded-md hover:bg-slate-100">
             <X className="h-4 w-4 text-slate-500" />
