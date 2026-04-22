@@ -180,7 +180,6 @@ export default function Calendar() {
             {cells.map((day, idx) => {
               if (!day) return <div key={`empty-${idx}`} className="min-h-[70px] border-b border-r border-slate-50 last:border-r-0 bg-slate-50/40" />;
 
-              const isToday = isSameDay(new Date(viewYear, viewMonth, day), today);
               const isSelected = selectedDay === day;
               const dayEvents = eventsByDay[day] || [];
               const deliveryEvents = dayEvents;
@@ -197,7 +196,7 @@ export default function Calendar() {
                   } ${(idx + 1) % 7 === 0 ? "border-r-0" : ""}`}
                 >
                   <div className={`flex items-center justify-center h-6 w-6 rounded-full text-xs font-semibold mb-1 ${
-                    isToday ? "bg-indigo-600 text-white" : isSelected ? "bg-indigo-100 text-indigo-700" : "text-slate-700"
+                    isSelected ? "bg-slate-100 text-slate-700" : "text-slate-700"
                   }`}>
                     {day}
                   </div>
