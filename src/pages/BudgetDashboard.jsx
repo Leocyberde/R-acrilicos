@@ -33,8 +33,8 @@ export default function BudgetDashboard() {
   const approved = budgets.filter(b => b.status === "aprovado");
   const rejected = budgets.filter(b => b.status === "reprovado");
 
-  const totalValue = budgets.reduce((sum, b) => sum + (b.total || 0), 0);
-  const approvedValue = approved.reduce((sum, b) => sum + (b.total || 0), 0);
+  const totalValue = budgets.reduce((sum, b) => sum + (Number(b.total) || 0), 0);
+  const approvedValue = approved.reduce((sum, b) => sum + (Number(b.total) || 0), 0);
 
   const statusData = [
     { name: "Pendente", value: pending.length, color: "#f59e0b" },
@@ -48,7 +48,7 @@ export default function BudgetDashboard() {
     const date = new Date(b.created_date);
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     if (!monthlyData[key]) monthlyData[key] = { month: key, total: 0, count: 0 };
-    monthlyData[key].total += b.total || 0;
+    monthlyData[key].total += Number(b.total) || 0;
     monthlyData[key].count += 1;
   });
   const monthlyChartData = Object.values(monthlyData).sort((a, b) => a.month.localeCompare(b.month)).slice(-6);
@@ -219,7 +219,7 @@ export default function BudgetDashboard() {
                       </td>
                       <td className="px-5 py-3 text-right">
                         <span className="text-sm font-semibold text-slate-800">
-                          R$ {(b.total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          R$ {(Number(b.total) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                         </span>
                       </td>
                       <td className="px-5 py-3 text-center">
