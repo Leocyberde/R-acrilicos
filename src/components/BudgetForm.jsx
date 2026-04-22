@@ -1,17 +1,11 @@
-import { useState, useEffect, useRef } from "react";
-import { base44 } from "@/api/base44Client";
+import { useState, useRef } from "react";
+import ClientSearchInput from "@/components/ClientSearchInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { Plus, Trash2, AlertCircle } from "lucide-react";
 import { toDateInputValue } from "@/utils/dateFormat";
 
@@ -26,7 +20,6 @@ function FieldError({ message }) {
 }
 
 export default function BudgetForm({ initialData, onSubmit, onCancel, loading }) {
-  const [clients, setClients] = useState([]);
   const [errors, setErrors] = useState({});
   const firstErrorRef = useRef(null);
 
@@ -50,44 +43,34 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
     items: initialData?.items?.length ? initialData.items : [{ name: "", quantity: 1, unit_price: 0 }],
   });
 
-  useEffect(() => {
-    async function loadClients() {
-      const data = await base44.entities.Client.list();
-      setClients(data);
-    }
-    loadClients();
-  }, []);
-
   const updateField = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: "" }));
   };
 
-  const handleClientSelect = (clientId) => {
-    const selectedClient = clients.find(c => String(c.id) === String(clientId));
-    if (selectedClient) {
-      const addressParts = [
-        selectedClient.address_street,
-        selectedClient.address_number ? `nº ${selectedClient.address_number}` : null,
-        selectedClient.address_complement,
-        selectedClient.address_city,
-        selectedClient.address_state,
-        selectedClient.address_zip_code ? `CEP ${selectedClient.address_zip_code}` : null,
-      ].filter(Boolean);
-      const composedAddress = addressParts.length > 0
-        ? addressParts.join(", ")
-        : selectedClient.address || selectedClient.city || "";
+  const handleClientSearchSelect = (client) => {
+    if (!client) return;
+    const addressParts = [
+      client.address_street,
+      client.address_number ? `nº ${client.address_number}` : null,
+      client.address_complement,
+      client.address_city,
+      client.address_state,
+      client.address_zip_code ? `CEP ${client.address_zip_code}` : null,
+    ].filter(Boolean);
+    const composedAddress = addressParts.length > 0
+      ? addressParts.join(", ")
+      : client.address || client.city || "";
 
-      setForm(prev => ({
-        ...prev,
-        client_id: selectedClient.id,
-        client_name: selectedClient.name || "",
-        client_phone: prev.client_phone || selectedClient.phone || selectedClient.mobile || "",
-        client_email: selectedClient.email || "",
-        client_address: composedAddress,
-      }));
-      setErrors(prev => ({ ...prev, client_name: "" }));
-    }
+    setForm(prev => ({
+      ...prev,
+      client_id: client.id,
+      client_name: client.name || "",
+      client_phone: client.phone || client.mobile || prev.client_phone,
+      client_email: client.email || prev.client_email,
+      client_address: composedAddress || prev.client_address,
+    }));
+    setErrors(prev => ({ ...prev, client_name: "" }));
   };
 
   const updateItem = (index, field, value) => {
@@ -162,36 +145,18 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <Label className="mb-2 block">Selecionar Cliente Cadastrado</Label>
-        <Select onValueChange={handleClientSelect} value={form.client_id ? String(form.client_id) : ""}>
-          <SelectTrigger>
-            <SelectValue placeholder="Clique para selecionar um cliente..." />
-          </SelectTrigger>
-          <SelectContent>
-            {clients.map(client => (
-              <SelectItem key={client.id} value={String(client.id)}>
-                {client.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {form.client_id && form.client_name && (
-          <p className="text-xs text-indigo-600 mt-1 font-medium">✓ Cliente selecionado: {form.client_name}</p>
-        )}
-        <p className="text-xs text-slate-500 mt-1">Ou preencha os dados manualmente abaixo</p>
-      </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <Label>Nome do Cliente <span className="text-red-500">*</span></Label>
-          <Input
-            ref={errors.client_name ? firstErrorRef : undefined}
-            value={form.client_name}
-            onChange={e => updateField("client_name", e.target.value)}
-            className={`mt-1 ${errors.client_name ? "border-red-500 focus-visible:ring-red-400" : ""}`}
-            placeholder="Nome do cliente"
-          />
+          <Label className="mb-2 block">Nome do Cliente <span className="text-red-500">*</span></Label>
+          <div ref={errors.client_name ? firstErrorRef : undefined}>
+            <ClientSearchInput
+              value={form.client_name}
+              onChange={(val) => updateField("client_name", val)}
+              onClientSelect={handleClientSearchSelect}
+              placeholder="Digite ou selecione um cliente..."
+              error={!!errors.client_name}
+            />
+          </div>
           <FieldError message={errors.client_name} />
         </div>
 

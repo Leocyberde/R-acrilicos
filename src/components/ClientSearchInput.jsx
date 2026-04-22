@@ -1,43 +1,44 @@
 import { useState, useEffect, useRef } from "react";
-import { base44 } from "@/api/base44Client";
-import { Search, X } from "lucide-react";
+import { localClient } from "@/api/localClient";
+import { Search, X, User, ChevronDown } from "lucide-react";
 
-export default function ClientSearchInput({ value, onChange, records = [], placeholder = "Buscar por cliente..." }) {
-  const [suggestions, setSuggestions] = useState([]);
+export default function ClientSearchInput({
+  value,
+  onChange,
+  onClientSelect,
+  placeholder = "Digite ou selecione um cliente...",
+  error = false,
+}) {
   const [allClients, setAllClients] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     async function loadClients() {
       try {
-        const data = await base44.entities.Client.list("-created_date", 500);
-        const fromClients = (data || []).map(c => c.full_name || c.company_name || c.name).filter(Boolean);
-        const fromRecords = (records || []).map(r => r.client_name).filter(Boolean);
-        const merged = Array.from(new Set([...fromClients, ...fromRecords])).sort((a, b) =>
-          a.localeCompare(b, "pt-BR", { sensitivity: "base" })
-        );
-        setAllClients(merged);
+        const data = await localClient.entities.Client.list();
+        setAllClients(data || []);
       } catch {
-        const fromRecords = (records || []).map(r => r.client_name).filter(Boolean);
-        const merged = Array.from(new Set(fromRecords)).sort((a, b) =>
-          a.localeCompare(b, "pt-BR", { sensitivity: "base" })
-        );
-        setAllClients(merged);
+        setAllClients([]);
       }
     }
     loadClients();
   }, []);
 
   useEffect(() => {
-    if (!value.trim()) {
-      setSuggestions([]);
-      return;
+    if (!open) return;
+    const q = (value || "").toLowerCase().trim();
+    if (!q) {
+      setSuggestions(allClients);
+    } else {
+      const matches = allClients.filter(c =>
+        (c.name || "").toLowerCase().includes(q)
+      );
+      setSuggestions(matches);
     }
-    const q = value.toLowerCase();
-    const matches = allClients.filter(name => name.toLowerCase().includes(q));
-    setSuggestions(matches.slice(0, 8));
-  }, [value, allClients]);
+  }, [value, allClients, open]);
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -49,51 +50,84 @@ export default function ClientSearchInput({ value, onChange, records = [], place
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSelect = (name) => {
-    onChange(name);
+  const handleSelect = (client) => {
+    onChange(client.name || "");
+    if (onClientSelect) onClientSelect(client);
     setOpen(false);
-    setSuggestions([]);
   };
 
   const handleClear = () => {
     onChange("");
-    setSuggestions([]);
+    if (onClientSelect) onClientSelect(null);
+    setSuggestions(allClients);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const handleFocus = () => {
+    setOpen(true);
+  };
+
+  const handleInputChange = (e) => {
+    onChange(e.target.value);
+    setOpen(true);
   };
 
   return (
     <div ref={containerRef} className="relative">
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none z-10" />
       <input
+        ref={inputRef}
         type="text"
-        value={value}
-        onChange={e => { onChange(e.target.value); setOpen(true); }}
-        onFocus={() => { if (value.trim()) setOpen(true); }}
+        value={value || ""}
+        onChange={handleInputChange}
+        onFocus={handleFocus}
         placeholder={placeholder}
-        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring pl-9 pr-8"
         autoComplete="off"
+        className={`flex h-9 w-full rounded-md border bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 pl-9 pr-8 ${
+          error
+            ? "border-red-500 focus-visible:ring-red-400"
+            : "border-input focus-visible:ring-ring"
+        }`}
       />
-      {value && (
+      {value ? (
         <button
           onClick={handleClear}
           className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10"
           type="button"
+          tabIndex={-1}
         >
           <X className="h-3.5 w-3.5" />
         </button>
+      ) : (
+        <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none z-10" />
       )}
-      {open && suggestions.length > 0 && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg max-h-56 overflow-y-auto">
-          {suggestions.map((name, i) => (
-            <button
-              key={i}
-              type="button"
-              className="w-full text-left px-3 py-2 text-sm text-slate-800 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-2 transition-colors"
-              onMouseDown={() => handleSelect(name)}
-            >
-              <Search className="h-3 w-3 text-slate-400 shrink-0" />
-              {name}
-            </button>
-          ))}
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+          {suggestions.length === 0 ? (
+            <div className="px-3 py-4 text-center text-sm text-slate-400">
+              {allClients.length === 0 ? "Nenhum cliente cadastrado" : "Nenhum cliente encontrado"}
+            </div>
+          ) : (
+            suggestions.map((client) => (
+              <button
+                key={client.id}
+                type="button"
+                className="w-full text-left px-3 py-2 text-sm text-slate-800 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-2 transition-colors"
+                onMouseDown={() => handleSelect(client)}
+              >
+                <div className="h-6 w-6 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                  <User className="h-3 w-3 text-indigo-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{client.name}</p>
+                  {client.phone && (
+                    <p className="text-xs text-slate-400 truncate">{client.phone}</p>
+                  )}
+                </div>
+              </button>
+            ))
+          )}
         </div>
       )}
     </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -7,11 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import ClientSearchInput from "@/components/ClientSearchInput";
 
 export default function WorkOrderCreate() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [clients, setClients] = useState([]);
   const [form, setForm] = useState({
     client_name: "",
     client_phone: "",
@@ -25,13 +25,15 @@ export default function WorkOrderCreate() {
     delivery_date: "",
   });
 
-  useEffect(() => {
-    async function loadClients() {
-      const data = await base44.entities.Client.list();
-      setClients(data);
-    }
-    loadClients();
-  }, []);
+  const handleClientSelect = (client) => {
+    if (!client) return;
+    setForm(prev => ({
+      ...prev,
+      client_name: client.name || prev.client_name,
+      client_phone: client.phone || prev.client_phone,
+      client_address: [client.address, client.city, client.state].filter(Boolean).join(", ") || prev.client_address,
+    }));
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -120,22 +122,12 @@ export default function WorkOrderCreate() {
         {/* Cliente */}
         <div>
           <label className="block text-sm font-medium text-slate-900 mb-2">Cliente *</label>
-          <div className="relative">
-            <Input
-              type="text"
-              name="client_name"
-              value={form.client_name}
-              onChange={handleInputChange}
-              placeholder="Digite ou selecione um cliente"
-              list="clients-list"
-              className="w-full"
-            />
-            <datalist id="clients-list">
-              {clients.map(client => (
-                <option key={client.id} value={client.name} />
-              ))}
-            </datalist>
-          </div>
+          <ClientSearchInput
+            value={form.client_name}
+            onChange={(val) => setForm(prev => ({ ...prev, client_name: val }))}
+            onClientSelect={handleClientSelect}
+            placeholder="Digite ou selecione um cliente..."
+          />
         </div>
 
         {/* Job */}
