@@ -10,7 +10,8 @@ import RoleSelector from './pages/RoleSelector';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
-const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
+const AdminMainPage = mainPageKey ? Pages[mainPageKey] : <></>;
+const ClientMainPage = Pages["ClientDashboard"] ?? AdminMainPage;
 
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
@@ -19,7 +20,7 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
 const PUBLIC_ROUTES = ['/ClientBudgetRequest', '/ClientRegister'];
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isAuthenticated } = useAuth();
+  const { isLoadingAuth, isAuthenticated, user } = useAuth();
   const location = useLocation();
 
   if (location.pathname === '/select') {
@@ -45,11 +46,15 @@ const AuthenticatedApp = () => {
     return <RoleSelector />;
   }
 
+  const isClient = user?.role === 'cliente';
+  const HomePageComponent = isClient ? ClientMainPage : AdminMainPage;
+  const homePageKey = isClient ? "ClientDashboard" : mainPageKey;
+
   return (
     <Routes>
       <Route path="/" element={
-        <LayoutWrapper currentPageName={mainPageKey}>
-          <MainPage />
+        <LayoutWrapper currentPageName={homePageKey}>
+          <HomePageComponent />
         </LayoutWrapper>
       } />
       {Object.entries(Pages).map(([path, Page]) => (

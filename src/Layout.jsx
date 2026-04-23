@@ -37,6 +37,7 @@ const navItems = [
   { name: "Contas a Receber", icon: TrendingUp, page: "AccountsReceivable", module: "accounts_receivable" },
   { name: "Calendário", icon: CalendarDays, page: "Calendar" },
 
+  { name: "Início", icon: LayoutDashboard, page: "ClientDashboard", clientOnly: true },
   { name: "Meus Orçamentos", icon: FileText, page: "ClientBudgets", clientOnly: true },
   { name: "Meus Recibos", icon: Receipt, page: "ClientReceipts", clientOnly: true },
   { name: "Solicitar Orçamento", icon: FileText, page: "ClientBudgetRequest", clientOnly: true },
