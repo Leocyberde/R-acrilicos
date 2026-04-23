@@ -347,7 +347,8 @@ async function handleMessage(jid, text) {
             const valor = fmtCurrency(budget.total_with_margin || budget.total);
             const status = fmtStatus(budget.status);
             const fileName = `Orcamento_${budget.id}.pdf`;
-            const caption = `📄 *Orçamento #${budget.id}*\n• Job: ${budget.job || '-'}\n• Status: ${status}\n• Valor: ${valor}`;
+            const produtor = budget.producer ? `\n• Produtor: ${budget.producer}` : '';
+            const caption = `📄 *Orçamento #${budget.id}*\n• Job: ${budget.job || '-'}${produtor}\n• Status: ${status}\n• Valor: ${valor}`;
             await sendDoc(jid, pdfBuffer, fileName, caption);
           } catch (e) {
             await sendMsg(jid, `⚠️ Erro ao gerar PDF do Orçamento #${budget.id}`);
