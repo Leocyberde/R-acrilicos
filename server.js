@@ -313,6 +313,12 @@ async function initDB() {
       "ALTER TABLE budgets ALTER COLUMN status SET DEFAULT 'em_aberto'",
       "ALTER TABLE receipts ALTER COLUMN status SET DEFAULT 'em_aberto'",
       "ALTER TABLE budget_requests ADD COLUMN IF NOT EXISTS client_phone VARCHAR(100)",
+      "ALTER TABLE settings ADD COLUMN IF NOT EXISTS receipt_bank_name VARCHAR(255)",
+      "ALTER TABLE settings ADD COLUMN IF NOT EXISTS receipt_bank_agency VARCHAR(100)",
+      "ALTER TABLE settings ADD COLUMN IF NOT EXISTS receipt_bank_account VARCHAR(100)",
+      "ALTER TABLE settings ADD COLUMN IF NOT EXISTS receipt_pix_cnpj VARCHAR(100)",
+      "ALTER TABLE settings ADD COLUMN IF NOT EXISTS receipt_beneficiary VARCHAR(255)",
+      "ALTER TABLE settings ADD COLUMN IF NOT EXISTS receipt_pix_qrcode TEXT",
     ];
     for (const sql of migrations) {
       await client.query(sql);

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, Image as ImageIcon, Shield, Layout } from "lucide-react";
+import { Upload, Image as ImageIcon, Shield, Layout, QrCode } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
@@ -40,6 +40,12 @@ export default function SettingsPage() {
         footer_notes: "",
         app_name: "",
         app_logo: "",
+        receipt_bank_name: "",
+        receipt_bank_agency: "",
+        receipt_bank_account: "",
+        receipt_pix_cnpj: "",
+        receipt_beneficiary: "",
+        receipt_pix_qrcode: "",
       });
     }
     setLoading(false);
@@ -71,6 +77,21 @@ export default function SettingsPage() {
       toast.success("Logo do sistema carregado com sucesso!");
     } catch {
       toast.error("Erro ao fazer upload. Tente novamente.");
+    }
+    setUploading(false);
+    e.target.value = "";
+  };
+
+  const handleQrCodeUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setSettings(prev => ({ ...prev, receipt_pix_qrcode: file_url }));
+      toast.success("QR Code carregado com sucesso!");
+    } catch {
+      toast.error("Erro ao fazer upload do QR Code.");
     }
     setUploading(false);
     e.target.value = "";
@@ -266,6 +287,96 @@ export default function SettingsPage() {
             className="mt-1 min-h-[120px]"
             placeholder="Ex: A PRODUÇÃO SERA INICIADA: APÓS ADIANTAMENTO DE 50%&#10;FATURAMENTO: 50% P/INICIAR PRODUÇÃO E 50% NA RETIRADA&#10;PARA RETIRAR - NÃO FAZEMOS ENTREGA !!!"
           />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <QrCode className="h-5 w-5" />
+            Rodapé dos Recibos (Dados Bancários / PIX)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-xs text-slate-500">Estas informações aparecem na parte inferior dos recibos, com o QR code do PIX ao lado.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <Label>Banco</Label>
+              <Input
+                value={settings?.receipt_bank_name || ""}
+                onChange={e => setSettings(prev => ({ ...prev, receipt_bank_name: e.target.value }))}
+                className="mt-1"
+                placeholder="Ex: Inter"
+              />
+            </div>
+            <div>
+              <Label>Agência</Label>
+              <Input
+                value={settings?.receipt_bank_agency || ""}
+                onChange={e => setSettings(prev => ({ ...prev, receipt_bank_agency: e.target.value }))}
+                className="mt-1"
+                placeholder="Ex: 0001"
+              />
+            </div>
+            <div>
+              <Label>Conta</Label>
+              <Input
+                value={settings?.receipt_bank_account || ""}
+                onChange={e => setSettings(prev => ({ ...prev, receipt_bank_account: e.target.value }))}
+                className="mt-1"
+                placeholder="Ex: 4068262-5"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label>PIX CNPJ</Label>
+              <Input
+                value={settings?.receipt_pix_cnpj || ""}
+                onChange={e => setSettings(prev => ({ ...prev, receipt_pix_cnpj: e.target.value }))}
+                className="mt-1"
+                placeholder="Ex: 31.567.417/0001-64"
+              />
+            </div>
+            <div>
+              <Label>Favorecido</Label>
+              <Input
+                value={settings?.receipt_beneficiary || ""}
+                onChange={e => setSettings(prev => ({ ...prev, receipt_beneficiary: e.target.value }))}
+                className="mt-1"
+                placeholder="Nome do favorecido"
+              />
+            </div>
+          </div>
+          <div>
+            <Label>QR Code PIX</Label>
+            {settings?.receipt_pix_qrcode && (
+              <div className="flex items-center gap-4 mt-2 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                <img src={settings.receipt_pix_qrcode} alt="QR Code PIX" className="w-24 h-24 object-contain" />
+                <div>
+                  <p className="text-xs text-slate-500 mb-2">QR Code atual</p>
+                  <Button variant="outline" size="sm" type="button" onClick={() => setSettings(prev => ({ ...prev, receipt_pix_qrcode: "" }))}>
+                    Remover
+                  </Button>
+                </div>
+              </div>
+            )}
+            <input
+              type="file"
+              id="qrcode-upload"
+              className="hidden"
+              accept="image/*"
+              onChange={handleQrCodeUpload}
+              disabled={uploading}
+            />
+            <Button asChild variant="outline" disabled={uploading} className="mt-2 w-full">
+              <label htmlFor="qrcode-upload" className="cursor-pointer">
+                <Upload className="h-4 w-4 mr-2" />
+                {uploading ? "Enviando..." : "Fazer Upload do QR Code"}
+              </label>
+            </Button>
+            <p className="text-xs text-slate-500 mt-1">Formatos aceitos: JPG, PNG. Recomendado: 300x300px.</p>
+          </div>
         </CardContent>
       </Card>
 

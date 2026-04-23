@@ -345,6 +345,40 @@ export default function ReceiptDetail() {
             </div>
           )}
 
+          {/* ── RECEIPT BANKING FOOTER ── */}
+          {(companySettings?.receipt_bank_name || companySettings?.receipt_pix_cnpj || companySettings?.receipt_pix_qrcode) && (
+            <div className="mt-6 pt-4 border-t-2 border-slate-300">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-orange-500 mb-2">DADOS BANCÁRIOS</p>
+                  {companySettings.receipt_bank_name && (
+                    <p className="text-sm text-slate-700">
+                      <span className="font-semibold">Banco:</span> {companySettings.receipt_bank_name}
+                      {companySettings.receipt_bank_agency && <>&nbsp;&nbsp;<span className="font-semibold">Ag:</span> {companySettings.receipt_bank_agency}</>}
+                      {companySettings.receipt_bank_account && <>&nbsp;&nbsp;<span className="font-semibold">Conta:</span> {companySettings.receipt_bank_account}</>}
+                    </p>
+                  )}
+                  {companySettings.receipt_pix_cnpj && (
+                    <p className="text-sm text-slate-700 mt-1">
+                      <span className="font-semibold">PIX CNPJ:</span>&nbsp;&nbsp;{companySettings.receipt_pix_cnpj}
+                    </p>
+                  )}
+                  {companySettings.receipt_beneficiary && (
+                    <p className="text-sm mt-1">
+                      <span className="font-semibold text-orange-500">Favorecido:</span> {companySettings.receipt_beneficiary}
+                    </p>
+                  )}
+                </div>
+                {companySettings.receipt_pix_qrcode && (
+                  <div className="text-center shrink-0">
+                    <p className="text-xs font-semibold text-slate-600 mb-1">PAGUE NO PIX</p>
+                    <img src={companySettings.receipt_pix_qrcode} alt="QR Code PIX" className="w-24 h-24 object-contain border border-slate-200" />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* ── THANK YOU FOOTER ── */}
           <div className="mt-8 pt-4 border-t border-slate-200 text-center">
             <p className="text-xs text-slate-500">Caso você tenha alguma dúvida entre em contato conosco</p>
