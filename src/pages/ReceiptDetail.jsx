@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer, Trash2, Edit, Download, Lock } from "lucide-react";
+import { ArrowLeft, Printer, Trash2, Edit, Download, Lock, Send } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import PrintHeader from "@/components/PrintHeader";
 import BudgetForm from "@/components/BudgetForm";
@@ -52,6 +52,18 @@ export default function ReceiptDetail() {
   const handleDelete = async () => {
     await base44.entities.Receipt.delete(id);
     navigate(createPageUrl("Receipts"));
+  };
+
+  const handleSendToClient = async () => {
+    setSaving(true);
+    try {
+      await base44.entities.Receipt.update(id, { sent_to_client: true });
+      setReceipt(prev => ({ ...prev, sent_to_client: true }));
+      toast.success("Recibo enviado ao cliente com sucesso! Ele já pode visualizá-lo no portal.");
+    } catch {
+      toast.error("Erro ao enviar recibo ao cliente.");
+    }
+    setSaving(false);
   };
 
   const handleClose = async () => {
@@ -175,6 +187,16 @@ export default function ReceiptDetail() {
             URL.revokeObjectURL(url);
           }}>
             <Download className="h-3.5 w-3.5 mr-1.5" /> PDF
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSendToClient}
+            disabled={saving}
+            className={receipt.sent_to_client ? "border-green-500 text-green-700" : "border-indigo-400 text-indigo-700"}
+          >
+            <Send className="h-3.5 w-3.5 mr-1.5" />
+            {receipt.sent_to_client ? "Reenviar ao Cliente" : "Enviar ao Cliente"}
           </Button>
           <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
             <Edit className="h-3.5 w-3.5 mr-1.5" /> Editar

@@ -38,6 +38,7 @@ const navItems = [
   { name: "Calendário", icon: CalendarDays, page: "Calendar" },
 
   { name: "Meus Orçamentos", icon: FileText, page: "ClientBudgets", clientOnly: true },
+  { name: "Meus Recibos", icon: Receipt, page: "ClientReceipts", clientOnly: true },
   { name: "Solicitar Orçamento", icon: FileText, page: "ClientBudgetRequest", clientOnly: true },
   { name: "Minhas O.S.", icon: Wrench, page: "WorkOrders", clientOnly: true },
   { name: "Perfil", icon: User, page: "ClientProfile", clientOnly: true },

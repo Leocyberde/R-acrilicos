@@ -319,6 +319,8 @@ async function initDB() {
       "ALTER TABLE settings ADD COLUMN IF NOT EXISTS receipt_pix_cnpj VARCHAR(100)",
       "ALTER TABLE settings ADD COLUMN IF NOT EXISTS receipt_beneficiary VARCHAR(255)",
       "ALTER TABLE settings ADD COLUMN IF NOT EXISTS receipt_pix_qrcode TEXT",
+      "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS sent_to_client BOOLEAN DEFAULT FALSE",
+      "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS client_email VARCHAR(255)",
     ];
     for (const sql of migrations) {
       await client.query(sql);

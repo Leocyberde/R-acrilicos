@@ -78,6 +78,7 @@ import WorkOrders from './pages/WorkOrders';
 import Calendar from './pages/Calendar';
 import ClientPortal from './pages/ClientPortal';
 import ClientBudgets from './pages/ClientBudgets';
+import ClientReceipts from './pages/ClientReceipts';
 import ClientProfile from './pages/ClientProfile';
 import WhatsAppSettings from './pages/WhatsAppSettings';
 import __Layout from './Layout.jsx';
@@ -115,6 +116,7 @@ export const PAGES = {
     "Calendar": Calendar,
     "ClientPortal": ClientPortal,
     "ClientBudgets": ClientBudgets,
+    "ClientReceipts": ClientReceipts,
     "ClientProfile": ClientProfile,
     "WhatsAppSettings": WhatsAppSettings,
 }
