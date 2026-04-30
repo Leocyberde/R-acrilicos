@@ -123,7 +123,7 @@ export async function generateBudgetPDF(budget, company = {}) {
       ? fmtDate(budget.emission_date)
       : fmtDate(budget.created_date);
 
-    doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(26)
+    doc.fillColor(C.slate900).font('Helvetica').fontSize(26)
       .text('Orçamento', rightX, headerStartY, { width: rightW, align: 'right' });
     doc.fillColor(C.slate600).font('Helvetica').fontSize(9)
       .text(`Data: ${emissionDate}`, rightX, headerStartY + 32, { width: rightW, align: 'right' });
@@ -148,17 +148,17 @@ export async function generateBudgetPDF(budget, company = {}) {
 
     if (budget.job) {
       doc.fillColor(C.slate800).font('Helvetica-Bold').fontSize(9).text('JOB:', ML, y, { width: labelW, continued: false });
-      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text(budget.job, ML + labelW, y, { width: valW });
+      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text((budget.job || '').toUpperCase(), ML + labelW, y, { width: valW });
       y += 14;
     }
     if (budget.producer) {
       doc.fillColor(C.slate700).font('Helvetica-Bold').fontSize(9).text('Produtor:', ML, y, { width: labelW, continued: false });
-      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text(budget.producer, ML + labelW, y, { width: valW });
+      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text((budget.producer || '').toUpperCase(), ML + labelW, y, { width: valW });
       y += 14;
     }
     if (budget.client_name) {
       doc.fillColor(C.slate700).font('Helvetica-Bold').fontSize(9).text('Empresa:', ML, y, { width: labelW, continued: false });
-      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text(budget.client_name, ML + labelW, y, { width: valW });
+      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text((budget.client_name || '').toUpperCase(), ML + labelW, y, { width: valW });
       y += 14;
     }
     if (budget.client_email) {
@@ -205,7 +205,7 @@ export async function generateBudgetPDF(budget, company = {}) {
         const unitPrice = Number(item.unit_price || item.price || 0);
         const lineTotal = Number(item.total || item.line_total || qty * unitPrice || 0);
 
-        const rowText = item.name || item.description || '-';
+        const rowText = String(item.name || item.description || '-').toUpperCase();
         const rowH = Math.max(doc.heightOfString(rowText, { width: COL.item.w - 4, size: 9 }), 14);
 
         doc.fillColor(C.slate800).font('Helvetica').fontSize(9)
@@ -304,11 +304,11 @@ export async function generateBudgetPDF(budget, company = {}) {
     y += 14;
     hLine(doc, ML, y, PW, C.slate200, 0.5);
     y += 10;
-    doc.fillColor(C.slate500).font('Helvetica').fontSize(8)
-      .text('Caso você tenha alguma dúvida entre em contato conosco', ML, y, { width: PW, align: 'center' });
-    y += 12;
     doc.fillColor(C.slate800).font('Helvetica-Bold').fontSize(9)
       .text('AGRADECEMOS SUA PREFERÊNCIA!', ML, y, { width: PW, align: 'center' });
+    y += 12;
+    doc.fillColor(C.slate500).font('Helvetica').fontSize(8)
+      .text('Caso você tenha alguma dúvida entre em contato conosco', ML, y, { width: PW, align: 'center' });
 
     doc.end();
   });
