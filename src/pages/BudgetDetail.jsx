@@ -238,10 +238,6 @@ export default function BudgetDetail() {
 
   return (
     <div className="space-y-6">
-      <style type="text/css" media="print">{`
-        @page { margin: 0; }
-        body { padding: 1cm; }
-      `}</style>
       {/* Actions bar - hidden in print */}
       <div className="no-print flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">

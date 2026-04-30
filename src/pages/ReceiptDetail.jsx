@@ -159,10 +159,6 @@ export default function ReceiptDetail() {
 
   return (
     <div className="space-y-6">
-      <style type="text/css" media="print">{`
-        @page { margin: 0; }
-        body { padding: 1cm; }
-      `}</style>
       <div className="no-print flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate(createPageUrl("Receipts"))}>
