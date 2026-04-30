@@ -159,6 +159,10 @@ export default function ReceiptDetail() {
 
   return (
     <div className="space-y-6">
+      <style type="text/css" media="print">{`
+        @page { margin: 0; }
+        body { padding: 1cm; }
+      `}</style>
       <div className="no-print flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate(createPageUrl("Receipts"))}>
@@ -267,12 +271,13 @@ export default function ReceiptDetail() {
               </div>
             </div>
             <div className="text-right ml-6">
-              <p className="text-3xl font-bold text-slate-900 tracking-tight">Recibo</p>
+              <p className="text-3xl font-normal text-slate-900 tracking-tight">Recibo</p>
               <p className="text-sm text-slate-600 mt-1">
                 Data: {receipt.emission_date
                   ? formatDateBR(receipt.emission_date)
                   : new Date(receipt.created_date).toLocaleDateString("pt-BR")}
               </p>
+              <p className="text-xs text-slate-500 mt-0.5">Nº {receipt.id}</p>
               <div className="no-print mt-2">
                 <StatusBadge status={receipt.status || "em_aberto"} />
               </div>
@@ -284,17 +289,17 @@ export default function ReceiptDetail() {
             {receipt.job && (
               <div className="flex gap-2 mb-1">
                 <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">JOB:</span>
-                <span className="text-sm text-slate-900">{receipt.job}</span>
+                <span className="text-sm font-bold text-slate-900 uppercase">{receipt.job}</span>
               </div>
             )}
             <div className="flex gap-2 mb-1">
               <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">Produtor:</span>
-              <span className="text-sm font-bold text-slate-900">{receipt.producer || "—"}</span>
+              <span className="text-sm font-bold text-slate-900 uppercase">{receipt.producer || "—"}</span>
             </div>
             {receipt.client_name && (
               <div className="flex gap-2">
                 <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">Empresa:</span>
-                <span className="text-sm font-bold text-slate-900">{receipt.client_name}</span>
+                <span className="text-sm font-bold text-slate-900 uppercase">{receipt.client_name}</span>
               </div>
             )}
           </div>
@@ -319,7 +324,7 @@ export default function ReceiptDetail() {
                 <tbody>
                   {receipt.items.map((item, i) => (
                     <tr key={i} className="border-b border-slate-200">
-                      <td className="py-2 pr-3 text-slate-800">{item.name}</td>
+                      <td className="py-2 pr-3 text-slate-800 uppercase">{item.name}</td>
                       <td className="py-2 px-3 text-slate-700 text-center">{item.quantity}</td>
                       <td className="py-2 px-3 text-slate-700 text-right">
                         R$ {(item.unit_price || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
@@ -403,8 +408,8 @@ export default function ReceiptDetail() {
 
           {/* ── THANK YOU FOOTER ── */}
           <div className="mt-8 pt-4 border-t border-slate-200 text-center">
-            <p className="text-xs text-slate-500">Caso você tenha alguma dúvida entre em contato conosco</p>
-            <p className="text-sm font-bold text-slate-800 mt-1">AGRADECEMOS SUA PREFERÊNCIA!</p>
+            <p className="text-sm font-bold text-slate-800">AGRADECEMOS SUA PREFERÊNCIA!</p>
+            <p className="text-xs text-slate-500 mt-1">Caso você tenha alguma dúvida entre em contato conosco</p>
           </div>
         </div>
       </div>

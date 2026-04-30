@@ -569,7 +569,7 @@ export async function generateReceiptPDF(receipt, company = {}) {
 
     const emissionDate = fmtDate(receipt.emission_date || receipt.created_date);
 
-    doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(26)
+    doc.fillColor(C.slate900).font('Helvetica').fontSize(26)
       .text('Recibo', rightX, headerStartY, { width: rightW, align: 'right' });
     doc.fillColor(C.slate600).font('Helvetica').fontSize(9)
       .text(`Data: ${emissionDate}`, rightX, headerStartY + 32, { width: rightW, align: 'right' });
@@ -591,17 +591,17 @@ export async function generateReceiptPDF(receipt, company = {}) {
 
     if (receipt.job) {
       doc.fillColor(C.slate800).font('Helvetica-Bold').fontSize(9).text('JOB:', ML, y, { width: labelW });
-      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text(receipt.job, ML + labelW, y, { width: valW });
+      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text((receipt.job || '').toUpperCase(), ML + labelW, y, { width: valW });
       y += 14;
     }
     if (receipt.producer) {
       doc.fillColor(C.slate700).font('Helvetica-Bold').fontSize(9).text('Produtor:', ML, y, { width: labelW });
-      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text(receipt.producer, ML + labelW, y, { width: valW });
+      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text((receipt.producer || '').toUpperCase(), ML + labelW, y, { width: valW });
       y += 14;
     }
     if (receipt.client_name) {
       doc.fillColor(C.slate700).font('Helvetica-Bold').fontSize(9).text('Empresa:', ML, y, { width: labelW });
-      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text(receipt.client_name, ML + labelW, y, { width: valW });
+      doc.fillColor(C.slate900).font('Helvetica-Bold').fontSize(9).text((receipt.client_name || '').toUpperCase(), ML + labelW, y, { width: valW });
       y += 14;
     }
     if (receipt.client_email) {
@@ -650,7 +650,7 @@ export async function generateReceiptPDF(receipt, company = {}) {
         const unitPrice = Number(item.unit_price || 0);
         const lineTotal = qty * unitPrice;
 
-        const rowText = item.name || item.description || '-';
+        const rowText = String(item.name || item.description || '-').toUpperCase();
         const rowH = Math.max(doc.heightOfString(rowText, { width: COL.item.w - 4, size: 9 }), 14);
 
         doc.fillColor(C.slate800).font('Helvetica').fontSize(9)
@@ -743,11 +743,11 @@ export async function generateReceiptPDF(receipt, company = {}) {
     y += 14;
     hLine(doc, ML, y, PW, C.slate200, 0.5);
     y += 10;
-    doc.fillColor(C.slate500).font('Helvetica').fontSize(8)
-      .text('Caso você tenha alguma dúvida entre em contato conosco', ML, y, { width: PW, align: 'center' });
-    y += 12;
     doc.fillColor(C.slate800).font('Helvetica-Bold').fontSize(9)
       .text('AGRADECEMOS SUA PREFERÊNCIA!', ML, y, { width: PW, align: 'center' });
+    y += 12;
+    doc.fillColor(C.slate500).font('Helvetica').fontSize(8)
+      .text('Caso você tenha alguma dúvida entre em contato conosco', ML, y, { width: PW, align: 'center' });
 
     doc.end();
   });
