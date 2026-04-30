@@ -266,7 +266,7 @@ export default function ReceiptDetail() {
                 )}
               </div>
             </div>
-            <div className="text-right ml-6">
+            <div className="text-right ml-6 pt-6">
               <p className="text-3xl font-normal text-slate-900 tracking-tight">Recibo</p>
               <p className="text-sm text-slate-600 mt-1">
                 Data: {receipt.emission_date
@@ -403,7 +403,7 @@ export default function ReceiptDetail() {
           )}
 
           {/* ── THANK YOU FOOTER ── */}
-          <div className="mt-8 pt-4 border-t border-slate-200 text-center">
+          <div className="mt-8 pt-4 border-t border-slate-200 text-center print-doc-thanks">
             <p className="text-sm font-bold text-slate-800">AGRADECEMOS SUA PREFERÊNCIA!</p>
             <p className="text-xs text-slate-500 mt-1">Caso você tenha alguma dúvida entre em contato conosco</p>
           </div>

@@ -110,12 +110,13 @@ export default function Layout({ children, currentPageName }) {
           .min-h-screen { min-height: 0 !important; }
           main { margin: 0 !important; padding: 0 !important; min-height: 0 !important; height: auto !important; }
           main > div { padding: 0 !important; max-width: 100% !important; min-height: 0 !important; height: auto !important; }
-          .print-doc { padding: 1cm !important; box-shadow: none !important; border: 0 !important; border-radius: 0 !important; }
+          .print-doc { padding: 1cm !important; box-shadow: none !important; border: 0 !important; border-radius: 0 !important; display: flex !important; flex-direction: column !important; min-height: 100vh !important; box-sizing: border-box !important; }
           .print-doc, .print-doc * { box-shadow: none !important; }
           .print-doc .space-y-6 > * + * { margin-top: 0.4rem !important; }
           .print-doc table { margin-bottom: 0.3rem !important; page-break-inside: auto; }
           .print-doc tr { page-break-inside: avoid; }
           .print-doc img { max-height: 90px !important; }
+          .print-doc-thanks { margin-top: auto !important; }
         }
       `}</style>
 
