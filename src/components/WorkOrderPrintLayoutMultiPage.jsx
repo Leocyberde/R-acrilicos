@@ -56,8 +56,7 @@ export default function WorkOrderPrintLayoutMultiPage({ workOrder }) {
       ]);
       if (settingsList.length > 0) setSettings(settingsList[0]);
       if (configs.length > 0) {
-        const { id, created_date, updated_date, ...rest } = configs[0];
-        setConfig({ ...DEFAULT, ...rest });
+        setConfig({ ...DEFAULT, ...(configs[0].config_data || {}) });
       }
     }
     load();
@@ -86,7 +85,11 @@ export default function WorkOrderPrintLayoutMultiPage({ workOrder }) {
 
   const createdDate = workOrder?.created_date ? new Date(workOrder.created_date).toLocaleDateString("pt-BR") : "";
   const deliveryDate = workOrder?.delivery_date
-    ? new Date(workOrder.delivery_date + "T00:00:00").toLocaleDateString("pt-BR")
+    ? (() => {
+        const raw = String(workOrder.delivery_date).split("T")[0];
+        const d = new Date(raw + "T12:00:00");
+        return isNaN(d.getTime()) ? workOrder.delivery_date : d.toLocaleDateString("pt-BR");
+      })()
     : null;
 
   const c = config;

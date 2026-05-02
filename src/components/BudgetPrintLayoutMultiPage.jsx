@@ -45,6 +45,9 @@ const DEFAULT = {
   show_producer: true,
   show_client: true,
   show_phone: true,
+  phone_font_size: 11,
+  phone_font_family: "Arial, sans-serif",
+  phone_color: "#333333",
   show_email: true,
   show_address_company: true,
 };
@@ -62,8 +65,7 @@ export default function BudgetPrintLayoutMultiPage({ budget }) {
       ]);
       if (settingsList.length > 0) setSettings(settingsList[0]);
       if (configs.length > 0) {
-        const { id, created_date, updated_date, ...rest } = configs[0];
-        setConfig({ ...DEFAULT, ...rest });
+        setConfig({ ...DEFAULT, ...(configs[0].config_data || {}) });
       }
     }
     load();
@@ -127,7 +129,7 @@ export default function BudgetPrintLayoutMultiPage({ budget }) {
                 <div style={{ fontWeight: "bold", fontSize: "18px", color: "#c00" }}>{settings?.company_name || "GestãoPro"}</div>
               )}
               {c.show_phone !== false && settings?.company_phone && (
-                <div style={{ fontSize: "11px", marginTop: "4px" }}>{settings.company_phone}</div>
+                <div style={{ fontSize: `${c.phone_font_size || 11}px`, fontFamily: c.phone_font_family, color: c.phone_color, marginTop: "4px" }}>{settings.company_phone}</div>
               )}
               {c.show_email !== false && settings?.company_email && (
                 <div style={{ fontSize: "11px", color: "#1565c0", marginTop: "4px" }}>{settings.company_email}</div>

@@ -252,9 +252,8 @@ export default function BudgetLayoutEditor() {
         localClient.entities.Settings.list(),
       ]);
       if (configs.length > 0) {
-        const { id, created_date, updated_date, ...rest } = configs[0];
-        setConfig({ ...DEFAULT_CONFIG, ...rest });
-        setConfigId(id);
+        setConfig({ ...DEFAULT_CONFIG, ...(configs[0].config_data || {}) });
+        setConfigId(configs[0].id);
       }
       if (settingsList.length > 0) setSettings(settingsList[0]);
     }
@@ -267,9 +266,9 @@ export default function BudgetLayoutEditor() {
     setSaving(true);
     try {
       if (configId) {
-        await localClient.entities.BudgetLayoutConfig.update(configId, config);
+        await localClient.entities.BudgetLayoutConfig.update(configId, { config_data: config });
       } else {
-        const created = await localClient.entities.BudgetLayoutConfig.create(config);
+        const created = await localClient.entities.BudgetLayoutConfig.create({ config_data: config });
         setConfigId(created.id);
       }
       setSaved(true);
