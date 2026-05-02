@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { localClient } from "@/api/localClient";
+import { usePrint } from "@/hooks/usePrint";
+import BudgetPrintLayoutMultiPage from "@/components/BudgetPrintLayoutMultiPage";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -32,22 +34,19 @@ export default function BudgetDetail() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [layoutSettings, setLayoutSettings] = useState(null);
   const [companySettings, setCompanySettings] = useState(null);
   const navigate = useNavigate();
+  const { printElement } = usePrint();
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
 
   useEffect(() => {
     async function load() {
-      const [found, layouts, settingsList] = await Promise.all([
-        base44.entities.Budget.get(id),
-        base44.entities.LayoutSettings.list(),
-        base44.entities.Settings.list(),
+      const [found, settingsList] = await Promise.all([
+        localClient.entities.Budget.get(id),
+        localClient.entities.Settings.list(),
       ]);
       setBudget(found);
-      const budgetLayout = layouts.find(l => l.document_type === "budget") || {};
-      setLayoutSettings(budgetLayout);
       if (settingsList.length > 0) setCompanySettings(settingsList[0]);
       setLoading(false);
     }
@@ -57,7 +56,7 @@ export default function BudgetDetail() {
   const updateStatus = async (status) => {
     setSaving(true);
     try {
-      await base44.entities.Budget.update(id, { status });
+      await localClient.entities.Budget.update(id, { status });
       setBudget(prev => ({ ...prev, status }));
       toast.success("Status atualizado com sucesso!");
     } catch {
@@ -69,7 +68,7 @@ export default function BudgetDetail() {
   const handleAcceptCounterProposal = async () => {
     setSaving(true);
     try {
-      await base44.entities.Budget.update(id, { status: "aceito_cliente" });
+      await localClient.entities.Budget.update(id, { status: "aceito_cliente" });
       setBudget(prev => ({ ...prev, status: "aceito_cliente" }));
       toast.success("Contraproposta aceita! Status atualizado para Aceito pelo Cliente.");
     } catch {
@@ -81,14 +80,14 @@ export default function BudgetDetail() {
   const handleApproveAndCreateOS = async () => {
     setSaving(true);
     try {
-      await base44.entities.Budget.update(id, { status: "aprovado" });
+      await localClient.entities.Budget.update(id, { status: "aprovado" });
 
       const osItems = (budget.items || []).map(item => ({
         name: item.name,
         quantity: item.quantity,
       }));
 
-      const os = await base44.entities.WorkOrder.create({
+      const os = await localClient.entities.WorkOrder.create({
         budget_id: String(id),
         client_name: budget.client_name,
         client_email: budget.client_email,
@@ -104,7 +103,7 @@ export default function BudgetDetail() {
         delivery_date: budget.delivery_date || null,
       });
 
-      const receipt = await base44.entities.Receipt.create({
+      const receipt = await localClient.entities.Receipt.create({
         budget_id: String(id),
         work_order_id: String(os.id),
         client_name: budget.client_name,
@@ -140,21 +139,21 @@ export default function BudgetDetail() {
 
   const handleUpdate = async (data) => {
     setSaving(true);
-    await base44.entities.Budget.update(id, data);
+    await localClient.entities.Budget.update(id, data);
     setBudget(prev => ({ ...prev, ...data }));
     setSaving(false);
     setEditing(false);
   };
 
   const handleDelete = async () => {
-    await base44.entities.Budget.delete(id);
+    await localClient.entities.Budget.delete(id);
     navigate(createPageUrl("Budgets"));
   };
 
   const handleClose = async () => {
     setSaving(true);
     try {
-      await base44.entities.Budget.update(id, { status: "orcamento_fechado" });
+      await localClient.entities.Budget.update(id, { status: "orcamento_fechado" });
       setBudget(prev => ({ ...prev, status: "orcamento_fechado" }));
       toast.success("Orçamento fechado com sucesso!");
     } catch {
@@ -166,7 +165,7 @@ export default function BudgetDetail() {
   const handleSendToClient = async () => {
     setSaving(true);
     try {
-      await base44.entities.Budget.update(id, { pdf_sent: true });
+      await localClient.entities.Budget.update(id, { pdf_sent: true });
       setBudget(prev => ({ ...prev, pdf_sent: true }));
       toast.success("Orçamento enviado ao cliente com sucesso! Ele já pode visualizá-lo no portal.");
     } catch {
@@ -177,7 +176,7 @@ export default function BudgetDetail() {
 
   const handleCreateReceipt = async () => {
     setSaving(true);
-    const receipt = await base44.entities.Receipt.create({
+    const receipt = await localClient.entities.Receipt.create({
       budget_id: id,
       client_name: budget.client_name,
       client_phone: budget.client_phone,
@@ -295,7 +294,7 @@ export default function BudgetDetail() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="outline" size="sm" onClick={() => window.print()}>
+          <Button variant="outline" size="sm" onClick={() => printElement('budget-print-layout')}>
             <Printer className="h-3.5 w-3.5 mr-1.5" /> Imprimir
           </Button>
           <Button variant="outline" size="sm" onClick={async () => {
@@ -561,6 +560,14 @@ export default function BudgetDetail() {
           </div>
 
         </div>
+      </div>
+
+      {/* Hidden new-layout print area */}
+      <div
+        id="budget-print-layout"
+        style={{ position: 'absolute', left: '-99999px', top: 0, width: '210mm' }}
+      >
+        {budget && <BudgetPrintLayoutMultiPage budget={budget} />}
       </div>
     </div>
   );

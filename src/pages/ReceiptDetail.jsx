@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { localClient } from "@/api/localClient";
+import { usePrint } from "@/hooks/usePrint";
+import ReceiptPrintLayoutMultiPage from "@/components/ReceiptPrintLayoutMultiPage";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -27,22 +29,19 @@ export default function ReceiptDetail() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [layoutSettings, setLayoutSettings] = useState(null);
   const [companySettings, setCompanySettings] = useState(null);
   const navigate = useNavigate();
+  const { printElement } = usePrint();
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
 
   useEffect(() => {
     async function load() {
-      const [found, layouts, settingsList] = await Promise.all([
-        base44.entities.Receipt.get(id),
-        base44.entities.LayoutSettings.list(),
-        base44.entities.Settings.list(),
+      const [found, settingsList] = await Promise.all([
+        localClient.entities.Receipt.get(id),
+        localClient.entities.Settings.list(),
       ]);
       setReceipt(found);
-      const receiptLayout = layouts.find(l => l.document_type === "receipt") || {};
-      setLayoutSettings(receiptLayout);
       if (settingsList.length > 0) setCompanySettings(settingsList[0]);
       setLoading(false);
     }
@@ -50,14 +49,14 @@ export default function ReceiptDetail() {
   }, [id]);
 
   const handleDelete = async () => {
-    await base44.entities.Receipt.delete(id);
+    await localClient.entities.Receipt.delete(id);
     navigate(createPageUrl("Receipts"));
   };
 
   const handleSendToClient = async () => {
     setSaving(true);
     try {
-      await base44.entities.Receipt.update(id, { sent_to_client: true });
+      await localClient.entities.Receipt.update(id, { sent_to_client: true });
       setReceipt(prev => ({ ...prev, sent_to_client: true }));
       toast.success("Recibo enviado ao cliente com sucesso! Ele já pode visualizá-lo no portal.");
     } catch {
@@ -69,7 +68,7 @@ export default function ReceiptDetail() {
   const handleClose = async () => {
     setSaving(true);
     try {
-      await base44.entities.Receipt.update(id, { status: "recibo_fechado" });
+      await localClient.entities.Receipt.update(id, { status: "recibo_fechado" });
       setReceipt(prev => ({ ...prev, status: "recibo_fechado" }));
       toast.success("Recibo fechado com sucesso!");
     } catch {
@@ -80,7 +79,7 @@ export default function ReceiptDetail() {
 
   const handleUpdate = async (data) => {
     setSaving(true);
-    await base44.entities.Receipt.update(id, {
+    await localClient.entities.Receipt.update(id, {
       client_name: data.client_name,
       client_phone: data.client_phone,
       client_email: data.client_email,
@@ -99,8 +98,8 @@ export default function ReceiptDetail() {
       total_with_margin_label: data.total_with_margin_label,
       notes: data.notes,
     });
-    const updated = await base44.entities.Receipt.list();
-    setReceipt(updated.find(r => r.id === id));
+    const updated = await localClient.entities.Receipt.get(id);
+    setReceipt(updated);
     setSaving(false);
     setEditing(false);
   };
@@ -171,7 +170,7 @@ export default function ReceiptDetail() {
         </div>
         <div className="flex flex-wrap gap-2 items-center">
           <StatusBadge status={receipt.status || "em_aberto"} />
-          <Button variant="outline" size="sm" onClick={() => window.print()}>
+          <Button variant="outline" size="sm" onClick={() => printElement('receipt-print-layout')}>
             <Printer className="h-3.5 w-3.5 mr-1.5" /> Imprimir
           </Button>
           <Button variant="outline" size="sm" onClick={async () => {
@@ -408,6 +407,14 @@ export default function ReceiptDetail() {
             <p className="text-xs text-slate-500 mt-1">Caso você tenha alguma dúvida entre em contato conosco</p>
           </div>
         </div>
+      </div>
+
+      {/* Hidden new-layout print area */}
+      <div
+        id="receipt-print-layout"
+        style={{ position: 'absolute', left: '-99999px', top: 0, width: '210mm' }}
+      >
+        {receipt && <ReceiptPrintLayoutMultiPage receipt={receipt} />}
       </div>
     </div>
   );

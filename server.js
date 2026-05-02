@@ -234,6 +234,27 @@ async function initDB() {
         created_date TIMESTAMP DEFAULT NOW(),
         updated_date TIMESTAMP DEFAULT NOW()
       );
+
+      CREATE TABLE IF NOT EXISTS budget_layout_configs (
+        id SERIAL PRIMARY KEY,
+        config_data JSONB DEFAULT '{}',
+        created_date TIMESTAMP DEFAULT NOW(),
+        updated_date TIMESTAMP DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS receipt_layout_configs (
+        id SERIAL PRIMARY KEY,
+        config_data JSONB DEFAULT '{}',
+        created_date TIMESTAMP DEFAULT NOW(),
+        updated_date TIMESTAMP DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS work_order_layout_configs (
+        id SERIAL PRIMARY KEY,
+        config_data JSONB DEFAULT '{}',
+        created_date TIMESTAMP DEFAULT NOW(),
+        updated_date TIMESTAMP DEFAULT NOW()
+      );
     `);
 
     // Migrate existing tables to add missing columns
@@ -1024,6 +1045,9 @@ app.use('/api/entities/Settings', buildEntityRoutes('settings'));
 app.use('/api/entities/LayoutSettings', buildEntityRoutes('layout_settings'));
 app.use('/api/entities/SectionStyles', buildEntityRoutes('section_styles'));
 app.use('/api/entities/UserPermissions', buildEntityRoutes('user_permissions'));
+app.use('/api/entities/BudgetLayoutConfig', buildEntityRoutes('budget_layout_configs'));
+app.use('/api/entities/ReceiptLayoutConfig', buildEntityRoutes('receipt_layout_configs'));
+app.use('/api/entities/WorkOrderLayoutConfig', buildEntityRoutes('work_order_layout_configs'));
 
 app.get('/api/entities/User', authMiddleware, async (req, res) => {
   try {

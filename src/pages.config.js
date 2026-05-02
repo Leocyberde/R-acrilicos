@@ -66,6 +66,9 @@ import Financial from './pages/Financial';
 import FinancialCreate from './pages/FinancialCreate';
 import FinancialDetail from './pages/FinancialDetail';
 import LayoutEditor from './pages/LayoutEditor';
+import BudgetLayoutEditor from './pages/BudgetLayoutEditor';
+import ReceiptLayoutEditor from './pages/ReceiptLayoutEditor';
+import WorkOrderLayoutEditor from './pages/WorkOrderLayoutEditor';
 import Production from './pages/Production';
 import ReceiptCreate from './pages/ReceiptCreate';
 import ReceiptDetail from './pages/ReceiptDetail';
@@ -105,6 +108,9 @@ export const PAGES = {
     "FinancialCreate": FinancialCreate,
     "FinancialDetail": FinancialDetail,
     "LayoutEditor": LayoutEditor,
+    "BudgetLayoutEditor": BudgetLayoutEditor,
+    "ReceiptLayoutEditor": ReceiptLayoutEditor,
+    "WorkOrderLayoutEditor": WorkOrderLayoutEditor,
     "Production": Production,
     "ReceiptCreate": ReceiptCreate,
     "ReceiptDetail": ReceiptDetail,

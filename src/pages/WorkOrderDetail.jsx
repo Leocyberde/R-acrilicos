@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { localClient } from "@/api/localClient";
+import { usePrint } from "@/hooks/usePrint";
+import WorkOrderPrintLayoutMultiPage from "@/components/WorkOrderPrintLayoutMultiPage";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -33,6 +35,7 @@ export default function WorkOrderDetail() {
   const [uploading, setUploading] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const navigate = useNavigate();
+  const { printElement } = usePrint();
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
 
@@ -41,9 +44,9 @@ export default function WorkOrderDetail() {
   useEffect(() => {
     async function load() {
       const [found, user, settingsList] = await Promise.all([
-        base44.entities.WorkOrder.get(id),
-        base44.auth.me(),
-        base44.entities.Settings.list(),
+        localClient.entities.WorkOrder.get(id),
+        localClient.auth.me(),
+        localClient.entities.Settings.list(),
       ]);
       setOrder(found);
       setIsClient(user?.role === "cliente");
@@ -55,14 +58,14 @@ export default function WorkOrderDetail() {
 
   const updateStatus = async (status) => {
     setSaving(true);
-    await base44.entities.WorkOrder.update(id, { status });
+    await localClient.entities.WorkOrder.update(id, { status });
     setOrder(prev => ({ ...prev, status }));
     setSaving(false);
   };
 
   const saveChanges = async () => {
     setSaving(true);
-    await base44.entities.WorkOrder.update(id, {
+    await localClient.entities.WorkOrder.update(id, {
       client_name: order.client_name,
       client_phone: order.client_phone,
       client_address: order.client_address,
@@ -78,7 +81,7 @@ export default function WorkOrderDetail() {
   const toggleUrgent = async () => {
     setSaving(true);
     const newVal = !order.is_urgent;
-    await base44.entities.WorkOrder.update(id, { is_urgent: newVal });
+    await localClient.entities.WorkOrder.update(id, { is_urgent: newVal });
     setOrder(prev => ({ ...prev, is_urgent: newVal }));
     setSaving(false);
   };
@@ -94,7 +97,7 @@ export default function WorkOrderDetail() {
 
 
   const handleDelete = async () => {
-    await base44.entities.WorkOrder.delete(id);
+    await localClient.entities.WorkOrder.delete(id);
     navigate(createPageUrl("WorkOrders"));
   };
 
@@ -103,7 +106,11 @@ export default function WorkOrderDetail() {
     if (!file) return;
     
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = localStorage.getItem("auth_token");
+    const uploadRes = await fetch("/api/upload", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData });
+    const { file_url } = await uploadRes.json();
     const attachments = order.attachments || [];
     attachments.push({
       name: file.name,
@@ -111,7 +118,7 @@ export default function WorkOrderDetail() {
       size: file.size,
       uploaded_date: new Date().toISOString(),
     });
-    await base44.entities.WorkOrder.update(id, { attachments });
+    await localClient.entities.WorkOrder.update(id, { attachments });
     setOrder(prev => ({ ...prev, attachments }));
     setUploading(false);
     e.target.value = "";
@@ -121,7 +128,7 @@ export default function WorkOrderDetail() {
     const attachments = [...(order.attachments || [])];
     attachments.splice(index, 1);
     setSaving(true);
-    await base44.entities.WorkOrder.update(id, { attachments });
+    await localClient.entities.WorkOrder.update(id, { attachments });
     setOrder(prev => ({ ...prev, attachments }));
     setSaving(false);
   };
@@ -181,6 +188,9 @@ export default function WorkOrderDetail() {
                 ]}
                 onPDF={() => downloadPDF('order-print', `ordem-servico-${String(order.id ?? '')}.pdf`)}
               />
+              <Button variant="outline" size="sm" onClick={() => printElement('workorder-print-layout')}>
+                <Printer className="h-3.5 w-3.5 mr-1.5" /> Imprimir
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -597,6 +607,14 @@ export default function WorkOrderDetail() {
             <p className="text-sm font-bold text-slate-800 mt-1">AGRADECEMOS SUA PREFERÊNCIA!</p>
           </div>
         </div>
+      </div>
+
+      {/* Hidden new-layout print area */}
+      <div
+        id="workorder-print-layout"
+        style={{ position: 'absolute', left: '-99999px', top: 0, width: '210mm' }}
+      >
+        {order && <WorkOrderPrintLayoutMultiPage workOrder={order} />}
       </div>
     </div>
   );
