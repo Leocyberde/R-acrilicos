@@ -298,16 +298,12 @@ export default function BudgetDetail() {
             <Printer className="h-3.5 w-3.5 mr-1.5" /> Imprimir
           </Button>
           <Button variant="outline" size="sm" onClick={async () => {
-            const token = localStorage.getItem('auth_token');
-            const res = await fetch(`/api/budgets/${budget.id}/pdf`, { headers: { Authorization: `Bearer ${token}` } });
-            if (!res.ok) { toast.error('Erro ao gerar PDF'); return; }
-            const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `orcamento-${budget.id}.pdf`;
-            a.click();
-            URL.revokeObjectURL(url);
+            toast.info('Gerando PDF, aguarde...');
+            try {
+              await downloadPDF('budget-print-layout', `orcamento-${budget.id}.pdf`);
+            } catch {
+              toast.error('Erro ao gerar PDF');
+            }
           }}>
             <Download className="h-3.5 w-3.5 mr-1.5" /> PDF
           </Button>
