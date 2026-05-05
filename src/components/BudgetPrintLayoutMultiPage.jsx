@@ -192,20 +192,20 @@ export default function BudgetPrintLayoutMultiPage({ budget }) {
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ borderTop: "1px solid #333", background: c.table_header_bg }}>
-            <th style={{ textAlign: "left", padding: "5px 4px", fontWeight: "bold", fontSize: "12px", color: c.table_header_color, width: `${c.table_item_width ?? 55}%` }}>Item</th>
-            <th style={{ textAlign: "center", padding: "5px 4px", fontWeight: "bold", fontSize: "12px", color: c.table_header_color, width: `${c.table_quantity_width ?? 8}%` }}>Qtd</th>
-            <th style={{ textAlign: "right", padding: "5px 4px", fontWeight: "bold", fontSize: "12px", color: c.table_header_color, width: `${c.table_unit_price_width ?? 18}%` }}>V.Unitário</th>
-            <th style={{ textAlign: "right", padding: "5px 4px", fontWeight: "bold", fontSize: "12px", color: c.table_header_color, width: `${c.table_subtotal_width ?? 19}%` }}>Subtotal</th>
+            <th style={{ textAlign: "left", padding: "5px 4px", fontWeight: "bold", fontSize: "12px", color: c.table_header_color, width: `${c.table_item_width ?? 55}%`, lineHeight: "1.2", verticalAlign: "middle" }}>Item</th>
+            <th style={{ textAlign: "center", padding: "5px 4px", fontWeight: "bold", fontSize: "12px", color: c.table_header_color, width: `${c.table_quantity_width ?? 8}%`, lineHeight: "1.2", verticalAlign: "middle" }}>Qtd</th>
+            <th style={{ textAlign: "right", padding: "5px 4px", fontWeight: "bold", fontSize: "12px", color: c.table_header_color, width: `${c.table_unit_price_width ?? 18}%`, lineHeight: "1.2", verticalAlign: "middle" }}>V.Unitário</th>
+            <th style={{ textAlign: "right", padding: "5px 4px", fontWeight: "bold", fontSize: "12px", color: c.table_header_color, width: `${c.table_subtotal_width ?? 19}%`, lineHeight: "1.2", verticalAlign: "middle" }}>Subtotal</th>
           </tr>
         </thead>
         <tbody>
           <tr><td colSpan={4} style={{ height: "8px" }} /></tr>
           {items.map((item, i) => (
-            <tr key={i} style={{ borderBottom: `1px solid ${c.table_row_border_color}`, height: `${c.table_row_height || 24}px` }}>
-              <td style={{ padding: "4px", wordBreak: "break-word", verticalAlign: "middle", textTransform: "uppercase" }}>{item.name}</td>
-              <td style={{ padding: "4px", textAlign: "center", verticalAlign: "middle" }}>{item.quantity}</td>
-              <td style={{ padding: "4px", textAlign: "right", color: c.table_value_color, verticalAlign: "middle" }}>R$ {fmt(item.unit_price)}</td>
-              <td style={{ padding: "4px", textAlign: "right", color: c.table_value_color, verticalAlign: "middle" }}>
+            <tr key={i} style={{ borderBottom: `1px solid ${c.table_row_border_color}`, height: `${c.table_row_height || 24}px`, lineHeight: `${c.table_row_height || 24}px` }}>
+              <td style={{ padding: "4px", wordBreak: "break-word", verticalAlign: "middle", textTransform: "uppercase", lineHeight: "1.2", display: "table-cell" }}>{item.name}</td>
+              <td style={{ padding: "4px", textAlign: "center", verticalAlign: "middle", lineHeight: "1.2", display: "table-cell" }}>{item.quantity}</td>
+              <td style={{ padding: "4px", textAlign: "right", color: c.table_value_color, verticalAlign: "middle", lineHeight: "1.2", display: "table-cell" }}>R$ {fmt(item.unit_price)}</td>
+              <td style={{ padding: "4px", textAlign: "right", color: c.table_value_color, verticalAlign: "middle", lineHeight: "1.2", display: "table-cell" }}>
                 R$ {fmt((item.quantity || 0) * (item.unit_price || 0))}
               </td>
             </tr>
