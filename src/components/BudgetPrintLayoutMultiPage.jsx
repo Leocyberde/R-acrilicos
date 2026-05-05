@@ -158,7 +158,7 @@ export default function BudgetPrintLayoutMultiPage({ budget }) {
                 fontWeight: c.title_bold !== false ? "bold" : "normal",
                 color: c.title_color,
               }}>
-                {c.title_text || "Orçamento"}
+                {c.title_text || "Orçamento"} #{String(budget.id || "")}
               </div>
               <div style={{ fontSize: "12px", marginTop: "4px" }}>Data: {emissionDate}</div>
               {budget.validity_date && <div style={{ fontSize: "12px", marginTop: "2px" }}>Validade: {formatDate(budget.validity_date)}</div>}

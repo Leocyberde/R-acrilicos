@@ -180,8 +180,8 @@ function BudgetPreview({ config, settings }) {
           {c.show_address_company !== false && settings?.company_address && <div style={{ fontFamily: c.address_font_family, fontSize: `${c.address_font_size}px`, color: c.address_color, marginTop: "4px" }}>{settings.company_address}</div>}
         </div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: `${c.title_font_size}px`, fontWeight: c.title_bold !== false ? "bold" : "normal", color: c.title_color }}>{c.title_text || "Orçamento"}</div>
-          <div style={{ fontSize: "12px", marginTop: "4px" }}>Data: {emissionDate}</div>
+<div style={{ fontSize: `${c.title_font_size}px`, fontWeight: c.title_bold !== false ? "bold" : "normal", color: c.title_color }}>{c.title_text || "Orçamento"} #{String(budget.id || "")}</div>
+	          <div style={{ fontSize: "12px", marginTop: "4px" }}>Data: {emissionDate}</div>
         </div>
       </div>
       <hr style={{ border: "none", borderTop: `${c.divider_thickness}px solid ${c.divider_color}`, margin: "8px 0" }} />
