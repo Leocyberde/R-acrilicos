@@ -451,19 +451,19 @@ export default function BudgetDetail() {
             {budget.job && (
               <div className="flex gap-2 mb-1">
                 <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">JOB:</span>
-                <span className="text-sm font-bold text-slate-900 uppercase">{budget.job}</span>
+                <span className="text-sm font-bold text-slate-900 uppercase">{budget.job?.toUpperCase()}</span>
               </div>
             )}
             {budget.producer && (
               <div className="flex gap-2 mb-1">
                 <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">Produtor:</span>
-                <span className="text-sm font-bold text-slate-900 uppercase">{budget.producer}</span>
+                <span className="text-sm font-bold text-slate-900 uppercase">{budget.producer?.toUpperCase()}</span>
               </div>
             )}
             {budget.client_name && (
               <div className="flex gap-2">
                 <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">Empresa:</span>
-                <span className="text-sm font-bold text-slate-900 uppercase">{budget.client_name}</span>
+                <span className="text-sm font-bold text-slate-900 uppercase">{budget.client_name?.toUpperCase()}</span>
               </div>
             )}
           </div>

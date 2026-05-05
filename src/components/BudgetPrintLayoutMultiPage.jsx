@@ -158,10 +158,11 @@ export default function BudgetPrintLayoutMultiPage({ budget }) {
                 fontWeight: c.title_bold !== false ? "bold" : "normal",
                 color: c.title_color,
               }}>
-                {c.title_text || "Orçamento"} #{String(budget.id || "")}
+                {c.title_text || "Orçamento"}
               </div>
               <div style={{ fontSize: "12px", marginTop: "4px" }}>Data: {emissionDate}</div>
               {budget.validity_date && <div style={{ fontSize: "12px", marginTop: "2px" }}>Validade: {formatDate(budget.validity_date)}</div>}
+              <div style={{ fontSize: "12px", marginTop: "4px", fontWeight: "bold" }}>Nº {String(budget.id || "")}</div>
             </div>
           </div>
 
@@ -174,9 +175,9 @@ export default function BudgetPrintLayoutMultiPage({ budget }) {
               {c.show_client !== false && <div>Cliente:</div>}
             </div>
             <div>
-              {c.show_job !== false && <div><strong>{budget.job || ""}</strong></div>}
-              {c.show_producer !== false && <div><strong>{budget.producer || ""}</strong></div>}
-              {c.show_client !== false && <div><strong>{budget.client_name || ""}</strong></div>}
+              {c.show_job !== false && <div><strong>{(budget.job || "").toUpperCase()}</strong></div>}
+              {c.show_producer !== false && <div><strong>{(budget.producer || "").toUpperCase()}</strong></div>}
+              {c.show_client !== false && <div><strong>{(budget.client_name || "").toUpperCase()}</strong></div>}
             </div>
           </div>
         </>
