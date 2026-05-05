@@ -95,9 +95,23 @@ export default function BudgetPrintLayoutMultiPage({ budget }) {
   const fmt = (v) =>
     (v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const emissionDate = budget?.emission_date
-    ? new Date(budget.emission_date + "T00:00:00").toLocaleDateString("pt-BR")
-    : budget?.created_date ? new Date(budget.created_date).toLocaleDateString("pt-BR") : "";
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    try {
+      // Tenta extrair apenas a parte da data YYYY-MM-DD
+      const cleanDate = String(dateStr).split("T")[0];
+      const parts = cleanDate.split("-");
+      if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+      const date = new Date(dateStr);
+      return isNaN(date.getTime()) ? "" : date.toLocaleDateString("pt-BR");
+    } catch (e) {
+      return "";
+    }
+  };
+
+  const emissionDate = formatDate(budget?.emission_date) || formatDate(budget?.created_date);
 
   const c = config;
 
@@ -147,7 +161,7 @@ export default function BudgetPrintLayoutMultiPage({ budget }) {
                 {c.title_text || "Orçamento"}
               </div>
               <div style={{ fontSize: "12px", marginTop: "4px" }}>Data: {emissionDate}</div>
-              {budget.validity_date && <div style={{ fontSize: "12px", marginTop: "2px" }}>Validade: {new Date(budget.validity_date + "T00:00:00").toLocaleDateString("pt-BR")}</div>}
+              {budget.validity_date && <div style={{ fontSize: "12px", marginTop: "2px" }}>Validade: {formatDate(budget.validity_date)}</div>}
             </div>
           </div>
 
@@ -187,10 +201,10 @@ export default function BudgetPrintLayoutMultiPage({ budget }) {
           <tr><td colSpan={4} style={{ height: "8px" }} /></tr>
           {items.map((item, i) => (
             <tr key={i} style={{ borderBottom: `1px solid ${c.table_row_border_color}`, height: `${c.table_row_height || 24}px` }}>
-              <td style={{ padding: "2px 4px", wordBreak: "break-word" }}>{item.name}</td>
-              <td style={{ padding: "2px 4px", textAlign: "center" }}>{item.quantity}</td>
-              <td style={{ padding: "2px 4px", textAlign: "right", color: c.table_value_color }}>R$ {fmt(item.unit_price)}</td>
-              <td style={{ padding: "2px 4px", textAlign: "right", color: c.table_value_color }}>
+              <td style={{ padding: "4px", wordBreak: "break-word", verticalAlign: "middle", textTransform: "uppercase" }}>{item.name}</td>
+              <td style={{ padding: "4px", textAlign: "center", verticalAlign: "middle" }}>{item.quantity}</td>
+              <td style={{ padding: "4px", textAlign: "right", color: c.table_value_color, verticalAlign: "middle" }}>R$ {fmt(item.unit_price)}</td>
+              <td style={{ padding: "4px", textAlign: "right", color: c.table_value_color, verticalAlign: "middle" }}>
                 R$ {fmt((item.quantity || 0) * (item.unit_price || 0))}
               </td>
             </tr>
