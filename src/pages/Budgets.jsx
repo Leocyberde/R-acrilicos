@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ export default function Budgets() {
 
   useEffect(() => {
     async function load() {
-      const data = await base44.entities.Budget.list("-created_date", 200);
+      const data = await api.entities.Budget.list("-created_date", 200);
       setBudgets(data);
       setLoading(false);
     }
@@ -69,7 +69,7 @@ export default function Budgets() {
 
     setDeleting(true);
     try {
-      await Promise.all(selected.map(id => base44.entities.Budget.delete(id)));
+      await Promise.all(selected.map(id => api.entities.Budget.delete(id)));
       setBudgets(budgets.filter(b => !selected.includes(b.id)));
       setSelected([]);
       toast.success(`${selected.length} orçamento(s) excluído(s) com sucesso`);

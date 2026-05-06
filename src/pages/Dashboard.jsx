@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { Link, Navigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { FileText, Wrench, Receipt, Factory, TrendingUp, Clock, CheckCircle2, AlertCircle } from "lucide-react";
@@ -33,9 +33,9 @@ export default function Dashboard() {
   useEffect(() => {
     async function load() {
       const [b, w, r] = await Promise.all([
-        base44.entities.Budget.list("-created_date", 100),
-        base44.entities.WorkOrder.list("-created_date", 100),
-        base44.entities.Receipt.list("-created_date", 100),
+        api.entities.Budget.list("-created_date", 100),
+        api.entities.WorkOrder.list("-created_date", 100),
+        api.entities.Receipt.list("-created_date", 100),
       ]);
       setBudgets(b);
       setWorkOrders(w);

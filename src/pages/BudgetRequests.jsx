@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -32,13 +32,13 @@ export default function BudgetRequests() {
   }, []);
 
   async function load() {
-    const data = await base44.entities.BudgetRequest.list("-created_date", 200);
+    const data = await api.entities.BudgetRequest.list("-created_date", 200);
     setRequests(data);
     setLoading(false);
   }
 
   const handleStatusChange = async (id, newStatus) => {
-    await base44.entities.BudgetRequest.update(id, { status: newStatus });
+    await api.entities.BudgetRequest.update(id, { status: newStatus });
     setRequests(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
     if (selected?.id === id) setSelected(prev => ({ ...prev, status: newStatus }));
     toast.success("Status atualizado!");

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { Badge } from "@/components/ui/badge";
 import { Receipt, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
@@ -205,12 +205,12 @@ export default function ClientReceipts() {
   useEffect(() => {
     const load = async () => {
       const [currentUser, settingsData] = await Promise.all([
-        base44.auth.me(),
-        base44.entities.Settings.list(),
+        api.auth.me(),
+        api.entities.Settings.list(),
       ]);
       if (settingsData.length > 0) setSettings(settingsData[0]);
       if (currentUser) {
-        const data = await base44.entities.Receipt.filter({ client_email: currentUser.email });
+        const data = await api.entities.Receipt.filter({ client_email: currentUser.email });
         const sent = (data || []).filter(r => r.sent_to_client === true || r.sent_to_client === "true");
         setReceipts(sent.sort((a, b) => new Date(b.created_date) - new Date(a.created_date)));
       }

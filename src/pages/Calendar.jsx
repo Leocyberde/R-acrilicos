@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { ChevronLeft, ChevronRight, CalendarDays, Zap, Circle } from "lucide-react";
@@ -52,7 +52,7 @@ export default function Calendar() {
   useEffect(() => {
     async function load() {
       try {
-        const data = await base44.entities.WorkOrder.list("-created_date", 500);
+        const data = await api.entities.WorkOrder.list("-created_date", 500);
         setOrders(data || []);
       } catch {
         setOrders([]);

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { createPageUrl } from "@/utils";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ export default function ReceiptCreate() {
 
   const handleSubmit = async (data) => {
     setLoading(true);
-    const created = await base44.entities.Receipt.create({
+    const created = await api.entities.Receipt.create({
       client_name: data.client_name,
       client_phone: data.client_phone,
       client_email: data.client_email,

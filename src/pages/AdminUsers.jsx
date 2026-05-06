@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,8 +51,8 @@ export default function AdminUsers() {
   async function loadData() {
     try {
       const [usersData, me] = await Promise.all([
-        base44.entities.User.list(),
-        base44.auth.me(),
+        api.entities.User.list(),
+        api.auth.me(),
       ]);
       setUsers(usersData);
       setCurrentUser(me);
@@ -66,7 +66,7 @@ export default function AdminUsers() {
   const handleInvite = async () => {
     if (!inviteEmail) return;
     setInviting(true);
-    await base44.users.inviteUser(inviteEmail, inviteRole);
+    await api.users.inviteUser(inviteEmail, inviteRole);
     toast.success("Convite enviado com sucesso!");
     setInviteEmail("");
     setInviteRole("user");
@@ -82,16 +82,16 @@ export default function AdminUsers() {
     }
     setCreating(true);
     try {
-      await base44.auth.register({
+      await api.auth.register({
         email: createEmail,
         password: createPassword
       });
       
-      const users = await base44.entities.User.list();
+      const users = await api.entities.User.list();
       const newUser = users.find(u => u.email === createEmail);
       
       if (newUser && createRole !== "user") {
-        await base44.entities.User.update(newUser.id, { role: createRole });
+        await api.entities.User.update(newUser.id, { role: createRole });
       }
       
       toast.success("Usuário criado com sucesso!");
@@ -110,11 +110,11 @@ export default function AdminUsers() {
   const handleUpdatePermissions = async () => {
     if (!editingUser) return;
     
-    await base44.entities.User.update(editingUser.id, {
+    await api.entities.User.update(editingUser.id, {
       role: editingUser.role,
     });
     
-    const existingPerms = await base44.entities.UserPermissions.filter({
+    const existingPerms = await api.entities.UserPermissions.filter({
       user_email: editingUser.email
     });
     
@@ -124,9 +124,9 @@ export default function AdminUsers() {
     };
     
     if (existingPerms.length > 0) {
-      await base44.entities.UserPermissions.update(existingPerms[0].id, permData);
+      await api.entities.UserPermissions.update(existingPerms[0].id, permData);
     } else {
-      await base44.entities.UserPermissions.create(permData);
+      await api.entities.UserPermissions.create(permData);
     }
     
     toast.success("Permissões atualizadas!");
@@ -141,7 +141,7 @@ export default function AdminUsers() {
       defaultPerms[m.id] = { view: false, create: false, edit: false, delete: false };
     });
     
-    const existingPerms = await base44.entities.UserPermissions.filter({
+    const existingPerms = await api.entities.UserPermissions.filter({
       user_email: user.email
     });
     
@@ -165,7 +165,7 @@ export default function AdminUsers() {
   };
 
   const handleDeleteUser = async (userId) => {
-    await base44.entities.User.delete(userId);
+    await api.entities.User.delete(userId);
     toast.success("Usuário excluído com sucesso!");
     loadData();
   };
@@ -177,7 +177,7 @@ export default function AdminUsers() {
     }
     setResettingPassword(true);
     try {
-      await base44.auth.resetPassword(resetPasswordUser.id, newPassword);
+      await api.auth.resetPassword(resetPasswordUser.id, newPassword);
       toast.success("Senha redefinida com sucesso!");
       setTimeout(() => {
         setResetPasswordOpen(false);

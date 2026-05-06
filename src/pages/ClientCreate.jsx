@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -90,7 +90,7 @@ export default function ClientCreate() {
         address_state: form.address_state,
         notes: form.notes,
       };
-      await base44.entities.Client.create(clientData);
+      await api.entities.Client.create(clientData);
       toast.success("Cliente cadastrado com sucesso!");
       navigate(createPageUrl("Clients"));
     } catch {

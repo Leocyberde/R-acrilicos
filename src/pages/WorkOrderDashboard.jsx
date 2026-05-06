@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Wrench, Clock, Cog, CheckCircle2, Truck } from "lucide-react";
@@ -14,7 +14,7 @@ export default function WorkOrderDashboard() {
 
   useEffect(() => {
     async function load() {
-      const data = await base44.entities.WorkOrder.list("-created_date", 500);
+      const data = await api.entities.WorkOrder.list("-created_date", 500);
       setOrders(data);
       setLoading(false);
     }

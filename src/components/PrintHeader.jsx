@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 
 export default function PrintHeader({ title, number }) {
   const [settings, setSettings] = useState(null);
 
   useEffect(() => {
     async function loadSettings() {
-      const data = await base44.entities.Settings.list();
+      const data = await api.entities.Settings.list();
       if (data.length > 0) setSettings(data[0]);
     }
     loadSettings();

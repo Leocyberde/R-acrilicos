@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -58,7 +58,7 @@ export default function ClientDetail() {
   useEffect(() => {
     async function load() {
       try {
-        const found = await base44.entities.Client.get(id);
+        const found = await api.entities.Client.get(id);
         setClient({ ...found, mobile: formatPhone(found.mobile) });
       } catch {
         toast.error("Erro ao carregar cliente.");
@@ -160,7 +160,7 @@ export default function ClientDetail() {
         cnpj: client.person_type === "juridica" ? client.cnpj : null,
         cpf_cnpj: client.person_type === "fisica" ? client.cpf : client.cnpj,
       };
-      await base44.entities.Client.update(id, updateData);
+      await api.entities.Client.update(id, updateData);
       toast.success("Cliente salvo com sucesso!");
     } catch {
       toast.error("Erro ao salvar cliente.");
@@ -173,7 +173,7 @@ export default function ClientDetail() {
     if (!file) return;
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await api.integrations.Core.UploadFile({ file });
       const files = [...(client.registration_files || [])];
       files.push({
         name: file.name,
@@ -181,7 +181,7 @@ export default function ClientDetail() {
         size: file.size,
         uploaded_date: new Date().toISOString(),
       });
-      await base44.entities.Client.update(id, { registration_files: files });
+      await api.entities.Client.update(id, { registration_files: files });
       setClient(prev => ({ ...prev, registration_files: files }));
       toast.success("Arquivo anexado com sucesso!");
     } catch {
@@ -195,7 +195,7 @@ export default function ClientDetail() {
     const files = [...(client.registration_files || [])];
     files.splice(index, 1);
     try {
-      await base44.entities.Client.update(id, { registration_files: files });
+      await api.entities.Client.update(id, { registration_files: files });
       setClient(prev => ({ ...prev, registration_files: files }));
     } catch {
       toast.error("Erro ao remover arquivo.");
@@ -204,7 +204,7 @@ export default function ClientDetail() {
 
   const handleDelete = async () => {
     try {
-      await base44.entities.Client.delete(id);
+      await api.entities.Client.delete(id);
       navigate(createPageUrl("Clients"));
     } catch {
       toast.error("Erro ao excluir cliente.");

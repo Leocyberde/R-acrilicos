@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,9 +20,9 @@ export default function AdminDataCleanup() {
     setLoading(true);
     try {
       const [b, w, r] = await Promise.all([
-        base44.entities.Budget.filter({ created_by: email }),
-        base44.entities.WorkOrder.filter({ created_by: email }),
-        base44.entities.Receipt.filter({ created_by: email }),
+        api.entities.Budget.filter({ created_by: email }),
+        api.entities.WorkOrder.filter({ created_by: email }),
+        api.entities.Receipt.filter({ created_by: email }),
       ]);
       setBudgets(b || []);
       setWorkOrders(w || []);
@@ -37,7 +37,7 @@ export default function AdminDataCleanup() {
   const deleteRecord = async (entity, id) => {
     setDeleting(id);
     try {
-      await base44.entities[entity].delete(id);
+      await api.entities[entity].delete(id);
       toast.success(`${entity} deletado com sucesso`);
       loadData();
     } catch (error) {

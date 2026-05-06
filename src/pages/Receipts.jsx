@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,7 @@ export default function Receipts() {
 
   useEffect(() => {
     async function load() {
-      const data = await base44.entities.Receipt.list("-created_date", 200);
+      const data = await api.entities.Receipt.list("-created_date", 200);
       setReceipts(data);
       setLoading(false);
     }
@@ -70,7 +70,7 @@ export default function Receipts() {
 
     setDeleting(true);
     try {
-      await Promise.all(selected.map(id => base44.entities.Receipt.delete(id)));
+      await Promise.all(selected.map(id => api.entities.Receipt.delete(id)));
       setReceipts(receipts.filter(r => !selected.includes(r.id)));
       setSelected([]);
       toast.success(`${selected.length} recibo(s) excluído(s) com sucesso`);

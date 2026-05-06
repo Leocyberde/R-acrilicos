@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,10 +49,10 @@ export default function AccountsDialog({ open, onOpenChange, account, onSave }) 
 
     try {
       if (account?.id) {
-        await base44.entities.Receipt.update(account.id, formData);
+        await api.entities.Receipt.update(account.id, formData);
         toast.success("Recebimento atualizado com sucesso");
       } else {
-        await base44.entities.Receipt.create(formData);
+        await api.entities.Receipt.create(formData);
         toast.success("Recebimento criado com sucesso");
       }
       onSave();

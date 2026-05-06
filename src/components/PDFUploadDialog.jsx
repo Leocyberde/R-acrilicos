@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Upload, FileText, Loader2 } from "lucide-react";
@@ -27,7 +27,7 @@ export default function PDFUploadDialog({ open, onOpenChange, entityType, onSucc
     setUploading(true);
 
     try {
-      const uploadResult = await base44.integrations.Core.UploadFile({ file });
+      const uploadResult = await api.integrations.Core.UploadFile({ file });
       const fileUrl = uploadResult.file_url;
 
       const jsonSchema = entityType === "workorder" ? {
@@ -80,7 +80,7 @@ export default function PDFUploadDialog({ open, onOpenChange, entityType, onSucc
         }
       };
 
-      const extractResult = await base44.integrations.Core.ExtractDataFromUploadedFile({
+      const extractResult = await api.integrations.Core.ExtractDataFromUploadedFile({
         file_url: fileUrl,
         json_schema: jsonSchema
       });
@@ -107,7 +107,7 @@ export default function PDFUploadDialog({ open, onOpenChange, entityType, onSucc
           status: "pendente"
         };
 
-        const createdOrder = await base44.entities.WorkOrder.create(workOrderData);
+        const createdOrder = await api.entities.WorkOrder.create(workOrderData);
         toast.success("Ordem de serviço criada com sucesso!");
         onSuccess(createdOrder);
       } else {
@@ -127,7 +127,7 @@ export default function PDFUploadDialog({ open, onOpenChange, entityType, onSucc
           notes: extractedData.notes || ""
         };
 
-        const createdReceipt = await base44.entities.Receipt.create(receiptData);
+        const createdReceipt = await api.entities.Receipt.create(receiptData);
         toast.success("Recibo criado com sucesso!");
         onSuccess(createdReceipt);
       }

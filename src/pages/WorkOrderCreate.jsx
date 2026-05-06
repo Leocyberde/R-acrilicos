@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -79,7 +79,7 @@ export default function WorkOrderCreate() {
 
     setLoading(true);
     try {
-      await base44.entities.WorkOrder.create({
+      await api.entities.WorkOrder.create({
         client_name: form.client_name,
         client_phone: form.client_phone,
         client_address: form.client_address,

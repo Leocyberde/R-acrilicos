@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -46,9 +46,9 @@ export default function WorkOrders() {
     async function load() {
       let data;
       if (user?.role === 'cliente') {
-        data = await base44.entities.WorkOrder.filter({ client_email: user.email }, "-created_date", 200);
+        data = await api.entities.WorkOrder.filter({ client_email: user.email }, "-created_date", 200);
       } else {
-        data = await base44.entities.WorkOrder.list("-created_date", 200);
+        data = await api.entities.WorkOrder.list("-created_date", 200);
       }
       setOrders(data || []);
       setLoading(false);
@@ -93,7 +93,7 @@ export default function WorkOrders() {
 
     setDeleting(true);
     try {
-      await Promise.all(selected.map(id => base44.entities.WorkOrder.delete(id)));
+      await Promise.all(selected.map(id => api.entities.WorkOrder.delete(id)));
       setOrders(orders.filter(o => !selected.includes(o.id)));
       setSelected([]);
       toast.success(`${selected.length} ordem(ns) excluída(s) com sucesso`);
@@ -106,7 +106,7 @@ export default function WorkOrders() {
 
   const handleStatusChange = async (id, newStatus) => {
     try {
-      await base44.entities.WorkOrder.update(id, { status: newStatus });
+      await api.entities.WorkOrder.update(id, { status: newStatus });
       setOrders(orders.map(o => o.id === id ? { ...o, status: newStatus } : o));
       toast.success("Status alterado com sucesso");
     } catch (error) {
@@ -116,7 +116,7 @@ export default function WorkOrders() {
 
   const handleToggleUrgent = async (id, currentVal) => {
     try {
-      await base44.entities.WorkOrder.update(id, { is_urgent: !currentVal });
+      await api.entities.WorkOrder.update(id, { is_urgent: !currentVal });
       setOrders(orders.map(o => o.id === id ? { ...o, is_urgent: !currentVal } : o));
       toast.success(!currentVal ? "Pedido marcado como urgente" : "Urgência removida");
     } catch (error) {

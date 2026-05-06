@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -252,12 +252,12 @@ export default function ClientBudgets() {
   useEffect(() => {
     const load = async () => {
       const [currentUser, settingsData] = await Promise.all([
-        base44.auth.me(),
-        base44.entities.Settings.list(),
+        api.auth.me(),
+        api.entities.Settings.list(),
       ]);
       if (settingsData.length > 0) setSettings(settingsData[0]);
       if (currentUser) {
-        const data = await base44.entities.Budget.filter({ client_email: currentUser.email });
+        const data = await api.entities.Budget.filter({ client_email: currentUser.email });
         const sent = (data || []).filter(b => b.pdf_sent === true || b.pdf_sent === "true");
         setBudgets(sent);
       }
@@ -269,7 +269,7 @@ export default function ClientBudgets() {
   const handleAccept = async (budget) => {
     setSubmitting(true);
     try {
-      await base44.entities.Budget.update(budget.id, {
+      await api.entities.Budget.update(budget.id, {
         status: "aceito_cliente",
         client_response_date: new Date().toISOString(),
       });
@@ -295,7 +295,7 @@ export default function ClientBudgets() {
     setSubmitting(true);
     try {
       const numericValue = parseFloat(counterValue.replace(/\./g, "").replace(",", "."));
-      await base44.entities.Budget.update(refusing.id, {
+      await api.entities.Budget.update(refusing.id, {
         status: "recusado_cliente",
         client_counter_value: numericValue,
         client_counter_notes: counterNotes,

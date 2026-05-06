@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,7 @@ export default function Client() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const currentUser = await base44.auth.me();
+        const currentUser = await api.auth.me();
         
         if (!currentUser) {
           navigate("/");
@@ -49,9 +49,9 @@ export default function Client() {
         setUser(currentUser);
 
         const [budgetsData, workOrdersData, receiptsData] = await Promise.all([
-          base44.entities.Budget.filter({ created_by: currentUser.email }),
-          base44.entities.WorkOrder.filter({ created_by: currentUser.email }),
-          base44.entities.Receipt.filter({ created_by: currentUser.email }),
+          api.entities.Budget.filter({ created_by: currentUser.email }),
+          api.entities.WorkOrder.filter({ created_by: currentUser.email }),
+          api.entities.Receipt.filter({ created_by: currentUser.email }),
         ]);
 
         setBudgets(budgetsData || []);
@@ -91,7 +91,7 @@ export default function Client() {
           <Button
             variant="outline"
             className="flex items-center gap-2"
-            onClick={() => base44.auth.logout()}
+            onClick={() => api.auth.logout()}
           >
             <LogOut className="w-4 h-4" />
             Sair

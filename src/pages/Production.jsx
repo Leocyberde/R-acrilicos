@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Input } from "@/components/ui/input";
@@ -44,7 +44,7 @@ export default function Production() {
 
   useEffect(() => {
     async function load() {
-      const data = await base44.entities.WorkOrder.list("-created_date", 200);
+      const data = await api.entities.WorkOrder.list("-created_date", 200);
       setOrders(data);
       setLoading(false);
     }
@@ -58,7 +58,7 @@ export default function Production() {
     if (currentIdx >= statusFlow.length - 1) return;
     const nextStatus = statusFlow[currentIdx + 1];
     setSaving(order.id);
-    await base44.entities.WorkOrder.update(order.id, { status: nextStatus });
+    await api.entities.WorkOrder.update(order.id, { status: nextStatus });
     setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: nextStatus } : o));
     setSaving(null);
   };

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ export default function FinancialCreate() {
 
   useEffect(() => {
     async function load() {
-      const data = await base44.entities.Receipt.list("-created_date", 100);
+      const data = await api.entities.Receipt.list("-created_date", 100);
       setReceipts(data);
     }
     load();
@@ -47,7 +47,7 @@ export default function FinancialCreate() {
     
     setSaving(true);
     const installments = generateInstallments(selectedReceipt.total_amount, numInstallments);
-    const payment = await base44.entities.Financial.create({
+    const payment = await api.entities.Financial.create({
       receipt_id: selectedReceipt.id,
       work_order_id: selectedReceipt.work_order_id,
       client_name: selectedReceipt.client_name,

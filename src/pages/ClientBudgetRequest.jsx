@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, Send, CheckCircle2, X, Paperclip } from "lucide-react";
 import { toast } from "sonner";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 
 
 export default function ClientBudgetRequest() {
@@ -45,13 +45,13 @@ export default function ClientBudgetRequest() {
 
       // 2. Fallback: usuário logado vinculado a um cliente
       try {
-        const user = await base44.auth.me();
+        const user = await api.auth.me();
         if (user) {
           // Não usar o nome do usuário admin como prefill
           if (user.role === "admin") return;
           name = user.full_name || "";
           try {
-            const clients = await base44.entities.Client.filter({ email: user.email });
+            const clients = await api.entities.Client.filter({ email: user.email });
             const client = clients?.[0];
             if (client) {
               name = client.person_type === "juridica"

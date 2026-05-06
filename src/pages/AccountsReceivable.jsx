@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,7 @@ export default function AccountsReceivable() {
 
   useEffect(() => {
     loadAccounts();
-    const unsubscribe = base44.entities.Receipt.subscribe((event) => {
+    const unsubscribe = api.entities.Receipt.subscribe((event) => {
       loadAccounts();
     });
     return unsubscribe;
@@ -27,7 +27,7 @@ export default function AccountsReceivable() {
 
   async function loadAccounts() {
     try {
-      const data = await base44.entities.Receipt.list("-created_date", 500);
+      const data = await api.entities.Receipt.list("-created_date", 500);
       setAccounts(data);
     } finally {
       setLoading(false);
@@ -74,7 +74,7 @@ export default function AccountsReceivable() {
 
   const handleDelete = async (id) => {
     if (confirm("Tem certeza que deseja deletar este recebimento?")) {
-      await base44.entities.Receipt.delete(id);
+      await api.entities.Receipt.delete(id);
       loadAccounts();
     }
   };

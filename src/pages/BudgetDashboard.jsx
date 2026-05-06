@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { FileText, Clock, CheckCircle2, XCircle, TrendingUp, DollarSign } from "lucide-react";
@@ -14,7 +14,7 @@ export default function BudgetDashboard() {
 
   useEffect(() => {
     async function load() {
-      const data = await base44.entities.Budget.list("-created_date", 500);
+      const data = await api.entities.Budget.list("-created_date", 500);
       setBudgets(data);
       setLoading(false);
     }

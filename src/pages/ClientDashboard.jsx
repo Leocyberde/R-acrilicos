@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useAuth } from "@/lib/AuthContext";
@@ -58,10 +58,10 @@ export default function ClientDashboard() {
     async function load() {
       if (!user?.email) return;
       const [allBudgets, allReceipts, allOrders, settingsList] = await Promise.all([
-        base44.entities.Budget.filter({ client_email: user.email }),
-        base44.entities.Receipt.filter({ client_email: user.email }),
-        base44.entities.WorkOrder.filter({ client_email: user.email }),
-        base44.entities.Settings.list(),
+        api.entities.Budget.filter({ client_email: user.email }),
+        api.entities.Receipt.filter({ client_email: user.email }),
+        api.entities.WorkOrder.filter({ client_email: user.email }),
+        api.entities.Settings.list(),
       ]);
       const sentBudgets = (allBudgets || []).filter(b => b.pdf_sent === true || b.pdf_sent === "true");
       const sentReceipts = (allReceipts || []).filter(r => r.sent_to_client === true || r.sent_to_client === "true");

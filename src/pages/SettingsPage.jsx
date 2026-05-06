@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,8 +23,8 @@ export default function SettingsPage() {
 
   async function loadData() {
     const [settingsData, me] = await Promise.all([
-      base44.entities.Settings.list(),
-      base44.auth.me(),
+      api.entities.Settings.list(),
+      api.auth.me(),
     ]);
     setCurrentUser(me);
     if (settingsData.length > 0) {
@@ -57,7 +57,7 @@ export default function SettingsPage() {
     
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await api.integrations.Core.UploadFile({ file });
       setSettings(prev => ({ ...prev, company_logo: file_url }));
       toast.success("Logo carregado com sucesso!");
     } catch {
@@ -72,7 +72,7 @@ export default function SettingsPage() {
     if (!file) return;
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await api.integrations.Core.UploadFile({ file });
       setSettings(prev => ({ ...prev, app_logo: file_url }));
       toast.success("Logo do sistema carregado com sucesso!");
     } catch {
@@ -87,7 +87,7 @@ export default function SettingsPage() {
     if (!file) return;
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await api.integrations.Core.UploadFile({ file });
       setSettings(prev => ({ ...prev, receipt_pix_qrcode: file_url }));
       toast.success("QR Code carregado com sucesso!");
     } catch {
@@ -101,9 +101,9 @@ export default function SettingsPage() {
     setSaving(true);
     try {
       if (settings.id) {
-        await base44.entities.Settings.update(settings.id, settings);
+        await api.entities.Settings.update(settings.id, settings);
       } else {
-        const created = await base44.entities.Settings.create(settings);
+        const created = await api.entities.Settings.create(settings);
         setSettings(created);
       }
       try { localStorage.removeItem("appBrandingCache"); } catch {}

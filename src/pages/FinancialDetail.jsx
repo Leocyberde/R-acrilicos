@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,7 @@ export default function FinancialDetail() {
 
   useEffect(() => {
     async function load() {
-      const found = await base44.entities.Financial.get(id);
+      const found = await api.entities.Financial.get(id);
       setPayment(found);
       setLoading(false);
     }
@@ -50,7 +50,7 @@ export default function FinancialDetail() {
     const somePaid = installments.some(i => i.status === "pago");
     const newStatus = allPaid ? "pago" : somePaid ? "parcial" : "pendente";
     setSaving(true);
-    await base44.entities.Financial.update(id, { installments, status: newStatus });
+    await api.entities.Financial.update(id, { installments, status: newStatus });
     setPayment(prev => ({ ...prev, installments, status: newStatus }));
     setSaving(false);
   };
@@ -66,7 +66,7 @@ export default function FinancialDetail() {
     if (allPaid) newStatus = "pago";
     else if (hasOverdue) newStatus = "vencido";
     else if (somePaid) newStatus = "parcial";
-    await base44.entities.Financial.update(id, { 
+    await api.entities.Financial.update(id, { 
       installments, 
       status: newStatus,
       payment_method: payment.payment_method,
@@ -77,7 +77,7 @@ export default function FinancialDetail() {
   };
 
   const handleDelete = async () => {
-    await base44.entities.Financial.delete(id);
+    await api.entities.Financial.delete(id);
     navigate(createPageUrl("Financial"));
   };
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ export default function Clients() {
   }, []);
 
   async function loadData() {
-    const data = await base44.entities.Client.list("-created_date", 500);
+    const data = await api.entities.Client.list("-created_date", 500);
     setClients(data);
     setLoading(false);
   }

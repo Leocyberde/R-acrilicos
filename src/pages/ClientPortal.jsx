@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -58,7 +58,7 @@ export default function ClientPortal() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const currentUser = await base44.auth.me();
+        const currentUser = await api.auth.me();
         
         if (!currentUser) {
           navigate("/");
@@ -70,9 +70,9 @@ export default function ClientPortal() {
         const clientEmail = currentUser.email;
 
         const [budgetsData, workOrdersData, receiptsData] = await Promise.all([
-          base44.entities.Budget.filter({ client_email: clientEmail }),
-          base44.entities.WorkOrder.filter({ client_email: clientEmail }),
-          base44.entities.Receipt.filter({ client_email: clientEmail }),
+          api.entities.Budget.filter({ client_email: clientEmail }),
+          api.entities.WorkOrder.filter({ client_email: clientEmail }),
+          api.entities.Receipt.filter({ client_email: clientEmail }),
         ]);
 
         setBudgets(budgetsData || []);

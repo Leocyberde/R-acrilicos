@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,10 +31,10 @@ export default function ClientProfile() {
 
   async function loadData() {
     try {
-      const currentUser = await base44.auth.me();
+      const currentUser = await api.auth.me();
       setUser(currentUser);
       if (currentUser) {
-        const clients = await base44.entities.Client.filter({ email: currentUser.email });
+        const clients = await api.entities.Client.filter({ email: currentUser.email });
         if (clients.length > 0) {
           setClient(clients[0]);
         } else {
@@ -93,7 +93,7 @@ export default function ClientProfile() {
     if (!file) return;
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await api.integrations.Core.UploadFile({ file });
       setClient(prev => ({ ...prev, photo_url: file_url }));
       toast.success("Foto atualizada!");
     } catch {
@@ -125,9 +125,9 @@ export default function ClientProfile() {
       };
 
       if (client.id) {
-        await base44.entities.Client.update(client.id, data);
+        await api.entities.Client.update(client.id, data);
       } else {
-        const created = await base44.entities.Client.create(data);
+        const created = await api.entities.Client.create(data);
         setClient(prev => ({ ...prev, id: created.id }));
       }
       setEditingAddress(false);

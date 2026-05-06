@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -34,8 +34,8 @@ export default function Financial() {
 
   async function loadData() {
     const [financialData, receiptsData] = await Promise.all([
-      base44.entities.Financial.list("-created_date", 500),
-      base44.entities.Receipt.list("-created_date", 500)
+      api.entities.Financial.list("-created_date", 500),
+      api.entities.Receipt.list("-created_date", 500)
     ]);
     setPayments(financialData);
     setReceipts(receiptsData);
@@ -77,7 +77,7 @@ export default function Financial() {
 
   const handleSaveReceipt = async (id) => {
     try {
-      await base44.entities.Receipt.update(id, editData);
+      await api.entities.Receipt.update(id, editData);
       setReceipts(receipts.map(r => r.id === id ? { ...r, ...editData } : r));
       setEditingReceipt(null);
       toast.success("Recibo atualizado com sucesso");

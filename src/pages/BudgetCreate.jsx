@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/apiClient";
 import { createPageUrl } from "@/utils";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,7 @@ export default function BudgetCreate() {
   const handleSubmit = async (data) => {
     setLoading(true);
     try {
-      const created = await base44.entities.Budget.create(data);
+      const created = await api.entities.Budget.create(data);
       toast.success("Orçamento criado com sucesso!");
       navigate(createPageUrl("BudgetDetail") + `?id=${created.id}`);
     } catch (err) {
