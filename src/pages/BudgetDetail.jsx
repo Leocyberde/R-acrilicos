@@ -35,6 +35,8 @@ export default function BudgetDetail() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [companySettings, setCompanySettings] = useState(null);
+  const [printReady, setPrintReady] = useState(false);
+  const [pendingPrint, setPendingPrint] = useState(false);
   const navigate = useNavigate();
   const { printElement } = usePrint();
   const params = new URLSearchParams(window.location.search);
@@ -52,6 +54,22 @@ export default function BudgetDetail() {
     }
     load();
   }, [id]);
+
+  useEffect(() => {
+    if (printReady && pendingPrint) {
+      setPendingPrint(false);
+      printElement('budget-print-layout');
+    }
+  }, [printReady, pendingPrint]);
+
+  const handlePrint = () => {
+    if (printReady) {
+      printElement('budget-print-layout');
+    } else {
+      setPendingPrint(true);
+      toast.info('Preparando layout para impressão...');
+    }
+  };
 
   const updateStatus = async (status) => {
     setSaving(true);
@@ -294,8 +312,8 @@ export default function BudgetDetail() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="outline" size="sm" onClick={() => printElement('budget-print-layout')}>
-            <Printer className="h-3.5 w-3.5 mr-1.5" /> Imprimir
+          <Button variant="outline" size="sm" onClick={handlePrint} disabled={pendingPrint}>
+            <Printer className="h-3.5 w-3.5 mr-1.5" /> {pendingPrint ? 'Aguarde...' : 'Imprimir'}
           </Button>
           <Button variant="outline" size="sm" onClick={async () => {
             toast.info('Gerando PDF, aguarde...');
@@ -563,7 +581,7 @@ export default function BudgetDetail() {
         id="budget-print-layout"
         style={{ position: 'absolute', left: '-99999px', top: 0, width: '210mm' }}
       >
-        {budget && <BudgetPrintLayoutMultiPage budget={budget} />}
+        {budget && <BudgetPrintLayoutMultiPage budget={budget} onReady={() => setPrintReady(true)} />}
       </div>
     </div>
   );
