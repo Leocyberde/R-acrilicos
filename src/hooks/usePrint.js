@@ -13,13 +13,27 @@ export function usePrint() {
     document.body.appendChild(container);
     document.body.classList.add("printing");
 
-    setTimeout(() => {
-      window.print();
-      setTimeout(() => {
-        document.body.classList.remove("printing");
+    let cleaned = false;
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      document.body.classList.remove("printing");
+      if (document.body.contains(container)) {
         document.body.removeChild(container);
-      }, 100);
-    }, 1000);
+      }
+    };
+
+    window.addEventListener("afterprint", cleanup, { once: true });
+
+    setTimeout(() => {
+      try {
+        window.print();
+      } catch (e) {
+        console.warn("Print failed:", e);
+      } finally {
+        setTimeout(cleanup, 500);
+      }
+    }, 500);
   };
 
   return { printElement };
