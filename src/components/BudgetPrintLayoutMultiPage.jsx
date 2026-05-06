@@ -52,10 +52,11 @@ const DEFAULT = {
   show_address_company: true,
 };
 
-export default function BudgetPrintLayoutMultiPage({ budget }) {
+export default function BudgetPrintLayoutMultiPage({ budget, onReady }) {
   const [settings, setSettings] = useState(null);
   const [config, setConfig] = useState(DEFAULT);
   const [pages, setPages] = useState([]);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -66,7 +67,10 @@ export default function BudgetPrintLayoutMultiPage({ budget }) {
       if (settingsList.length > 0) setSettings(settingsList[0]);
       if (configs.length > 0) {
         setConfig({ ...DEFAULT, ...(configs[0].config_data || {}) });
+      } else {
+        setSettings(s => s || {});
       }
+      setDataLoaded(true);
     }
     load();
   }, []);
@@ -91,6 +95,12 @@ export default function BudgetPrintLayoutMultiPage({ budget }) {
 
     setPages(itemChunks);
   }, [config, budget]);
+
+  useEffect(() => {
+    if (dataLoaded && pages.length > 0 && onReady) {
+      onReady();
+    }
+  }, [dataLoaded, pages]);
 
   const fmt = (v) =>
     (v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -201,11 +211,11 @@ export default function BudgetPrintLayoutMultiPage({ budget }) {
         <tbody>
           <tr><td colSpan={4} style={{ height: "8px" }} /></tr>
           {items.map((item, i) => (
-            <tr key={i} style={{ borderBottom: `1px solid ${c.table_row_border_color}`, height: `${c.table_row_height || 24}px`, lineHeight: `${c.table_row_height || 24}px` }}>
-              <td style={{ padding: "4px", wordBreak: "break-word", verticalAlign: "middle", textTransform: "uppercase", lineHeight: "1.2", display: "table-cell" }}>{item.name}</td>
-              <td style={{ padding: "4px", textAlign: "center", verticalAlign: "middle", lineHeight: "1.2", display: "table-cell" }}>{item.quantity}</td>
-              <td style={{ padding: "4px", textAlign: "right", color: c.table_value_color, verticalAlign: "middle", lineHeight: "1.2", display: "table-cell" }}>R$ {fmt(item.unit_price)}</td>
-              <td style={{ padding: "4px", textAlign: "right", color: c.table_value_color, verticalAlign: "middle", lineHeight: "1.2", display: "table-cell" }}>
+            <tr key={i} style={{ borderBottom: `1px solid ${c.table_row_border_color}`, height: `${c.table_row_height || 24}px` }}>
+              <td style={{ padding: "0 4px 2px 4px", wordBreak: "break-word", verticalAlign: "bottom", textTransform: "uppercase", lineHeight: "1.2", display: "table-cell" }}>{item.name}</td>
+              <td style={{ padding: "0 4px 2px 4px", textAlign: "center", verticalAlign: "bottom", lineHeight: "1.2", display: "table-cell" }}>{item.quantity}</td>
+              <td style={{ padding: "0 4px 2px 4px", textAlign: "right", color: c.table_value_color, verticalAlign: "bottom", lineHeight: "1.2", display: "table-cell" }}>R$ {fmt(item.unit_price)}</td>
+              <td style={{ padding: "0 4px 2px 4px", textAlign: "right", color: c.table_value_color, verticalAlign: "bottom", lineHeight: "1.2", display: "table-cell" }}>
                 R$ {fmt((item.quantity || 0) * (item.unit_price || 0))}
               </td>
             </tr>
