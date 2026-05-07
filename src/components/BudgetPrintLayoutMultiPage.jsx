@@ -211,10 +211,10 @@ export default function BudgetPrintLayoutMultiPage({ budget, onReady }) {
           <tr><td colSpan={4} style={{ height: "8px" }} /></tr>
           {items.map((item, i) => (
             <tr key={i} style={{ borderBottom: `1px solid ${c.table_row_border_color}`, height: `${c.table_row_height || 24}px` }}>
-              <td style={{ padding: "0 4px 2px 4px", wordBreak: "break-word", verticalAlign: "bottom", textTransform: "uppercase", lineHeight: "1.2" }}>{item.name}</td>
-              <td style={{ padding: "0 4px 2px 4px", textAlign: "center", verticalAlign: "bottom", lineHeight: "1.2" }}>{item.quantity}</td>
-              <td style={{ padding: "0 4px 2px 4px", textAlign: "right", color: c.table_value_color, verticalAlign: "bottom", lineHeight: "1.2" }}>R$ {fmt(item.unit_price)}</td>
-              <td style={{ padding: "0 4px 2px 4px", textAlign: "right", color: c.table_value_color, verticalAlign: "bottom", lineHeight: "1.2" }}>
+              <td style={{ padding: "2px 4px", wordBreak: "break-word", verticalAlign: "middle", textTransform: "uppercase" }}>{item.name}</td>
+              <td style={{ padding: "2px 4px", textAlign: "center", verticalAlign: "middle" }}>{item.quantity}</td>
+              <td style={{ padding: "2px 4px", textAlign: "right", color: c.table_value_color, verticalAlign: "middle" }}>R$ {fmt(item.unit_price)}</td>
+              <td style={{ padding: "2px 4px", textAlign: "right", color: c.table_value_color, verticalAlign: "middle" }}>
                 R$ {fmt((item.quantity || 0) * (item.unit_price || 0))}
               </td>
             </tr>
