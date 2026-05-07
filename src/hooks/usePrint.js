@@ -5,10 +5,10 @@ export function usePrint() {
 
     const container = document.createElement("div");
     container.className = "print-only-container";
-    container.style.cssText = "width:100%;margin:0;padding:0;line-height:normal;font-size:initial;";
+    container.style.cssText = "width:100%;margin:0;padding:0;font-size:initial;";
 
     const clone = el.cloneNode(true);
-    clone.style.cssText = "margin:0;padding:0;line-height:normal;font-size:initial;";
+    clone.style.cssText = "margin:0;padding:0;font-size:initial;";
     container.appendChild(clone);
     document.body.appendChild(container);
     document.body.classList.add("printing");
