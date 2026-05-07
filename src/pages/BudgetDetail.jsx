@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { localClient } from "@/api/localClient";
-import { usePrint } from "@/hooks/usePrint";
 import BudgetPrintLayoutMultiPage from "@/components/BudgetPrintLayoutMultiPage";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -9,7 +8,7 @@ import { ArrowLeft, Printer, CheckCircle, XCircle, Edit, Wrench, Trash2, Refresh
 import { toast } from "sonner";
 import StatusBadge from "@/components/StatusBadge";
 import BudgetForm from "@/components/BudgetForm";
-import { downloadPDF } from "@/components/DownloadPDF";
+import { downloadPDF, printFromCanvas } from "@/components/DownloadPDF";
 import { formatDateBR } from "@/utils/dateFormat";
 import {
   AlertDialog,
@@ -38,7 +37,6 @@ export default function BudgetDetail() {
   const [printReady, setPrintReady] = useState(false);
   const [pendingPrint, setPendingPrint] = useState(false);
   const navigate = useNavigate();
-  const { printElement } = usePrint();
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
 
@@ -58,16 +56,18 @@ export default function BudgetDetail() {
   useEffect(() => {
     if (printReady && pendingPrint) {
       setPendingPrint(false);
-      printElement('budget-print-layout');
+      toast.info('Preparando impressão...');
+      printFromCanvas('budget-print-layout').catch(() => toast.error('Erro ao preparar impressão'));
     }
   }, [printReady, pendingPrint]);
 
   const handlePrint = () => {
     if (printReady) {
-      printElement('budget-print-layout');
+      toast.info('Preparando impressão...');
+      printFromCanvas('budget-print-layout').catch(() => toast.error('Erro ao preparar impressão'));
     } else {
       setPendingPrint(true);
-      toast.info('Preparando layout para impressão...');
+      toast.info('Carregando layout...');
     }
   };
 

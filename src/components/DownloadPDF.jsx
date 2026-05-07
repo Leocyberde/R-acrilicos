@@ -1,13 +1,19 @@
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
-export async function downloadPDF(elementId, filename) {
+async function captureCanvas(elementId) {
   const element = document.getElementById(elementId);
-  if (!element) return;
+  if (!element) return null;
 
-  const originalStyle = element.getAttribute("style") || "";
-  element.style.cssText =
-    "position:fixed;top:0;left:0;width:210mm;z-index:-9999;background:white;visibility:visible;";
+  const prevDisplay = element.style.display;
+  const prevVisibility = element.style.visibility;
+  const prevPosition = element.style.position;
+  const prevZIndex = element.style.zIndex;
+
+  element.style.display = "block";
+  element.style.visibility = "visible";
+  element.style.position = "static";
+  element.style.zIndex = "auto";
 
   await new Promise((r) => setTimeout(r, 600));
 
@@ -18,12 +24,22 @@ export async function downloadPDF(elementId, filename) {
     logging: false,
     backgroundColor: "#ffffff",
     scrollX: 0,
-    scrollY: 0,
-    windowWidth: element.scrollWidth,
-    windowHeight: element.scrollHeight,
+    scrollY: -window.scrollY,
+    windowWidth: document.documentElement.scrollWidth,
+    windowHeight: document.documentElement.scrollHeight,
   });
 
-  element.setAttribute("style", originalStyle);
+  element.style.display = prevDisplay;
+  element.style.visibility = prevVisibility;
+  element.style.position = prevPosition;
+  element.style.zIndex = prevZIndex;
+
+  return canvas;
+}
+
+export async function downloadPDF(elementId, filename) {
+  const canvas = await captureCanvas(elementId);
+  if (!canvas) return;
 
   const imgData = canvas.toDataURL("image/jpeg", 0.95);
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -41,4 +57,40 @@ export async function downloadPDF(elementId, filename) {
   }
 
   pdf.save(filename);
+}
+
+export async function printFromCanvas(elementId) {
+  const canvas = await captureCanvas(elementId);
+  if (!canvas) return;
+
+  const imgData = canvas.toDataURL("image/jpeg", 0.95);
+
+  const pageWidthMm = 210;
+  const imgHeightMm = (canvas.height * pageWidthMm) / canvas.width;
+  const pageHeightMm = 297;
+  const totalPages = Math.max(1, Math.round(imgHeightMm / pageHeightMm));
+
+  const pages = Array.from({ length: totalPages }, (_, i) => {
+    const offsetMm = i * pageHeightMm;
+    return `<div style="width:210mm;height:297mm;overflow:hidden;page-break-after:${i < totalPages - 1 ? 'always' : 'auto'};position:relative;">
+      <img src="${imgData}" style="width:210mm;height:${imgHeightMm}mm;position:absolute;top:-${offsetMm}mm;left:0;" />
+    </div>`;
+  }).join('');
+
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return;
+
+  printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @page { size: A4 portrait; margin: 0; }
+  body { background: #fff; }
+  @media print { body { margin: 0; } }
+</style></head><body>${pages}</body></html>`);
+  printWindow.document.close();
+
+  setTimeout(() => {
+    printWindow.focus();
+    printWindow.print();
+  }, 600);
 }
