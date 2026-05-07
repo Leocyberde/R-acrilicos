@@ -113,12 +113,11 @@ export default function ReceiptPrintLayoutMultiPage({ receipt }) {
         color: c.body_color,
         background: "#fff",
         width: "210mm",
-        height: "297mm",
+        minHeight: "297mm",
         padding: `${c.page_padding}mm`,
         paddingBottom: "24mm",
         boxSizing: "border-box",
         position: "relative",
-        pageBreakAfter: "always",
       }}
     >
       {isFirstPage && (
@@ -287,12 +286,27 @@ export default function ReceiptPrintLayoutMultiPage({ receipt }) {
   return (
     <div>
       <style>{`
+        @page { size: A4; margin: 0; }
         @media print {
-          .receipt-page { page-break-after: always; break-after: page; }
-          .receipt-page:last-child { page-break-after: avoid; break-after: auto; }
+          body {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .pages-container {
+            display: block !important;
+            gap: 0 !important;
+          }
+          .receipt-page {
+            page-break-after: always;
+            break-after: page;
+          }
+          .receipt-page:last-child {
+            page-break-after: avoid;
+            break-after: auto;
+          }
         }
       `}</style>
-      <div style={{ display: "flex", flexDirection: "column", gap: "16px", alignItems: "center" }}>
+      <div className="pages-container" style={{ display: "flex", flexDirection: "column", gap: "16px", alignItems: "center" }}>
         {pages.map((itemsInPage, idx) => (
           <div key={idx} className="receipt-page">
             <ReceiptPage items={itemsInPage} pageNum={idx + 1} isFirstPage={idx === 0} />

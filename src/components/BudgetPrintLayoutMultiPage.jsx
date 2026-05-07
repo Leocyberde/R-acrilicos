@@ -135,12 +135,11 @@ export default function BudgetPrintLayoutMultiPage({ budget, onReady }) {
         color: c.body_color,
         background: "#fff",
         width: "210mm",
-        height: "297mm",
+        minHeight: "297mm",
         padding: `${c.page_padding}mm`,
         paddingBottom: "24mm",
         boxSizing: "border-box",
         position: "relative",
-        pageBreakAfter: "always",
       }}
     >
       {isFirstPage && (
@@ -212,10 +211,10 @@ export default function BudgetPrintLayoutMultiPage({ budget, onReady }) {
           <tr><td colSpan={4} style={{ height: "8px" }} /></tr>
           {items.map((item, i) => (
             <tr key={i} style={{ borderBottom: `1px solid ${c.table_row_border_color}`, height: `${c.table_row_height || 24}px` }}>
-              <td style={{ padding: "0 4px 2px 4px", wordBreak: "break-word", verticalAlign: "bottom", textTransform: "uppercase", lineHeight: "1.2", display: "table-cell" }}>{item.name}</td>
-              <td style={{ padding: "0 4px 2px 4px", textAlign: "center", verticalAlign: "bottom", lineHeight: "1.2", display: "table-cell" }}>{item.quantity}</td>
-              <td style={{ padding: "0 4px 2px 4px", textAlign: "right", color: c.table_value_color, verticalAlign: "bottom", lineHeight: "1.2", display: "table-cell" }}>R$ {fmt(item.unit_price)}</td>
-              <td style={{ padding: "0 4px 2px 4px", textAlign: "right", color: c.table_value_color, verticalAlign: "bottom", lineHeight: "1.2", display: "table-cell" }}>
+              <td style={{ padding: "0 4px 2px 4px", wordBreak: "break-word", verticalAlign: "bottom", textTransform: "uppercase", lineHeight: "1.2" }}>{item.name}</td>
+              <td style={{ padding: "0 4px 2px 4px", textAlign: "center", verticalAlign: "bottom", lineHeight: "1.2" }}>{item.quantity}</td>
+              <td style={{ padding: "0 4px 2px 4px", textAlign: "right", color: c.table_value_color, verticalAlign: "bottom", lineHeight: "1.2" }}>R$ {fmt(item.unit_price)}</td>
+              <td style={{ padding: "0 4px 2px 4px", textAlign: "right", color: c.table_value_color, verticalAlign: "bottom", lineHeight: "1.2" }}>
                 R$ {fmt((item.quantity || 0) * (item.unit_price || 0))}
               </td>
             </tr>
@@ -314,12 +313,27 @@ export default function BudgetPrintLayoutMultiPage({ budget, onReady }) {
   return (
     <div>
       <style>{`
+        @page { size: A4; margin: 0; }
         @media print {
-          .budget-page { page-break-after: always; break-after: page; }
-          .budget-page:last-child { page-break-after: avoid; break-after: auto; }
+          body {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .pages-container {
+            display: block !important;
+            gap: 0 !important;
+          }
+          .budget-page {
+            page-break-after: always;
+            break-after: page;
+          }
+          .budget-page:last-child {
+            page-break-after: avoid;
+            break-after: auto;
+          }
         }
       `}</style>
-      <div style={{ display: "flex", flexDirection: "column", gap: "16px", alignItems: "center" }}>
+      <div className="pages-container" style={{ display: "flex", flexDirection: "column", gap: "16px", alignItems: "center" }}>
         {pages.map((itemsInPage, idx) => (
           <div key={idx} className="budget-page">
             <BudgetPage items={itemsInPage} pageNum={idx + 1} isFirstPage={idx === 0} />
