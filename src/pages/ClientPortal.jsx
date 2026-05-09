@@ -8,6 +8,7 @@ import { FileText, Wrench, Receipt, AlertCircle, Download, Clock, Calendar, Truc
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
+import { downloadBudgetPDF } from "@/components/DownloadPDF";
 
 function formatDateTime(val) {
   if (!val) return null;
@@ -69,10 +70,22 @@ export default function ClientPortal() {
 
         const clientEmail = currentUser.email;
 
+        // FIX #2 — busca o client_id pelo email e usa-o nas queries.
+        // Filtrar só por email falha se o email do cliente mudar ou houver variações.
+        let clientId = null;
+        try {
+          const clients = await api.entities.Client.filter({ email: clientEmail });
+          if (clients && clients.length > 0) clientId = clients[0].id;
+        } catch { /* continua com filtro por email como fallback */ }
+
+        const filterArgs = clientId
+          ? { client_id: clientId }
+          : { client_email: clientEmail };
+
         const [budgetsData, workOrdersData, receiptsData] = await Promise.all([
-          api.entities.Budget.filter({ client_email: clientEmail }),
-          api.entities.WorkOrder.filter({ client_email: clientEmail }),
-          api.entities.Receipt.filter({ client_email: clientEmail }),
+          api.entities.Budget.filter(filterArgs),
+          api.entities.WorkOrder.filter(filterArgs),
+          api.entities.Receipt.filter(filterArgs),
         ]);
 
         setBudgets(budgetsData || []);
@@ -160,17 +173,14 @@ export default function ClientPortal() {
                             R$ {(budget.total_with_margin || budget.total || 0).toFixed(2).replace(".", ",")}
                           </div>
                           <div className="flex flex-col gap-2 mt-3 items-end">
-                            {budget.pdf_url && (
-                              <a
-                                href={budget.pdf_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-800 border border-indigo-300 rounded-md px-3 py-1.5 hover:bg-indigo-50 transition-colors"
-                              >
-                                <Download className="w-3.5 h-3.5" />
-                                Baixar PDF
-                              </a>
-                            )}
+                            {/* FIX #6 — gera PDF em tempo real em vez de depender de pdf_url salvo no banco */}
+                            <button
+                              onClick={() => downloadBudgetPDF(budget, null, `orcamento-${budget.id}.pdf`)}
+                              className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-800 border border-indigo-300 rounded-md px-3 py-1.5 hover:bg-indigo-50 transition-colors"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              Baixar PDF
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -214,7 +224,7 @@ export default function ClientPortal() {
                           variant="outline"
                           size="sm"
                           className="ml-4"
-                          onClick={() => navigate(`/WorkOrderDetail?id=${order.id}`)}
+                          onClick={() => navigate(`/ClientWorkOrders`)}
                         >
                           Ver Detalhes
                         </Button>

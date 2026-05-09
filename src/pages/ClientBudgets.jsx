@@ -16,7 +16,7 @@ import { FileText, AlertCircle, CheckCircle, XCircle, Printer, Download } from "
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
-import { downloadPDF, printFromCanvas } from "@/components/DownloadPDF";
+import { downloadBudgetPDF, printDocument } from "@/components/DownloadPDF";
 
 const statusConfig = {
   pendente: { badge: "bg-yellow-100 text-yellow-800 border-yellow-200", label: "Aguardando resposta" },
@@ -35,12 +35,14 @@ function BudgetDocument({ budget, settings, onAccept, onRefuse, submitting }) {
   const canRespond = budget.status === "pendente" || budget.status === "aprovado";
   const docId = `client-budget-doc-${budget.id}`;
 
+  // FIX #1/#7 — usa os dados do orçamento diretamente em vez de capturar o HTML da tela,
+  // evitando que botões de ação (Aceitar/Recusar) apareçam no PDF/impressão.
   const handlePrint = () => {
     toast.info('Preparando impressão...');
-    printFromCanvas(docId).catch(() => toast.error('Erro ao preparar impressão'));
+    printDocument('budget', budget, settings).catch(() => toast.error('Erro ao preparar impressão'));
   };
   const handlePDF = () => {
-    downloadPDF(docId, `orcamento-${budget.id}.pdf`).catch(() => toast.error('Erro ao gerar PDF'));
+    downloadBudgetPDF(budget, settings, `orcamento-${budget.id}.pdf`).catch(() => toast.error('Erro ao gerar PDF'));
   };
 
   return (
@@ -273,11 +275,12 @@ export default function ClientBudgets() {
 
   useEffect(() => {
     const load = async () => {
+      // FIX #4 — busca settings e usuário em paralelo; settings usa cache de sessão via localClient
       const [currentUser, settingsData] = await Promise.all([
         api.auth.me(),
         api.entities.Settings.list(),
       ]);
-      if (settingsData.length > 0) setSettings(settingsData[0]);
+      if (settingsData && settingsData.length > 0) setSettings(settingsData[0]);
       if (currentUser) {
         const data = await api.entities.Budget.filter({ client_email: currentUser.email });
         const sent = (data || []).filter(b => b.pdf_sent === true || b.pdf_sent === "true");

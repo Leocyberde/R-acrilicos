@@ -8,7 +8,7 @@ import { ArrowLeft, Printer, CheckCircle, XCircle, Edit, Wrench, Trash2, Refresh
 import { toast } from "sonner";
 import StatusBadge from "@/components/StatusBadge";
 import BudgetForm from "@/components/BudgetForm";
-import { downloadPDF, printFromCanvas } from "@/components/DownloadPDF";
+import { downloadBudgetPDF, printDocument } from "@/components/DownloadPDF";
 import { formatDateBR } from "@/utils/dateFormat";
 import {
   AlertDialog,
@@ -57,14 +57,14 @@ export default function BudgetDetail() {
     if (printReady && pendingPrint) {
       setPendingPrint(false);
       toast.info('Preparando impressão...');
-      printFromCanvas('budget-print-layout').catch(() => toast.error('Erro ao preparar impressão'));
+      printDocument('budget', budget, companySettings).catch(() => toast.error('Erro ao preparar impressão'));
     }
   }, [printReady, pendingPrint]);
 
   const handlePrint = () => {
     if (printReady) {
       toast.info('Preparando impressão...');
-      printFromCanvas('budget-print-layout').catch(() => toast.error('Erro ao preparar impressão'));
+      printDocument('budget', budget, companySettings).catch(() => toast.error('Erro ao preparar impressão'));
     } else {
       setPendingPrint(true);
       toast.info('Carregando layout...');
@@ -318,7 +318,7 @@ export default function BudgetDetail() {
           <Button variant="outline" size="sm" onClick={async () => {
             toast.info('Gerando PDF, aguarde...');
             try {
-              await downloadPDF('budget-print-layout', `orcamento-${budget.id}.pdf`);
+              await downloadBudgetPDF(budget, companySettings, `orcamento-${budget.id}.pdf`);
             } catch {
               toast.error('Erro ao gerar PDF');
             }
@@ -540,14 +540,12 @@ export default function BudgetDetail() {
                   <span className="font-bold text-sm text-slate-900">R${budget.total_with_margin.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                 </div>
               )}
-              <div className="text-right pt-1">
-                <span className="text-xs text-slate-500 italic">Elaborado por: Gleissa</span>
-              </div>
-              {/* {budget.producer && (
+              {/* FIX #2 — usa o produtor do orçamento */}
+              {budget.producer && (
                 <div className="text-right pt-1">
                   <span className="text-xs text-slate-500 italic">Elaborado por: {budget.producer}</span>
                 </div>
-              )} */}
+              )}
             </div>
           </div>
 

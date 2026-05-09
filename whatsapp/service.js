@@ -8,7 +8,7 @@ import QRCode from 'qrcode';
 import P from 'pino';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { generateBudgetPDF, generateWorkOrderPDF } from './pdfGenerator.js';
+import { generateBudgetPDF, generateWorkOrderPDF, generateReceiptPDF } from './pdfGenerator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,11 +27,19 @@ let reconnectTimer = null;
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 10;
 
+// FIX #4 — Cache em memória para configurações da empresa (TTL: 10 minutos)
+let _companyCache = null;
+let _companyCacheAt = 0;
+const COMPANY_CACHE_TTL_MS = 10 * 60 * 1000;
+
+// FIX #5 — Limpeza completa do estado ao expirar sessão
 setInterval(() => {
   const now = Date.now();
   for (const [phone, state] of conversations) {
     if (now - state.lastActivity > CONVO_TIMEOUT_MS) {
-      state.step = "menu";
+      // Reseta o step E apaga os dados do cliente para forçar nova consulta no banco
+      state.step = 'menu';
+      state.data = {};
     }
   }
 }, 5 * 60 * 1000);
@@ -79,13 +87,21 @@ async function sendDoc(jid, buffer, fileName, caption) {
   }
 }
 
+// FIX #4 — Cache com TTL para evitar queries repetidas ao banco para dados que raramente mudam
 async function getCompanySettings() {
   if (!dbPool) return {};
+  if (_companyCache && Date.now() - _companyCacheAt < COMPANY_CACHE_TTL_MS) {
+    return _companyCache;
+  }
   try {
-    const result = await dbPool.query('SELECT * FROM settings ORDER BY id LIMIT 1');
-    return result.rows[0] || {};
+    const result = await dbPool.query(
+      'SELECT id, name, cnpj, phone, email, address, logo_url FROM settings ORDER BY id LIMIT 1'
+    );
+    _companyCache = result.rows[0] || {};
+    _companyCacheAt = Date.now();
+    return _companyCache;
   } catch {
-    return {};
+    return _companyCache || {};
   }
 }
 
@@ -95,34 +111,28 @@ function normPhone(jid) {
   return base.replace(/\D/g, '');
 }
 
-// Verifica se o valor extraído do JID é um número de telefone real (não LID interno do WhatsApp)
-// LIDs são identificadores internos do WhatsApp multi-device com mais de 15 dígitos
 function isValidPhoneFromJid(rawPhone) {
   const digits = rawPhone.replace(/\D/g, '');
   return digits.length >= 8 && digits.length <= 15;
 }
 
-// Retorna o número de telefone real para uso em formulários/banco de dados.
-// Se o JID retornar um LID (>15 dígitos), usa o telefone cadastrado do cliente como fallback.
 function resolveDisplayPhone(sessionPhone, client) {
   const digits = sessionPhone.replace(/\D/g, '');
   if (isValidPhoneFromJid(digits)) {
     return cleanPhoneDigits(digits);
   }
-  // Fallback: número cadastrado do cliente
   if (client) {
     const registered = cleanPhoneDigits(client.mobile || client.phone || '');
     if (registered) return registered;
   }
-  return ''; // não temos como inferir o número real
+  return '';
 }
 
 function cleanPhoneDigits(raw) {
-  if (!raw) return "";
-  const cleanRaw = raw.includes("@") ? raw.split("@")[0] : raw;
-  let digits = cleanRaw.replace(/\D/g, "");
-  // Se for Brasil (55) e tiver código do país, removemos para manter padrão local (DDD + número)
-  if (digits.startsWith("55") && digits.length >= 12) {
+  if (!raw) return '';
+  const cleanRaw = raw.includes('@') ? raw.split('@')[0] : raw;
+  let digits = cleanRaw.replace(/\D/g, '');
+  if (digits.startsWith('55') && digits.length >= 12) {
     digits = digits.slice(2);
   }
   return digits;
@@ -130,7 +140,7 @@ function cleanPhoneDigits(raw) {
 
 function formatPhone(raw) {
   const local = cleanPhoneDigits(raw);
-  if (!local) return "";
+  if (!local) return '';
   if (local.length === 11) return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
   if (local.length === 10) return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
   return local;
@@ -165,10 +175,9 @@ function fmtDate(d) {
   }
 }
 
-async function getLink(path) {
+async function getLink(p) {
   if (!appUrl) return null;
   let base = appUrl.trim().replace(/\/$/, '');
-
   try {
     const parsed = new URL(base);
     base = parsed.origin;
@@ -176,47 +185,30 @@ async function getLink(path) {
     const match = base.match(/^(https?:\/\/[^/]+)/);
     if (match) base = match[1];
   }
-
-  return `${base}${path}`;
+  return `${base}${p}`;
 }
 
 async function findClientByPhone(phone) {
-  if (!dbPool) {
-    console.warn('[WhatsApp Bot] findClientByPhone: DB pool não inicializado');
-    return null;
-  }
+  if (!dbPool) return null;
   const clean = cleanPhoneDigits(phone);
-  if (!clean) {
-    console.warn('[WhatsApp Bot] findClientByPhone: número vazio após normalização (raw=%s)', phone);
-    return null;
-  }
+  if (!clean) return null;
 
-  // Gera variante com/sem o 9º dígito (padrão brasileiro)
-  // Ex: "11987654321" (11 dígitos) → variante sem 9: "1187654321"
-  // Ex: "1187654321"  (10 dígitos) → variante com 9: "11987654321"
   let variant = null;
   if (clean.length === 11) {
-    // Tem 9º dígito — tenta sem ele
     const ddd = clean.slice(0, 2);
     const num = clean.slice(2);
-    if (num.startsWith('9')) {
-      variant = ddd + num.slice(1); // remove o 9
-    }
+    if (num.startsWith('9')) variant = ddd + num.slice(1);
   } else if (clean.length === 10) {
-    // Sem 9º dígito — tenta com ele
-    const ddd = clean.slice(0, 2);
-    const num = clean.slice(2);
-    variant = ddd + '9' + num;
+    variant = clean.slice(0, 2) + '9' + clean.slice(2);
   }
 
   const numbersToSearch = [clean];
   if (variant) numbersToSearch.push(variant);
 
   try {
-    // Normaliza o campo do banco para comparar apenas dígitos
+    // FIX #7 — Seleciona apenas as colunas usadas pelo bot (evita tráfego desnecessário)
     const normalize = `regexp_replace(coalesce(mobile,''), '\\D', '', 'g')`;
     const normalizeP = `regexp_replace(coalesce(phone,''), '\\D', '', 'g')`;
-
     const params = [clean];
     let variantClause = '';
     if (variant) {
@@ -224,10 +216,8 @@ async function findClientByPhone(phone) {
       variantClause = `OR ${normalize} = $2 OR ${normalizeP} = $2`;
     }
 
-    // 1. Busca nos campos mobile/phone do cliente
-    // Priorizamos mobile (WhatsApp) sobre o telefone fixo
     const result = await dbPool.query(
-      `SELECT *,
+      `SELECT id, name, razao_social, person_type, mobile, phone,
         CASE
           WHEN ${normalize} = $1 THEN 1
           WHEN ${normalizeP} = $1 THEN 2
@@ -244,10 +234,10 @@ async function findClientByPhone(phone) {
     );
     if (result.rows.length > 0) return result.rows[0];
 
-    // 2. Se não encontrou, busca na tabela client_phones (números adicionais vinculados)
     const phoneParams = numbersToSearch.map((_, i) => `$${i + 1}`).join(', ');
     const linkedResult = await dbPool.query(
-      `SELECT c.* FROM clients c
+      `SELECT c.id, c.name, c.razao_social, c.person_type, c.mobile, c.phone
+       FROM clients c
        INNER JOIN client_phones cp ON cp.client_id = c.id
        WHERE cp.phone IN (${phoneParams})
        ORDER BY c.id ASC
@@ -261,6 +251,19 @@ async function findClientByPhone(phone) {
   }
 }
 
+// FIX #9 — Indicador de "digitando" nativo do Baileys em vez de setTimeout hardcoded
+async function sendTyping(jid, durationMs = 800) {
+  if (!sock || status !== 'connected') return;
+  try {
+    await sock.sendPresenceUpdate('composing', jid);
+    await new Promise(r => setTimeout(r, durationMs));
+    await sock.sendPresenceUpdate('paused', jid);
+  } catch {
+    // Se falhar, apenas aguarda o tempo sem o indicador visual
+    await new Promise(r => setTimeout(r, durationMs));
+  }
+}
+
 async function handleMessage(jid, text) {
   const phone = normPhone(jid);
   const now = Date.now();
@@ -269,25 +272,32 @@ async function handleMessage(jid, text) {
 
   const RESET_WORDS = ['oi', 'olá', 'ola', 'menu', 'início', 'inicio', 'comecar', 'começar', '0'];
 
-  // Verifica se o cliente já existe pelo número de WhatsApp
-  const client = await findClientByPhone(phone);
-  console.log('[WhatsApp Bot] Mensagem recebida — jid=%s phone=%s cliente=%s', jid, phone, client ? `${client.id}/${client.name}` : 'NÃO ENCONTRADO');
+  // FIX #1 — Reutiliza dados do cliente já em memória se a sessão existir e não for reset
+  const existingState = conversations.get(phone);
+  const isReset = !existingState || RESET_WORDS.includes(lc);
 
-  if (!conversations.has(phone) || RESET_WORDS.includes(lc)) {
+  let client;
+  if (isReset || !existingState?.data?.client) {
+    // Só vai ao banco se for início/reset de conversa ou se ainda não tiver o cliente em memória
+    client = await findClientByPhone(phone);
+  } else {
+    client = existingState.data.client;
+  }
+
+  if (isReset) {
     if (client) {
-      // Número reconhecido — usa nome do cliente cadastrado (razão social se CNPJ, primeiro nome se CPF)
-      const displayName = client.person_type === 'juridica'
-        ? (client.razao_social || client.name) // Usa razão social se existir, senão cai para o nome/empresa
-        : client.name.split(' ')[0];
+      const displayName =
+        client.person_type === 'juridica'
+          ? client.razao_social || client.name
+          : client.name.split(' ')[0];
       conversations.set(phone, { step: 'menu', lastActivity: now, data: { client } });
       await sendMsg(jid, `Olá! 👋 *${displayName}*, bem-vindo ao atendimento automático!`);
       await sendMenu(jid);
     } else {
-      // Número não cadastrado — oferece link de cadastro
       conversations.set(phone, { step: 'not_registered', lastActivity: now, data: {} });
-      const registerLink = await getLink(`/ClientRegister`);
+      const registerLink = await getLink('/ClientRegister');
       await sendMsg(jid, '⚠️ Olá! Seu número não está cadastrado em nosso sistema.\n\nAcesse o link abaixo para realizar seu cadastro:');
-      await new Promise(r => setTimeout(r, 800));
+      await sendTyping(jid, 800); // FIX #9
       await sendMsg(jid, registerLink || 'Entre em contato com nossa equipe para realizar o cadastro.');
     }
     return;
@@ -296,129 +306,149 @@ async function handleMessage(jid, text) {
   const state = conversations.get(phone);
   state.lastActivity = now;
 
-  // Número não cadastrado — reenvia o link de cadastro a cada mensagem
   if (state.step === 'not_registered') {
-    const registerLink = await getLink(`/ClientRegister`);
+    const registerLink = await getLink('/ClientRegister');
     await sendMsg(jid, '⚠️ Seu número não está cadastrado. Use o link abaixo para se cadastrar:');
-    await new Promise(r => setTimeout(r, 800));
+    await sendTyping(jid, 800); // FIX #9
     await sendMsg(jid, registerLink || 'Entre em contato com nossa equipe para realizar o cadastro.');
     return;
   }
 
   if (state.step === 'menu') {
     const currentClient = state.data.client;
-    
+
     if (input === '1') {
-      const path = currentClient
+      const p = currentClient
         ? `/ClientBudgetRequest?client=${currentClient.id}`
-        : `/ClientBudgetRequest`;
-      const link = await getLink(path);
-      await sendMsg(jid, "Acesse o link abaixo para preencher seu pedido de orçamento:");
-      await new Promise(r => setTimeout(r, 1000));
+        : '/ClientBudgetRequest';
+      const link = await getLink(p);
+      await sendMsg(jid, 'Acesse o link abaixo para preencher seu pedido de orçamento:');
+      await sendTyping(jid, 1000); // FIX #9
       await sendMsg(jid, link);
-      state.step = "menu";
+      state.step = 'menu';
       return;
+
     } else if (input === '2') {
-      // Consultar orçamentos
       if (!currentClient) {
         await sendMsg(jid, '⚠️ Para consultar orçamentos, você precisa estar cadastrado.');
-        state.step = "menu";
+        state.step = 'menu';
         return;
       }
-      
+
       await sendMsg(jid, `📊 Buscando orçamentos para *${currentClient.name}*...`);
-      
+
+      // FIX #6 — Remove ILIKE por nome (impreciso e custoso); filtra apenas por client_id
+      // FIX #7 — Seleciona apenas as colunas usadas pelo bot
       const budgetsResult = await dbPool.query(
-        `SELECT * FROM budgets
-         WHERE (client_id = $1 OR client_name ILIKE $2)
+        `SELECT id, job, status, total, total_with_margin, producer, created_date
+         FROM budgets
+         WHERE client_id = $1
            AND status NOT IN ('cancelado', 'recusado')
          ORDER BY created_date DESC
          LIMIT 5`,
-        [currentClient.id, `%${currentClient.name}%`]
+        [currentClient.id]
       );
 
       if (budgetsResult.rows.length === 0) {
-        await sendMsg(jid, `🔍 Nenhum orçamento em aberto encontrado.`);
+        await sendMsg(jid, '🔍 Nenhum orçamento em aberto encontrado.');
       } else {
+        // FIX #2 — getCompanySettings chamada UMA vez, fora do loop
+        // FIX #4 — resultado vem do cache em memória (sem query ao banco)
         const company = await getCompanySettings();
-        for (const budget of budgetsResult.rows) {
-          try {
-            const pdfBuffer = await generateBudgetPDF(budget, company);
-            const valor = fmtCurrency(budget.total_with_margin || budget.total);
-            const status = fmtStatus(budget.status);
-            const fileName = `Orcamento_${budget.id}.pdf`;
-            const produtor = budget.producer ? `\n• Produtor: ${budget.producer}` : '';
-            const caption = `📄 *Orçamento #${budget.id}*\n• Job: ${budget.job || '-'}${produtor}\n• Status: ${status}\n• Valor: ${valor}`;
-            await sendDoc(jid, pdfBuffer, fileName, caption);
-          } catch (e) {
-            await sendMsg(jid, `⚠️ Erro ao gerar PDF do Orçamento #${budget.id}`);
-          }
-        }
+
+        // FIX #3 — Geração e envio de PDFs em paralelo (Promise.all)
+        await Promise.all(
+          budgetsResult.rows.map(async (budget) => {
+            try {
+              const pdfBuffer = await generateBudgetPDF(budget, company);
+              const valor = fmtCurrency(budget.total_with_margin || budget.total);
+              const statusLabel = fmtStatus(budget.status);
+              const fileName = `Orcamento_${budget.id}.pdf`;
+              const produtor = budget.producer ? `\n• Produtor: ${budget.producer}` : '';
+              const caption = `📄 *Orçamento #${budget.id}*\n• Job: ${budget.job || '-'}${produtor}\n• Status: ${statusLabel}\n• Valor: ${valor}`;
+              await sendDoc(jid, pdfBuffer, fileName, caption);
+            } catch {
+              await sendMsg(jid, `⚠️ Erro ao gerar PDF do Orçamento #${budget.id}`);
+            }
+          })
+        );
       }
-      state.step = "menu";
+      state.step = 'menu';
+
     } else if (input === '3') {
-      // Acompanhar O.S.
       if (!currentClient) {
         await sendMsg(jid, '⚠️ Para acompanhar suas O.S., você precisa estar cadastrado.');
-        state.step = "menu";
+        state.step = 'menu';
         return;
       }
 
       await sendMsg(jid, `🔧 Buscando Ordens de Serviço para *${currentClient.name}*...`);
 
+      // FIX #6 — Remove ILIKE por nome; filtra apenas por client_id
+      // FIX #7 — Seleciona apenas as colunas usadas pelo bot
       const ordersResult = await dbPool.query(
-        `SELECT * FROM work_orders
-         WHERE (client_id = $1 OR client_name ILIKE $2)
+        `SELECT id, status, created_date
+         FROM work_orders
+         WHERE client_id = $1
            AND status NOT IN ('cancelado')
          ORDER BY created_date DESC
          LIMIT 5`,
-        [currentClient.id, `%${currentClient.name}%`]
+        [currentClient.id]
       );
 
       if (ordersResult.rows.length === 0) {
-        await sendMsg(jid, `🔍 Nenhuma Ordem de Serviço encontrada.`);
+        await sendMsg(jid, '🔍 Nenhuma Ordem de Serviço encontrada.');
       } else {
+        // FIX #2 — getCompanySettings chamada UMA vez, fora do loop
+        // FIX #4 — resultado vem do cache em memória
         const company = await getCompanySettings();
-        for (const order of ordersResult.rows) {
-          try {
-            const pdfBuffer = await generateWorkOrderPDF(order, company);
-            const statusLabel = fmtStatus(order.status);
-            const fileName = `OS_${order.id}.pdf`;
-            const caption = `📋 *O.S. #${order.id}*\n• Status: ${statusLabel}\n• Data: ${fmtDate(order.created_date)}`;
-            await sendDoc(jid, pdfBuffer, fileName, caption);
-          } catch (e) {
-            await sendMsg(jid, `⚠️ Erro ao gerar PDF da O.S. #${order.id}`);
-          }
-        }
+
+        // FIX #3 — Geração e envio de PDFs em paralelo (Promise.all)
+        await Promise.all(
+          ordersResult.rows.map(async (order) => {
+            try {
+              const pdfBuffer = await generateWorkOrderPDF(order, company);
+              const statusLabel = fmtStatus(order.status);
+              const fileName = `OS_${order.id}.pdf`;
+              const caption = `📋 *O.S. #${order.id}*\n• Status: ${statusLabel}\n• Data: ${fmtDate(order.created_date)}`;
+              await sendDoc(jid, pdfBuffer, fileName, caption);
+            } catch {
+              await sendMsg(jid, `⚠️ Erro ao gerar PDF da O.S. #${order.id}`);
+            }
+          })
+        );
       }
-      state.step = "menu";
+      state.step = 'menu';
+
     } else if (input === '4') {
       await sendMsg(jid, '💬 *Suporte*\n\nUm membro da nossa equipe já vai te atender! ⏳');
-      state.step = "menu";
+      state.step = 'menu';
     } else {
       await sendMsg(jid, '❓ Opção inválida. Responda com *1*, *2*, *3* ou *4*.');
     }
   }
 }
 
-async function sendMenu(jid, isRegistered = false) {
+// FIX #8 — Parâmetro isRegistered removido pois nunca foi utilizado
+async function sendMenu(jid) {
   const menu = `Escolha uma opção:\n\n1️⃣ *Solicitar orçamento*\n2️⃣ *Consultar meus orçamentos*\n3️⃣ *Acompanhar status da minha O.S.*\n4️⃣ *Falar com suporte*`;
   await sendMsg(jid, menu);
 }
 
+// FIX #10 — Logs de reconexão rebaixados para console.warn para não poluir logs de produção
 function scheduleReconnect() {
   if (reconnectTimer) {
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
   }
   if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-    console.log(`[WhatsApp] Limite de ${MAX_RECONNECT_ATTEMPTS} reconexões atingido. Reconexão manual necessária.`);
+    console.warn(`[WhatsApp] Limite de ${MAX_RECONNECT_ATTEMPTS} reconexões atingido. Reconexão manual necessária.`);
     status = 'disconnected';
     return;
   }
   const delay = Math.min(5000 * Math.pow(1.5, reconnectAttempts), 60000);
   reconnectAttempts++;
-  console.log(`[WhatsApp] Reconectando em ${Math.round(delay / 1000)}s (tentativa ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+  console.warn(`[WhatsApp] Reconectando em ${Math.round(delay / 1000)}s (tentativa ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
   reconnectTimer = setTimeout(connect, delay);
 }
 
@@ -476,7 +506,6 @@ export async function connect() {
           scheduleReconnect();
         }
       } else if (connection === 'open') {
-        // Ignora eventos duplicados de 'open'
         if (status === 'connected') return;
         status = 'connected';
         qrData = null;
@@ -500,20 +529,15 @@ export async function connect() {
           '';
         if (!text) continue;
 
-        // Resolve LID (identificador interno do WhatsApp multi-device) para o número real
         let jid = rawJid;
         if (rawJid.endsWith('@lid')) {
-          // 1. Verifica se a própria chave já traz o número real (remoteJidAlt)
           if (msg.key.remoteJidAlt && !msg.key.remoteJidAlt.endsWith('@lid')) {
             jid = msg.key.remoteJidAlt;
-            console.log('[WhatsApp Bot] LID resolvido via remoteJidAlt: %s -> %s', rawJid, jid);
           } else {
-            // 2. Tenta resolver via mapping interno do Baileys
             try {
               const pn = await sock.signalRepository?.lidMapping?.getPNForLID?.(rawJid);
               if (pn) {
                 jid = pn;
-                console.log('[WhatsApp Bot] LID resolvido via lidMapping: %s -> %s', rawJid, jid);
               } else {
                 console.warn('[WhatsApp Bot] Não foi possível resolver LID para PN: %s', rawJid);
               }

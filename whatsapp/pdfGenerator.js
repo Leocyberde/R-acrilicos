@@ -11,6 +11,8 @@ function fmtDate(d) {
   try { return new Date(d).toLocaleDateString('pt-BR'); } catch { return String(d); }
 }
 
+// FIX #6 — Timeout de 5s para evitar que a geração do PDF fique travada
+//           aguardando uma logo que não responde.
 async function fetchLogoBuffer(logoUrl) {
   if (!logoUrl) return null;
   try {
@@ -19,10 +21,22 @@ async function fetchLogoBuffer(logoUrl) {
       return base64Data ? Buffer.from(base64Data, 'base64') : null;
     }
     const url = logoUrl.startsWith('http') ? logoUrl : `http://localhost:3001${logoUrl}`;
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    return Buffer.from(await res.arrayBuffer());
-  } catch { return null; }
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    try {
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (!res.ok) return null;
+      return Buffer.from(await res.arrayBuffer());
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      console.warn('[pdfGenerator] Timeout ao carregar logo:', logoUrl);
+    }
+    return null;
+  }
 }
 
 // ── Color palette matching the panel ─────────────────────────────────────────
@@ -262,14 +276,12 @@ export async function generateBudgetPDF(budget, company = {}) {
       y += 14;
     }
 
-    doc.fillColor(C.slate500).font('Helvetica-Oblique').fontSize(8)
-      .text(`Elaborado por: Gleissa`, totalsX, y, { width: totalsW, align: 'right' });
-    y += 12;
-    // if (budget.producer) {
-    //   doc.fillColor(C.slate500).font('Helvetica-Oblique').fontSize(8)
-    //     .text(`Elaborado por: ${budget.producer}`, totalsX, y, { width: totalsW, align: 'right' });
-    //   y += 12;
-    // }
+    // FIX #2 — usa o produtor do orçamento em vez do nome hardcoded
+    if (budget.producer) {
+      doc.fillColor(C.slate500).font('Helvetica-Oblique').fontSize(8)
+        .text(`Elaborado por: ${budget.producer}`, totalsX, y, { width: totalsW, align: 'right' });
+      y += 12;
+    }
 
     y += 10;
 

@@ -57,18 +57,57 @@ export default function ClientDashboard() {
   useEffect(() => {
     async function load() {
       if (!user?.email) return;
-      const [allBudgets, allReceipts, allOrders, settingsList] = await Promise.all([
-        api.entities.Budget.filter({ client_email: user.email }),
-        api.entities.Receipt.filter({ client_email: user.email }),
-        api.entities.WorkOrder.filter({ client_email: user.email }),
-        api.entities.Settings.list(),
+      // FIX #3 — resolve client_id primeiro para queries mais precisas;
+      // settings usa resultado cacheado se disponível no sessionStorage
+      let clientId = null;
+      try {
+        const cached = sessionStorage.getItem('_clientId_' + user.email);
+        if (cached) {
+          clientId = JSON.parse(cached);
+        } else {
+          const clients = await api.entities.Client.filter({ email: user.email });
+          if (clients && clients.length > 0) {
+            clientId = clients[0].id;
+            sessionStorage.setItem('_clientId_' + user.email, JSON.stringify(clientId));
+          }
+        }
+      } catch { /* fallback to email filter */ }
+
+      const filterArgs = clientId
+        ? { client_id: clientId }
+        : { client_email: user.email };
+
+      // FIX #3 — settings cacheada no sessionStorage por 10 minutos
+      let settingsData = null;
+      try {
+        const cachedSettings = sessionStorage.getItem('_appSettings');
+        const cachedAt = Number(sessionStorage.getItem('_appSettingsAt') || 0);
+        if (cachedSettings && Date.now() - cachedAt < 10 * 60 * 1000) {
+          settingsData = JSON.parse(cachedSettings);
+        } else {
+          const list = await api.entities.Settings.list();
+          settingsData = list?.[0] || null;
+          if (settingsData) {
+            sessionStorage.setItem('_appSettings', JSON.stringify(settingsData));
+            sessionStorage.setItem('_appSettingsAt', String(Date.now()));
+          }
+        }
+      } catch { /* sem cache, segue sem settings */ }
+
+      const [allBudgets, allReceipts, allOrders] = await Promise.all([
+        api.entities.Budget.filter(filterArgs),
+        api.entities.Receipt.filter(filterArgs),
+        api.entities.WorkOrder.filter(filterArgs),
       ]);
+
+      // FIX #9 — parse seguro de datas
+      const parseDate = (d) => d ? new Date(String(d).replace('T', ' ').split('.')[0]) : new Date(0);
       const sentBudgets = (allBudgets || []).filter(b => b.pdf_sent === true || b.pdf_sent === "true");
       const sentReceipts = (allReceipts || []).filter(r => r.sent_to_client === true || r.sent_to_client === "true");
-      setBudgets(sentBudgets.sort((a, b) => new Date(b.created_date) - new Date(a.created_date)));
-      setReceipts(sentReceipts.sort((a, b) => new Date(b.created_date) - new Date(a.created_date)));
-      setWorkOrders((allOrders || []).sort((a, b) => new Date(b.created_date) - new Date(a.created_date)));
-      if (settingsList?.length > 0) setSettings(settingsList[0]);
+      setBudgets(sentBudgets.sort((a, b) => parseDate(b.created_date) - parseDate(a.created_date)));
+      setReceipts(sentReceipts.sort((a, b) => parseDate(b.created_date) - parseDate(a.created_date)));
+      setWorkOrders((allOrders || []).sort((a, b) => parseDate(b.created_date) - parseDate(a.created_date)));
+      if (settingsData) setSettings(settingsData);
       setLoading(false);
     }
     load();
@@ -130,7 +169,7 @@ export default function ClientDashboard() {
           count={workOrders.length}
           sublabel={osAtivas > 0 ? `${osAtivas} em andamento` : "Nenhuma ativa"}
           color="bg-orange-500"
-          link={createPageUrl("WorkOrders")}
+          link={createPageUrl("ClientWorkOrders")}
         />
       </div>
 
@@ -222,7 +261,7 @@ export default function ClientDashboard() {
               <Wrench className="h-4 w-4 text-orange-500" />
               <h2 className="text-sm font-semibold text-slate-800">Minhas Ordens de Serviço</h2>
             </div>
-            <Link to={createPageUrl("WorkOrders")} className="text-xs text-indigo-600 hover:underline flex items-center gap-1">
+            <Link to={createPageUrl("ClientWorkOrders")} className="text-xs text-indigo-600 hover:underline flex items-center gap-1">
               Ver todas <ChevronRight className="h-3 w-3" />
             </Link>
           </div>

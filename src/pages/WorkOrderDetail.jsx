@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, Trash2, Upload, Download, FileText, X, Edit, Save, Zap, ZapOff, AlertTriangle } from "lucide-react";
-import { downloadPDF, printFromCanvas } from "@/components/DownloadPDF";
+import { downloadWorkOrderPDF, printDocument } from "@/components/DownloadPDF";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -184,10 +184,10 @@ export default function WorkOrderDetail() {
                   { key: "created_date", label: "Criado", format: (v) => new Date(v).toLocaleDateString("pt-BR") },
                   { key: "status", label: "Status" },
                 ]}
-                onPDF={() => downloadPDF('order-print', `ordem-servico-${String(order.id ?? '')}.pdf`)}
-                onPrint={() => { toast.info('Preparando impressão...'); printFromCanvas('workorder-print-layout').catch(() => toast.error('Erro ao preparar impressão')); }}
+                onPDF={() => downloadWorkOrderPDF(order, companySettings, `ordem-servico-${String(order.id ?? '')}.pdf`)}
+                onPrint={() => { toast.info('Preparando impressão...'); printDocument('workOrder', order, companySettings).catch(() => toast.error('Erro ao preparar impressão')); }}
               />
-              <Button variant="outline" size="sm" onClick={() => { toast.info('Preparando impressão...'); printFromCanvas('workorder-print-layout').catch(() => toast.error('Erro ao preparar impressão')); }}>
+              <Button variant="outline" size="sm" onClick={() => { toast.info('Preparando impressão...'); printDocument('workOrder', order, companySettings).catch(() => toast.error('Erro ao preparar impressão')); }}>
                 <Printer className="h-3.5 w-3.5 mr-1.5" /> Imprimir
               </Button>
               <Button
@@ -243,10 +243,10 @@ export default function WorkOrderDetail() {
           )}
           {isClient && (
             <>
-              <Button variant="outline" size="sm" onClick={() => { toast.info('Preparando impressão...'); printFromCanvas('workorder-print-layout').catch(() => toast.error('Erro ao preparar impressão')); }}>
+              <Button variant="outline" size="sm" onClick={() => { toast.info('Preparando impressão...'); printDocument('workOrder', order, companySettings).catch(() => toast.error('Erro ao preparar impressão')); }}>
                 <Printer className="h-3.5 w-3.5 mr-1.5" /> Imprimir
               </Button>
-              <Button variant="outline" size="sm" onClick={() => downloadPDF('order-print', `ordem-servico-${String(order.id ?? '')}.pdf`).catch(() => toast.error('Erro ao gerar PDF'))}>
+              <Button variant="outline" size="sm" onClick={() => downloadWorkOrderPDF(order, companySettings, `ordem-servico-${String(order.id ?? '')}.pdf`).catch(() => toast.error('Erro ao gerar PDF'))}>
                 <Download className="h-3.5 w-3.5 mr-1.5" /> PDF
               </Button>
             </>

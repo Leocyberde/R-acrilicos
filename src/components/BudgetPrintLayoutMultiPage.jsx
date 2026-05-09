@@ -1,75 +1,49 @@
 import { useState, useEffect } from "react";
 import { localClient } from "@/api/localClient";
+import { BUDGET_LAYOUT_DEFAULTS } from "@/utils/defaultLayoutConfig";
 
-const DEFAULT = {
-  title_text: "Orçamento",
-  title_font_size: 22,
-  title_color: "#1a1a1a",
-  title_bold: true,
-  body_font_family: "Arial, sans-serif",
-  body_font_size: 12,
-  body_color: "#1a1a1a",
-  divider_color: "#1a1a1a",
-  divider_thickness: 2,
-  table_header_bg: "#ffffff",
-  table_header_color: "#1a1a1a",
-  table_row_border_color: "#eeeeee",
-  table_row_height: 24,
-  table_value_color: "#1565c0",
-  table_item_width: 55,
-  table_quantity_width: 8,
-  table_unit_price_width: 18,
-  table_subtotal_width: 19,
-  blank_rows: 10,
-  totals_bg: "#f9f9f9",
-  totals_value_color: "#cc0000",
-  totals_border_color: "#333333",
-  totals_border_thickness: 2,
-  totals_label_sem_nota: "SEM NOTA",
-  totals_label_com_nota: "COM NOTA",
-  show_elaborado_por: true,
-  elaborado_por_text: "",
-  show_instructions: true,
-  instructions_text: "ATENÇÃO! LEIA AS INSTRUÇÕES ABAIXO\n\nA PRODUÇÃO SERÁ INICIADA: APÓS ADIANTAMENTO DE 50%\nFATURAMENTO: 50% P/INICIAR PRODUÇÃO E 50% NA RETIRADA",
-  instructions_text_color: "#1a1a1a",
-  instructions_bg: "#fff8f0",
-  instructions_border_color: "#aaaaaa",
-  show_footer: true,
-  footer_line1: "Caso você tenha alguma dúvida entre em contato conosco",
-  footer_line2: "AGRADECEMOS SUA PREFERÊNCIA!",
-  notes_border_color: "#cccccc",
-  notes_bg: "#fefefe",
-  page_padding: 14,
-  logo_height: 60,
-  show_job: true,
-  show_producer: true,
-  show_client: true,
-  show_phone: true,
-  phone_font_size: 11,
-  phone_font_family: "Arial, sans-serif",
-  phone_color: "#333333",
-  show_email: true,
-  show_address_company: true,
-};
+// FIX #4 — Cache de sessão para settings e configs de layout.
+// Evita que cada componente faça queries separadas ao banco toda vez que é montado.
+const _settingsCache = { data: null, at: 0 };
+const _configCache   = {};
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+async function loadSettings() {
+  if (_settingsCache.data && Date.now() - _settingsCache.at < CACHE_TTL) {
+    return _settingsCache.data;
+  }
+  const list = await localClient.entities.Settings.list();
+  _settingsCache.data = list[0] || null;
+  _settingsCache.at   = Date.now();
+  return _settingsCache.data;
+}
+
+async function loadLayoutConfig(entityName) {
+  const cached = _configCache[entityName];
+  if (cached && Date.now() - cached.at < CACHE_TTL) return cached.data;
+  const list = await localClient.entities[entityName].list();
+  _configCache[entityName] = { data: list[0]?.config_data || null, at: Date.now() };
+  return _configCache[entityName].data;
+}
+
+
 
 export default function BudgetPrintLayoutMultiPage({ budget, onReady }) {
   const [settings, setSettings] = useState(null);
-  const [config, setConfig] = useState(DEFAULT);
+  const [config, setConfig] = useState(BUDGET_LAYOUT_DEFAULTS);
   const [pages, setPages] = useState([]);
   const [dataLoaded, setDataLoaded] = useState(false);
 
   useEffect(() => {
     async function load() {
-      const [settingsList, configs] = await Promise.all([
-        localClient.entities.Settings.list(),
-        localClient.entities.BudgetLayoutConfig.list(),
+      // FIX #4 — usa cache de sessão para evitar queries repetidas ao banco
+      const [settingsData, configData] = await Promise.all([
+        loadSettings(),
+        loadLayoutConfig('BudgetLayoutConfig'),
       ]);
-      if (settingsList.length > 0) setSettings(settingsList[0]);
-      if (configs.length > 0) {
-        setConfig({ ...DEFAULT, ...(configs[0].config_data || {}) });
-      } else {
-        setSettings(s => s || {});
-      }
+      if (settingsData) setSettings(settingsData);
+      if (configData) {
+        setConfig({ ...BUDGET_LAYOUT_DEFAULTS, ...configData });
       setDataLoaded(true);
     }
     load();
@@ -127,7 +101,7 @@ export default function BudgetPrintLayoutMultiPage({ budget, onReady }) {
 
   if (!settings || !config) return <div>Carregando...</div>;
 
-  const BudgetPage = ({ items, pageNum, isFirstPage }) => (
+  const BudgetPage = ({ items, pageNum, pageIdx, isFirstPage }) => (
     <div
       style={{
         fontFamily: c.body_font_family,
@@ -223,7 +197,7 @@ export default function BudgetPrintLayoutMultiPage({ budget, onReady }) {
         </tbody>
       </table>
 
-      {pages.length > 0 && items === pages[pages.length - 1] && (
+      {pages.length > 0 && pageIdx === pages.length - 1 && (
         <>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <tbody>
@@ -336,7 +310,7 @@ export default function BudgetPrintLayoutMultiPage({ budget, onReady }) {
       <div className="pages-container" style={{ display: "block" }}>
         {pages.map((itemsInPage, idx) => (
           <div key={idx} className="budget-page">
-            <BudgetPage items={itemsInPage} pageNum={idx + 1} isFirstPage={idx === 0} />
+            <BudgetPage items={itemsInPage} pageNum={idx + 1} pageIdx={idx} isFirstPage={idx === 0} />
           </div>
         ))}
       </div>

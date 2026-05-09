@@ -6,7 +6,7 @@ import { Receipt, AlertCircle, Printer, Download } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
-import { downloadPDF, printFromCanvas } from "@/components/DownloadPDF";
+import { downloadReceiptPDF, printDocument } from "@/components/DownloadPDF";
 
 const statusConfig = {
   em_aberto:      { badge: "bg-blue-100 text-blue-800 border-blue-200",    label: "Em Aberto" },
@@ -34,12 +34,13 @@ function ReceiptDocument({ receipt, settings }) {
   const cfg = statusConfig[receipt.status] || { badge: "bg-slate-100 text-slate-700 border-slate-200", label: receipt.status };
   const docId = `client-receipt-doc-${receipt.id}`;
 
+  // FIX #1/#7 — passa os dados do recibo diretamente, sem capturar HTML da tela
   const handlePrint = () => {
     toast.info('Preparando impressão...');
-    printFromCanvas(docId).catch(() => toast.error('Erro ao preparar impressão'));
+    printDocument('receipt', receipt, settings).catch(() => toast.error('Erro ao preparar impressão'));
   };
   const handlePDF = () => {
-    downloadPDF(docId, `recibo-${receipt.id}.pdf`).catch(() => toast.error('Erro ao gerar PDF'));
+    downloadReceiptPDF(receipt, settings, `recibo-${receipt.id}.pdf`).catch(() => toast.error('Erro ao gerar PDF'));
   };
 
   return (
@@ -236,7 +237,9 @@ export default function ClientReceipts() {
       if (currentUser) {
         const data = await api.entities.Receipt.filter({ client_email: currentUser.email });
         const sent = (data || []).filter(r => r.sent_to_client === true || r.sent_to_client === "true");
-        setReceipts(sent.sort((a, b) => new Date(b.created_date) - new Date(a.created_date)));
+        // FIX #9 — parse seguro de datas sem timezone para evitar desvio de fuso horário
+      const parseDate = (d) => d ? new Date(String(d).replace('T', ' ').split('.')[0]) : new Date(0);
+      setReceipts(sent.sort((a, b) => parseDate(b.created_date) - parseDate(a.created_date)));
       }
       setLoading(false);
     };

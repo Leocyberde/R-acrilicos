@@ -1,62 +1,48 @@
 import { useState, useEffect } from "react";
 import { localClient } from "@/api/localClient";
+import { WORK_ORDER_LAYOUT_DEFAULTS } from "@/utils/defaultLayoutConfig";
 
-const DEFAULT = {
-  title_text: "Ordem de Serviço",
-  title_font_size: 22,
-  title_color: "#1a1a1a",
-  title_bold: true,
-  body_font_family: "Arial, sans-serif",
-  body_font_size: 12,
-  body_color: "#1a1a1a",
-  divider_color: "#1a1a1a",
-  divider_thickness: 2,
-  table_header_bg: "#ffffff",
-  table_header_color: "#1a1a1a",
-  table_row_border_color: "#eeeeee",
-  table_row_height: 24,
-  table_number_width: 6,
-  table_item_width: 76,
-  table_quantity_width: 18,
-  blank_rows: 10,
-  show_signature: true,
-  show_delivery_date: true,
-  show_elaborado_por: true,
-  elaborado_por_text: "",
-  show_instructions: false,
-  instructions_text: "",
-  instructions_text_color: "#1a1a1a",
-  instructions_bg: "#fff8f0",
-  instructions_border_color: "#aaaaaa",
-  show_footer: true,
-  footer_line1: "Caso você tenha alguma dúvida entre em contato conosco",
-  footer_line2: "AGRADECEMOS SUA PREFERÊNCIA!",
-  notes_border_color: "#cccccc",
-  notes_bg: "#fefefe",
-  page_padding: 14,
-  logo_height: 60,
-  show_job: true,
-  show_producer: true,
-  show_client: true,
-  show_phone: true,
-  show_email: true,
-  show_address_company: true,
-};
+// FIX #4 — Cache de sessão para settings e configs de layout.
+// Evita que cada componente faça queries separadas ao banco toda vez que é montado.
+const _settingsCache = { data: null, at: 0 };
+const _configCache   = {};
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+async function loadSettings() {
+  if (_settingsCache.data && Date.now() - _settingsCache.at < CACHE_TTL) {
+    return _settingsCache.data;
+  }
+  const list = await localClient.entities.Settings.list();
+  _settingsCache.data = list[0] || null;
+  _settingsCache.at   = Date.now();
+  return _settingsCache.data;
+}
+
+async function loadLayoutConfig(entityName) {
+  const cached = _configCache[entityName];
+  if (cached && Date.now() - cached.at < CACHE_TTL) return cached.data;
+  const list = await localClient.entities[entityName].list();
+  _configCache[entityName] = { data: list[0]?.config_data || null, at: Date.now() };
+  return _configCache[entityName].data;
+}
+
+
 
 export default function WorkOrderPrintLayoutMultiPage({ workOrder }) {
   const [settings, setSettings] = useState(null);
-  const [config, setConfig] = useState(DEFAULT);
+  const [config, setConfig] = useState(WORK_ORDER_LAYOUT_DEFAULTS);
   const [pages, setPages] = useState([]);
 
   useEffect(() => {
     async function load() {
-      const [settingsList, configs] = await Promise.all([
-        localClient.entities.Settings.list(),
-        localClient.entities.WorkOrderLayoutConfig.list(),
+      // FIX #4 — usa cache de sessão para evitar queries repetidas ao banco
+      const [settingsData, configData] = await Promise.all([
+        loadSettings(),
+        loadLayoutConfig('WorkOrderLayoutConfig'),
       ]);
-      if (settingsList.length > 0) setSettings(settingsList[0]);
-      if (configs.length > 0) {
-        setConfig({ ...DEFAULT, ...(configs[0].config_data || {}) });
+      if (settingsData) setSettings(settingsData);
+      if (configData) {
+        setConfig({ ...WORK_ORDER_LAYOUT_DEFAULTS, ...configData });
       }
     }
     load();
@@ -96,7 +82,7 @@ export default function WorkOrderPrintLayoutMultiPage({ workOrder }) {
 
   if (!settings || !config) return <div>Carregando...</div>;
 
-  const WorkOrderPage = ({ items, pageNum, isFirstPage }) => (
+  const WorkOrderPage = ({ items, pageNum, pageIdx, isFirstPage }) => (
     <div
       style={{
         fontFamily: c.body_font_family,
@@ -189,7 +175,7 @@ export default function WorkOrderPrintLayoutMultiPage({ workOrder }) {
         </tbody>
       </table>
 
-      {pages.length > 0 && items === pages[pages.length - 1] && (
+      {pages.length > 0 && pageIdx === pages.length - 1 && (
         <>
           {c.show_instructions !== false && c.instructions_text && (
             <div style={{
@@ -287,10 +273,10 @@ export default function WorkOrderPrintLayoutMultiPage({ workOrder }) {
           }
         }
       `}</style>
-      <div className="pages-container" style={{ display: "flex", flexDirection: "column", gap: "16px", alignItems: "center" }}>
+      <div className="pages-container" style={{ display: "block" }}>
         {pages.map((itemsInPage, idx) => (
           <div key={idx} className="workorder-page">
-            <WorkOrderPage items={itemsInPage} pageNum={idx + 1} isFirstPage={idx === 0} />
+            <WorkOrderPage items={itemsInPage} pageNum={idx + 1} pageIdx={idx} isFirstPage={idx === 0} />
           </div>
         ))}
       </div>
