@@ -201,20 +201,20 @@ export default function BudgetPrintLayoutMultiPage({ budget, onReady }) {
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ borderTop: "1px solid #333", background: c.table_header_bg }}>
-            <th style={{ textAlign: "left", padding: "5px 4px", fontWeight: "bold", fontSize: "12px", color: c.table_header_color, width: `${c.table_item_width ?? 55}%`, lineHeight: "1.2", verticalAlign: "middle" }}>Item</th>
-            <th style={{ textAlign: "center", padding: "5px 4px", fontWeight: "bold", fontSize: "12px", color: c.table_header_color, width: `${c.table_quantity_width ?? 8}%`, lineHeight: "1.2", verticalAlign: "middle" }}>Qtd</th>
-            <th style={{ textAlign: "right", padding: "5px 4px", fontWeight: "bold", fontSize: "12px", color: c.table_header_color, width: `${c.table_unit_price_width ?? 18}%`, lineHeight: "1.2", verticalAlign: "middle" }}>V.Unitário</th>
-            <th style={{ textAlign: "right", padding: "5px 4px", fontWeight: "bold", fontSize: "12px", color: c.table_header_color, width: `${c.table_subtotal_width ?? 19}%`, lineHeight: "1.2", verticalAlign: "middle" }}>Subtotal</th>
+            <th style={{ textAlign: "left", padding: "5px 4px", fontWeight: "bold", fontSize: "12px", color: c.table_header_color, width: `${c.table_item_width ?? 55}%`, verticalAlign: "middle" }}>Item</th>
+            <th style={{ textAlign: "center", padding: "5px 4px", fontWeight: "bold", fontSize: "12px", color: c.table_header_color, width: `${c.table_quantity_width ?? 8}%`, verticalAlign: "middle" }}>Qtd</th>
+            <th style={{ textAlign: "right", padding: "5px 4px", fontWeight: "bold", fontSize: "12px", color: c.table_header_color, width: `${c.table_unit_price_width ?? 18}%`, verticalAlign: "middle" }}>V.Unitário</th>
+            <th style={{ textAlign: "right", padding: "5px 4px", fontWeight: "bold", fontSize: "12px", color: c.table_header_color, width: `${c.table_subtotal_width ?? 19}%`, verticalAlign: "middle" }}>Subtotal</th>
           </tr>
         </thead>
         <tbody>
           <tr><td colSpan={4} style={{ height: "8px" }} /></tr>
           {items.map((item, i) => (
-            <tr key={i} style={{ borderBottom: `1px solid ${c.table_row_border_color}`, height: `${c.table_row_height || 24}px` }}>
-              <td style={{ padding: "2px 4px", wordBreak: "break-word", verticalAlign: "middle", textTransform: "uppercase" }}>{item.name}</td>
-              <td style={{ padding: "2px 4px", textAlign: "center", verticalAlign: "middle" }}>{item.quantity}</td>
-              <td style={{ padding: "2px 4px", textAlign: "right", color: c.table_value_color, verticalAlign: "middle" }}>R$ {fmt(item.unit_price)}</td>
-              <td style={{ padding: "2px 4px", textAlign: "right", color: c.table_value_color, verticalAlign: "middle" }}>
+            <tr key={i} style={{ borderBottom: `1px solid ${c.table_row_border_color}` }}>
+              <td style={{ padding: "5px 4px", wordBreak: "break-word", verticalAlign: "middle", textTransform: "uppercase" }}>{item.name}</td>
+              <td style={{ padding: "5px 4px", textAlign: "center", verticalAlign: "middle" }}>{item.quantity}</td>
+              <td style={{ padding: "5px 4px", textAlign: "right", color: c.table_value_color, verticalAlign: "middle" }}>R$ {fmt(item.unit_price)}</td>
+              <td style={{ padding: "5px 4px", textAlign: "right", color: c.table_value_color, verticalAlign: "middle" }}>
                 R$ {fmt((item.quantity || 0) * (item.unit_price || 0))}
               </td>
             </tr>
@@ -333,7 +333,7 @@ export default function BudgetPrintLayoutMultiPage({ budget, onReady }) {
           }
         }
       `}</style>
-      <div className="pages-container" style={{ display: "flex", flexDirection: "column", gap: "16px", alignItems: "center" }}>
+      <div className="pages-container" style={{ display: "block" }}>
         {pages.map((itemsInPage, idx) => (
           <div key={idx} className="budget-page">
             <BudgetPage items={itemsInPage} pageNum={idx + 1} isFirstPage={idx === 0} />

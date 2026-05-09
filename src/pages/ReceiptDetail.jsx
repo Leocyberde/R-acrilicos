@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { localClient } from "@/api/localClient";
-import { usePrint } from "@/hooks/usePrint";
 import ReceiptPrintLayoutMultiPage from "@/components/ReceiptPrintLayoutMultiPage";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -9,7 +8,7 @@ import { ArrowLeft, Printer, Trash2, Edit, Download, Lock, Send } from "lucide-r
 import StatusBadge from "@/components/StatusBadge";
 import PrintHeader from "@/components/PrintHeader";
 import BudgetForm from "@/components/BudgetForm";
-import { downloadPDF } from "@/components/DownloadPDF";
+import { downloadPDF, printFromCanvas } from "@/components/DownloadPDF";
 import { formatDateBR } from "@/utils/dateFormat";
 import { toast } from "sonner";
 import {
@@ -31,7 +30,6 @@ export default function ReceiptDetail() {
   const [saving, setSaving] = useState(false);
   const [companySettings, setCompanySettings] = useState(null);
   const navigate = useNavigate();
-  const { printElement } = usePrint();
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
 
@@ -170,7 +168,7 @@ export default function ReceiptDetail() {
         </div>
         <div className="flex flex-wrap gap-2 items-center">
           <StatusBadge status={receipt.status || "em_aberto"} />
-          <Button variant="outline" size="sm" onClick={() => printElement('receipt-print-layout')}>
+          <Button variant="outline" size="sm" onClick={() => { toast.info('Preparando impressão...'); printFromCanvas('receipt-print-layout').catch(() => toast.error('Erro ao preparar impressão')); }}>
             <Printer className="h-3.5 w-3.5 mr-1.5" /> Imprimir
           </Button>
           <Button variant="outline" size="sm" onClick={async () => {

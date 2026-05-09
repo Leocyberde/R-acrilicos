@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "PHN5AUQZrLHwg89YNMD-N"
+uri = "file://relatorio_correcoes_impressao.pdf"
+type = "pdf"
+title = "Relatório de Correções — Problema de Impressão Mobile"

@@ -12,10 +12,11 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { FileText, AlertCircle, CheckCircle, XCircle } from "lucide-react";
+import { FileText, AlertCircle, CheckCircle, XCircle, Printer, Download } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { downloadPDF, printFromCanvas } from "@/components/DownloadPDF";
 
 const statusConfig = {
   pendente: { badge: "bg-yellow-100 text-yellow-800 border-yellow-200", label: "Aguardando resposta" },
@@ -32,9 +33,18 @@ function formatBRL(value) {
 function BudgetDocument({ budget, settings, onAccept, onRefuse, submitting }) {
   const cfg = statusConfig[budget.status] || { badge: "bg-slate-100 text-slate-700 border-slate-200", label: budget.status };
   const canRespond = budget.status === "pendente" || budget.status === "aprovado";
+  const docId = `client-budget-doc-${budget.id}`;
+
+  const handlePrint = () => {
+    toast.info('Preparando impressão...');
+    printFromCanvas(docId).catch(() => toast.error('Erro ao preparar impressão'));
+  };
+  const handlePDF = () => {
+    downloadPDF(docId, `orcamento-${budget.id}.pdf`).catch(() => toast.error('Erro ao gerar PDF'));
+  };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+    <div id={docId} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
       {/* Document header */}
       <div className="p-6 sm:p-8 border-b-2 border-slate-900">
         <div className="flex items-start justify-between">
@@ -235,6 +245,18 @@ function BudgetDocument({ budget, settings, onAccept, onRefuse, submitting }) {
             </Button>
           </div>
         )}
+
+        {/* Print / PDF */}
+        <div className="flex gap-2 pt-2 border-t border-slate-100">
+          <Button variant="outline" size="sm" onClick={handlePrint} className="text-xs">
+            <Printer className="h-3.5 w-3.5 mr-1.5" />
+            Imprimir
+          </Button>
+          <Button variant="outline" size="sm" onClick={handlePDF} className="text-xs">
+            <Download className="h-3.5 w-3.5 mr-1.5" />
+            PDF
+          </Button>
+        </div>
       </div>
     </div>
   );

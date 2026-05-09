@@ -3,11 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Printer, Download } from "lucide-react";
 import { toast } from "sonner";
 
-export default function ExportTabs({ data, filename, columns, onPDF }) {
+export default function ExportTabs({ data, filename, columns, onPDF, onPrint }) {
   const [exporting, setExporting] = useState(false);
 
   const handlePrint = () => {
-    window.print();
+    if (onPrint) {
+      onPrint();
+    } else {
+      window.print();
+    }
   };
 
   const handlePDF = async () => {
