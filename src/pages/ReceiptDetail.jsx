@@ -409,11 +409,10 @@ export default function ReceiptDetail() {
 
       {/* Visualização — mesmo layout do PDF */}
       <div style={{ background: "#e5e7eb", padding: "24px 0", borderRadius: "8px", overflowX: "auto", marginTop: "24px" }}>
-        <div
-          id="receipt-print-layout"
-          style={{ width: "210mm", margin: "0 auto", boxShadow: "0 2px 16px rgba(0,0,0,0.18)" }}
-        >
-          {receipt && <ReceiptPrintLayoutMultiPage receipt={receipt} />}
+        <div style={{ width: "210mm", margin: "0 auto", boxShadow: "0 2px 16px rgba(0,0,0,0.18)" }}>
+          <div id="receipt-print-layout">
+            {receipt && <ReceiptPrintLayoutMultiPage receipt={receipt} />}
+          </div>
         </div>
       </div>
     </div>

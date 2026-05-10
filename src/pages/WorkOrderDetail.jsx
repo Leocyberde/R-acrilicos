@@ -187,9 +187,6 @@ export default function WorkOrderDetail() {
                 onPDF={() => downloadWorkOrderPDF(order, companySettings, `ordem-servico-${String(order.id ?? '')}.pdf`)}
                 onPrint={() => { toast.info('Preparando impressão...'); printDocument('workOrder', order, companySettings).catch(() => toast.error('Erro ao preparar impressão')); }}
               />
-              <Button variant="outline" size="sm" onClick={() => { toast.info('Preparando impressão...'); printDocument('workOrder', order, companySettings).catch(() => toast.error('Erro ao preparar impressão')); }}>
-                <Printer className="h-3.5 w-3.5 mr-1.5" /> Imprimir
-              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -479,13 +476,15 @@ export default function WorkOrderDetail() {
       </Tabs>
 
 
-      {/* Aba de Visualização — mesmo layout do PDF */}
+      {/* Visualização — fundo cinza, exibe o layout sempre montado no DOM */}
       <div style={{ background: "#e5e7eb", padding: "24px 0", borderRadius: "8px", overflowX: "auto", marginTop: "24px" }}>
         <div
-          id="workorder-print-layout"
           style={{ width: "210mm", margin: "0 auto", boxShadow: "0 2px 16px rgba(0,0,0,0.18)" }}
         >
-          {order && <WorkOrderPrintLayoutMultiPage workOrder={order} />}
+          {/* id fora do wrapper visual para o html2canvas capturar sem sombra */}
+          <div id="workorder-print-layout">
+            {order && <WorkOrderPrintLayoutMultiPage workOrder={order} />}
+          </div>
         </div>
       </div>
     </div>
