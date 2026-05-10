@@ -23,9 +23,13 @@ export default function PrintHeader({ title, number }) {
           )}
           <p className="text-sm text-slate-600 font-semibold">{settings?.company_name || "Sistema de Gestão"}</p>
           {settings?.company_address && <p className="text-xs text-slate-500 mt-0.5">{settings.company_address}</p>}
-          {(settings?.company_phone || settings?.company_email) && (
+          {(settings?.company_phone || settings?.company_email || settings?.company_email2) && (
             <p className="text-xs text-slate-500">
-              {settings.company_phone} {settings.company_phone && settings.company_email && "•"} {settings.company_email}
+              {settings.company_phone} 
+              {settings.company_phone && (settings.company_email || settings.company_email2) && " • "} 
+              {settings.company_email}
+              {settings.company_email && settings.company_email2 && " • "}
+              {settings.company_email2}
             </p>
           )}
         </div>

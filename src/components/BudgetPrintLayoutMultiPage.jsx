@@ -129,8 +129,12 @@ export default function BudgetPrintLayoutMultiPage({ budget, onReady }) {
               {c.show_phone !== false && settings?.company_phone && (
                 <div style={{ fontSize: `${c.phone_font_size || 11}px`, fontFamily: c.phone_font_family, color: c.phone_color, marginTop: "4px" }}>{settings.company_phone}</div>
               )}
-              {c.show_email !== false && settings?.company_email && (
-                <div style={{ fontSize: "11px", color: "#1565c0", marginTop: "4px" }}>{settings.company_email}</div>
+              {c.show_email !== false && (settings?.company_email || settings?.company_email2) && (
+                <div style={{ fontSize: "11px", color: "#1565c0", marginTop: "4px" }}>
+                  {settings.company_email}
+                  {settings.company_email && settings.company_email2 && " | "}
+                  {settings.company_email2}
+                </div>
               )}
               {c.show_address_company !== false && settings?.company_address && (
                 <div style={{ fontSize: "10px", marginTop: "4px" }}>{settings.company_address}</div>

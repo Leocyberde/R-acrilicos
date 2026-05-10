@@ -109,8 +109,12 @@ export default function WorkOrderPrintLayoutMultiPage({ workOrder }) {
               {c.show_phone !== false && settings?.company_phone && (
                 <div style={{ fontSize: "11px", marginTop: "4px" }}>{settings.company_phone}</div>
               )}
-              {c.show_email !== false && settings?.company_email && (
-                <div style={{ fontSize: "11px", color: "#1565c0", marginTop: "4px" }}>{settings.company_email}</div>
+              {c.show_email !== false && (settings?.company_email || settings?.company_email2) && (
+                <div style={{ fontSize: "11px", color: "#1565c0", marginTop: "4px" }}>
+                  {settings.company_email}
+                  {settings.company_email && settings.company_email2 && " | "}
+                  {settings.company_email2}
+                </div>
               )}
               {c.show_address_company !== false && settings?.company_address && (
                 <div style={{ fontSize: "10px", marginTop: "4px" }}>{settings.company_address}</div>
