@@ -44,7 +44,6 @@ export default function BudgetPrintLayoutMultiPage({ budget, onReady }) {
       if (settingsData) setSettings(settingsData);
       if (configData) {
         setConfig({ ...BUDGET_LAYOUT_DEFAULTS, ...configData });
-      }
       setDataLoaded(true);
     }
     load();

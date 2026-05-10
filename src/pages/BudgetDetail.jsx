@@ -6,10 +6,8 @@ import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, CheckCircle, XCircle, Edit, Wrench, Trash2, RefreshCw, Receipt as ReceiptIcon, Download, Send, AlertTriangle, Lock } from "lucide-react";
 import { toast } from "sonner";
-import StatusBadge from "@/components/StatusBadge";
 import BudgetForm from "@/components/BudgetForm";
 import { downloadBudgetPDF, printDocument } from "@/components/DownloadPDF";
-import { formatDateBR } from "@/utils/dateFormat";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -411,173 +409,10 @@ export default function BudgetDetail() {
         </div>
       )}
 
-      {/* Budget Document */}
-      <div
-        id="budget-content"
-        className="bg-white rounded-xl border border-slate-200 print:border-0 print:shadow-none print:rounded-none"
-        style={{ fontFamily: '"Segoe UI", Arial, sans-serif', color: '#1a1a1a' }}
-      >
-        <div className="p-8 sm:p-10 print-doc">
-
-          {/* ── COMPANY HEADER ── */}
-          <div className="flex items-start justify-between pb-4 mb-4 border-b-2 border-slate-800">
-            <div className="flex-1">
-              {companySettings?.company_logo ? (
-                <img src={companySettings.company_logo} alt="Logo" className="h-24 mb-2 object-contain" />
-              ) : (
-                <p className="text-xl font-bold text-slate-900">{companySettings?.company_name || "Minha Empresa"}</p>
-              )}
-              {companySettings?.company_logo && companySettings?.company_name && (
-                <p className="text-xs font-semibold text-slate-600">{companySettings.company_name}</p>
-              )}
-              <div className="mt-1 space-y-0.5">
-                {companySettings?.company_phone && (
-                  <p className="text-xs text-slate-700">{companySettings.company_phone}</p>
-                )}
-                {companySettings?.company_email && (
-                  <p className="text-xs text-slate-700">{companySettings.company_email}</p>
-                )}
-                {companySettings?.company_email2 && (
-                  <p className="text-xs text-slate-700">{companySettings.company_email2}</p>
-                )}
-                {companySettings?.company_address && (
-                  <p className="text-xs text-slate-700">{companySettings.company_address}</p>
-                )}
-              </div>
-            </div>
-            <div className="text-right ml-6 pt-6">
-              <p className="text-3xl font-normal text-slate-900 tracking-tight">Orçamento</p>
-              <p className="text-sm text-slate-600 mt-1">
-                Data: {budget.emission_date
-                  ? formatDateBR(budget.emission_date)
-                  : new Date(budget.created_date).toLocaleDateString("pt-BR")}
-              </p>
-              {budget.validity_date && (
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Válido até: {formatDateBR(budget.validity_date)}
-                </p>
-              )}
-              <p className="text-xs text-slate-500 mt-0.5">Nº {budget.id}</p>
-              <div className="no-print mt-2">
-                <StatusBadge status={budget.status} />
-              </div>
-            </div>
-          </div>
-
-          {/* ── JOB / PRODUTOR / EMPRESA ── */}
-          <div className="mb-5 pb-4 border-b border-slate-300">
-            {budget.job && (
-              <div className="flex gap-2 mb-1">
-                <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">JOB:</span>
-                <span className="text-sm font-bold text-slate-900 uppercase">{budget.job?.toUpperCase()}</span>
-              </div>
-            )}
-            {budget.producer && (
-              <div className="flex gap-2 mb-1">
-                <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">Produtor:</span>
-                <span className="text-sm font-bold text-slate-900 uppercase">{budget.producer?.toUpperCase()}</span>
-              </div>
-            )}
-            {budget.client_name && (
-              <div className="flex gap-2">
-                <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">Empresa:</span>
-                <span className="text-sm font-bold text-slate-900 uppercase">{budget.client_name?.toUpperCase()}</span>
-              </div>
-            )}
-          </div>
-
-          {/* ── DESCRIPTION (if any) ── */}
-          {budget.description && (
-            <div className="mb-4 text-sm text-slate-600 italic">{budget.description}</div>
-          )}
-
-          {/* ── ITEMS TABLE ── */}
-          {budget.items?.length > 0 && (
-            <div className="mb-2">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="border-b-2 border-slate-800">
-                    <th className="text-left font-bold text-slate-800 py-2 pr-3">Item</th>
-                    <th className="text-center font-bold text-slate-800 py-2 px-3 w-16">Qtd</th>
-                    <th className="text-right font-bold text-slate-800 py-2 px-3 w-28">Preco.Uni</th>
-                    <th className="text-right font-bold text-slate-800 py-2 pl-3 w-28">Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {budget.items.map((item, i) => (
-                    <tr key={i} className="border-b border-slate-200">
-                      <td className="py-2 pr-3 text-slate-800 uppercase">{item.name}</td>
-                      <td className="py-2 px-3 text-slate-700 text-center">{item.quantity}</td>
-                      <td className="py-2 px-3 text-slate-700 text-right">
-                        R$ {(item.unit_price || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="py-2 pl-3 text-slate-800 text-right">
-                        R$ {((item.quantity || 0) * (item.unit_price || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* ── TOTALS ── */}
-          <div className="flex justify-end mt-3 mb-6">
-            <div className="w-64 space-y-1">
-              {budget.discount > 0 && (
-                <div className="flex justify-between text-sm text-red-600 pb-1">
-                  <span>Desconto:</span>
-                  <span>- R$ {Number(budget.discount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                </div>
-              )}
-              <div className="flex justify-between border-t-2 border-slate-800 pt-2">
-                <span className="font-semibold text-sm text-slate-800">{budget.total_label || "Sem Nota Total"}</span>
-                <span className="font-bold text-sm text-slate-900">R${(budget.total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-              </div>
-              {budget.total_with_margin > 0 && (
-                <div className="flex justify-between border-t border-slate-400 pt-1">
-                  <span className="font-semibold text-sm text-slate-800">{budget.total_with_margin_label || "Com Nota Total"}</span>
-                  <span className="font-bold text-sm text-slate-900">R${budget.total_with_margin.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                </div>
-              )}
-              {/* FIX #2 — usa o produtor do orçamento */}
-              {budget.producer && (
-                <div className="text-right pt-1">
-                  <span className="text-xs text-slate-500 italic">Elaborado por: {budget.producer}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* ── NOTES (budget-specific) ── */}
-          {budget.notes && (
-            <div className="mb-4 p-3 border border-slate-200 rounded text-sm text-slate-700 bg-slate-50">
-              <p className="font-semibold text-slate-700 mb-1 uppercase text-xs tracking-wide">Observações</p>
-              <p className="whitespace-pre-line">{budget.notes}</p>
-            </div>
-          )}
-
-          {/* ── ATENÇÃO / FOOTER NOTES (from settings) ── */}
-          {companySettings?.footer_notes && (
-            <div className="mb-6 pt-4 border-t border-slate-300">
-              <p className="text-sm font-bold text-red-600 mb-2">ATENÇÃO ! LEIA AS INSTRUÇÕES ABAIXO</p>
-              <p className="text-sm text-slate-800 whitespace-pre-line">{companySettings.footer_notes}</p>
-            </div>
-          )}
-
-          {/* ── THANK YOU FOOTER ── */}
-          <div className="mt-8 pt-4 border-t border-slate-200 text-center print-doc-thanks">
-            <p className="text-sm font-bold text-slate-800">AGRADECEMOS SUA PREFERÊNCIA!</p>
-            <p className="text-xs text-slate-500 mt-1">Caso você tenha alguma dúvida entre em contato conosco</p>
-          </div>
-
-        </div>
-      </div>
-
-      {/* Hidden new-layout print area */}
+      {/* Layout de orçamento — mesmo visual do PDF e da impressão */}
       <div
         id="budget-print-layout"
-        style={{ position: 'absolute', left: '-99999px', top: 0, width: '210mm' }}
+        style={{ width: '210mm', margin: '0 auto' }}
       >
         {budget && <BudgetPrintLayoutMultiPage budget={budget} onReady={() => setPrintReady(true)} />}
       </div>

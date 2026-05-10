@@ -6,7 +6,7 @@
  *
  * NOTE: Com o novo DownloadPDF.jsx (FIX #1), printElement ainda é usado para o
  * caminho de impressão via CSS (@media print) quando o usuário prefere o layout
- * visual do painel em vez do PDF gerado pelo @react-pdf/renderer.
+ * visual do painel.
  */
 export function usePrint() {
   /**
