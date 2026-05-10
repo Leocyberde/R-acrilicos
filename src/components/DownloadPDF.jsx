@@ -88,8 +88,11 @@ async function generatePDFBlob(elementId) {
 
   for (let i = 0; i < pageList.length; i++) {
     const pageEl    = pageList[i];
-    const contentH  = getContentHeight(pageEl);    // altura real sem espaço vazio
-    const elWidth   = pageEl.scrollWidth;
+
+    // Força largura em pixels (210mm ≈ 794px @96dpi) para evitar scrollWidth=0 em mobile
+    const rect     = pageEl.getBoundingClientRect();
+    const elWidth  = rect.width > 10 ? rect.width : 794;
+    const contentH = getContentHeight(pageEl);
 
     const canvas = await html2canvas(pageEl, {
       scale:       3,
@@ -98,8 +101,8 @@ async function generatePDFBlob(elementId) {
       backgroundColor: "#ffffff",
       logging:     false,
       width:       elWidth,
-      height:      contentH,          // captura só até o conteúdo real
-      windowWidth: elWidth,
+      height:      Math.max(contentH, 100),
+      windowWidth: Math.max(elWidth, 794),
     });
 
     const imgData      = canvas.toDataURL("image/jpeg", 0.95);

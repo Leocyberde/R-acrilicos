@@ -54,15 +54,17 @@ export default function BudgetDetail() {
   useEffect(() => {
     if (printReady && pendingPrint) {
       setPendingPrint(false);
-      toast.info('Preparando impressão...');
-      printDocument('budget', budget, companySettings).catch(() => toast.error('Erro ao preparar impressão'));
+      const tid = toast.loading('Gerando impressão...');
+                  try { await printDocument('budget', budget, companySettings); toast.dismiss(tid); }
+                  catch (e) { toast.dismiss(tid); toast.error('Erro ao imprimir'); } => toast.error('Erro ao preparar impressão'));
     }
   }, [printReady, pendingPrint]);
 
   const handlePrint = () => {
     if (printReady) {
-      toast.info('Preparando impressão...');
-      printDocument('budget', budget, companySettings).catch(() => toast.error('Erro ao preparar impressão'));
+      const tid = toast.loading('Gerando impressão...');
+                  try { await printDocument('budget', budget, companySettings); toast.dismiss(tid); }
+                  catch (e) { toast.dismiss(tid); toast.error('Erro ao imprimir'); } => toast.error('Erro ao preparar impressão'));
     } else {
       setPendingPrint(true);
       toast.info('Carregando layout...');

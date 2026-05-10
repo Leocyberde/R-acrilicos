@@ -184,8 +184,26 @@ export default function WorkOrderDetail() {
                   { key: "created_date", label: "Criado", format: (v) => new Date(v).toLocaleDateString("pt-BR") },
                   { key: "status", label: "Status" },
                 ]}
-                onPDF={() => downloadWorkOrderPDF(order, companySettings, `ordem-servico-${String(order.id ?? '')}.pdf`)}
-                onPrint={() => { toast.info('Preparando impressão...'); printDocument('workOrder', order, companySettings).catch(() => toast.error('Erro ao preparar impressão')); }}
+                onPDF={async () => {
+                  const tid = toast.loading('Gerando PDF...');
+                  try {
+                    await downloadWorkOrderPDF(order, companySettings, `ordem-servico-${String(order.id ?? '')}.pdf`);
+                    toast.dismiss(tid);
+                  } catch (e) {
+                    toast.dismiss(tid);
+                    toast.error('Erro ao gerar PDF: ' + (e?.message || 'tente novamente'));
+                  }
+                }}
+                onPrint={async () => {
+                  const tid = toast.loading('Gerando impressão...');
+                  try {
+                    await printDocument('workOrder', order, companySettings);
+                    toast.dismiss(tid);
+                  } catch (e) {
+                    toast.dismiss(tid);
+                    toast.error('Erro ao imprimir: ' + (e?.message || 'tente novamente'));
+                  }
+                }}
               />
               <Button
                 variant="outline"
@@ -240,10 +258,18 @@ export default function WorkOrderDetail() {
           )}
           {isClient && (
             <>
-              <Button variant="outline" size="sm" onClick={() => { toast.info('Preparando impressão...'); printDocument('workOrder', order, companySettings).catch(() => toast.error('Erro ao preparar impressão')); }}>
+              <Button variant="outline" size="sm" onClick={async () => {
+                const tid = toast.loading('Gerando impressão...');
+                try { await printDocument('workOrder', order, companySettings); toast.dismiss(tid); }
+                catch (e) { toast.dismiss(tid); toast.error('Erro ao imprimir'); }
+              }}>
                 <Printer className="h-3.5 w-3.5 mr-1.5" /> Imprimir
               </Button>
-              <Button variant="outline" size="sm" onClick={() => downloadWorkOrderPDF(order, companySettings, `ordem-servico-${String(order.id ?? '')}.pdf`).catch(() => toast.error('Erro ao gerar PDF'))}>
+              <Button variant="outline" size="sm" onClick={async () => {
+                const tid = toast.loading('Gerando PDF...');
+                try { await downloadWorkOrderPDF(order, companySettings, `ordem-servico-${String(order.id ?? '')}.pdf`); toast.dismiss(tid); }
+                catch (e) { toast.dismiss(tid); toast.error('Erro ao gerar PDF'); }
+              }}>
                 <Download className="h-3.5 w-3.5 mr-1.5" /> PDF
               </Button>
             </>
