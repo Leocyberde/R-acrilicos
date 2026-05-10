@@ -168,9 +168,16 @@ export default function ReceiptDetail() {
         </div>
         <div className="flex flex-wrap gap-2 items-center">
           <StatusBadge status={receipt.status || "em_aberto"} />
-          <Button variant="outline" size="sm" onClick={() => { const tid = toast.loading('Gerando impressão...');
-                  try { await printDocument('receipt', receipt, companySettings); toast.dismiss(tid); }
-                  catch (e) { toast.dismiss(tid); toast.error('Erro ao imprimir'); } => toast.error('Erro ao preparar impressão')); }}>
+          <Button variant="outline" size="sm" onClick={async () => {
+                  const tid = toast.loading('Gerando impressão...');
+                  try {
+                    await printDocument('receipt', receipt, companySettings);
+                    toast.dismiss(tid);
+                  } catch (e) {
+                    toast.dismiss(tid);
+                    toast.error('Erro ao imprimir');
+                  }
+                }}>
             <Printer className="h-3.5 w-3.5 mr-1.5" /> Imprimir
           </Button>
           <Button variant="outline" size="sm" onClick={async () => {
