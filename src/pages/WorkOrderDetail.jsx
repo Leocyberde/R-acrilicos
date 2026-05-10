@@ -274,6 +274,7 @@ export default function WorkOrderDetail() {
       <Tabs defaultValue="details" className="no-print">
         <TabsList>
           <TabsTrigger value="details">Detalhes</TabsTrigger>
+          <TabsTrigger value="preview">Visualização</TabsTrigger>
           <TabsTrigger value="files">Arquivos ({order?.attachments?.length || 0})</TabsTrigger>
         </TabsList>
 
@@ -477,153 +478,15 @@ export default function WorkOrderDetail() {
         </TabsContent>
       </Tabs>
 
-      {/* Print/PDF version - budget-style layout */}
-      <div
-        id="order-print"
-        className="bg-white print:block"
-        style={{
-          fontFamily: '"Segoe UI", Arial, sans-serif',
-          color: '#1a1a1a',
-          position: 'absolute',
-          left: '-99999px',
-          top: 0,
-          width: '794px',
-        }}
-      >
-        <style>{`
-          @media print {
-            #order-print {
-              position: static !important;
-              left: auto !important;
-              width: auto !important;
-            }
-          }
-        `}</style>
-        <div className="p-8 sm:p-10 print-doc">
 
-          {/* ── COMPANY HEADER ── */}
-          <div className="flex items-start justify-between pb-4 mb-4 border-b-2 border-slate-800">
-            <div className="flex-1">
-              {companySettings?.company_logo ? (
-                <img src={companySettings.company_logo} alt="Logo" className="h-24 mb-2 object-contain" />
-              ) : (
-                <p className="text-xl font-bold text-slate-900">{companySettings?.company_name || "Minha Empresa"}</p>
-              )}
-              {companySettings?.company_logo && companySettings?.company_name && (
-                <p className="text-xs font-semibold text-slate-600">{companySettings.company_name}</p>
-              )}
-              <div className="mt-1 space-y-0.5">
-                {companySettings?.company_phone && (
-                  <p className="text-xs text-slate-700">{companySettings.company_phone}</p>
-                )}
-                {companySettings?.company_email && (
-                  <p className="text-xs text-slate-700">{companySettings.company_email}</p>
-                )}
-                {companySettings?.company_email2 && (
-                  <p className="text-xs text-slate-700">{companySettings.company_email2}</p>
-                )}
-                {companySettings?.company_address && (
-                  <p className="text-xs text-slate-700">{companySettings.company_address}</p>
-                )}
-              </div>
-            </div>
-            <div className="text-right ml-6">
-              <p className="text-3xl font-bold text-slate-900 tracking-tight">Ordem de Serviço</p>
-              <p className="text-sm text-slate-600 mt-1">
-                Nº {String(order?.id ?? '')}
-              </p>
-              <p className="text-sm text-slate-600 mt-1">
-                Data: {order?.created_date ? new Date(order.created_date).toLocaleDateString("pt-BR") : ''}
-              </p>
-              {order?.delivery_date && (
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Entrega: {formatDateBR(order.delivery_date)}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* ── JOB / PRODUTOR / EMPRESA ── */}
-          <div className="mb-5 pb-4 border-b border-slate-300">
-            {order?.job && (
-              <div className="flex gap-2 mb-1">
-                <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">JOB:</span>
-                <span className="text-sm text-slate-900">{order.job}</span>
-              </div>
-            )}
-            {order?.producer && (
-              <div className="flex gap-2 mb-1">
-                <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">Produtor:</span>
-                <span className="text-sm font-bold text-slate-900">{order.producer}</span>
-              </div>
-            )}
-            {order?.client_name && (
-              <div className="flex gap-2 mb-1">
-                <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">Empresa:</span>
-                <span className="text-sm font-bold text-slate-900">{order.client_name}</span>
-              </div>
-            )}
-            {order?.client_phone && (
-              <div className="flex gap-2">
-                <span className="text-sm font-semibold text-slate-700 w-24 shrink-0">Telefone:</span>
-                <span className="text-sm text-slate-900">{order.client_phone}</span>
-              </div>
-            )}
-          </div>
-
-          {/* ── DESCRIPTION ── */}
-          {order?.description && (
-            <div className="mb-4 text-sm text-slate-600 italic">{order.description}</div>
-          )}
-
-          {/* ── ITEMS TABLE (without prices) ── */}
-          {order?.items?.length > 0 && (
-            <div className="mb-2">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="border-b-2 border-slate-800">
-                    <th className="text-left font-bold text-slate-800 py-2 pr-3">Item</th>
-                    <th className="text-center font-bold text-slate-800 py-2 px-3 w-24">Quantidade</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {order.items.map((item, i) => (
-                    <tr key={i} className="border-b border-slate-200">
-                      <td className="py-2 pr-3 text-slate-800">{item.name}</td>
-                      <td className="py-2 px-3 text-slate-700 text-center">{item.quantity}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          <div className="text-right mt-3 mb-6">
-            <span className="text-xs text-slate-500 italic">Elaborado por: Gleissa</span>
-          </div>
-
-          {/* ── NOTES ── */}
-          {order?.notes && (
-            <div className="mb-4 p-3 border border-slate-200 rounded text-sm text-slate-700 bg-slate-50">
-              <p className="font-semibold text-slate-700 mb-1 uppercase text-xs tracking-wide">Observações</p>
-              <p className="whitespace-pre-line">{order.notes}</p>
-            </div>
-          )}
-
-          {/* ── THANK YOU FOOTER ── */}
-          <div className="mt-8 pt-4 border-t border-slate-200 text-center">
-            <p className="text-xs text-slate-500">Caso você tenha alguma dúvida entre em contato conosco</p>
-            <p className="text-sm font-bold text-slate-800 mt-1">AGRADECEMOS SUA PREFERÊNCIA!</p>
-          </div>
+      {/* Aba de Visualização — mesmo layout do PDF */}
+      <div style={{ background: "#e5e7eb", padding: "24px 0", borderRadius: "8px", overflowX: "auto", marginTop: "24px" }}>
+        <div
+          id="workorder-print-layout"
+          style={{ width: "210mm", margin: "0 auto", boxShadow: "0 2px 16px rgba(0,0,0,0.18)" }}
+        >
+          {order && <WorkOrderPrintLayoutMultiPage workOrder={order} />}
         </div>
-      </div>
-
-      {/* Hidden new-layout print area */}
-      <div
-        id="workorder-print-layout"
-        style={{ position: 'absolute', left: '-99999px', top: 0, width: '210mm' }}
-      >
-        {order && <WorkOrderPrintLayoutMultiPage workOrder={order} />}
       </div>
     </div>
   );

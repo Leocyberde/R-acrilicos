@@ -1,25 +1,18 @@
 /**
  * DownloadPDF.jsx
  *
- * Gera PDFs e impressões capturando o layout HTML já renderizado
- * (BudgetPrintLayoutMultiPage, WorkOrderPrintLayoutMultiPage, ReceiptPrintLayoutMultiPage),
- * preservando 100% do visual original configurado pelo usuário.
+ * - Download PDF  → html2canvas (scale 3x) → jsPDF → salva arquivo
+ * - Imprimir      → mesmo PDF gerado → abre blob URL no browser para impressão
+ *                   (mesmo visual do download, sem clonar HTML, sem flutuação)
  *
- * Estratégia:
- *  - Download PDF  → html2canvas (alta resolução) → jsPDF
- *  - Impressão     → iframe oculto com o HTML clonado (FIX #7: evita window.open bloqueado)
- *
- * NÃO usa @react-pdf/renderer — o layout visual vem do componente HTML existente.
- *
- * DEPENDÊNCIAS (já existentes no projeto):
- *   npm install html2canvas jspdf
+ * FIX página em branco: mede altura real do conteúdo com getBoundingClientRect
+ * em vez de scrollHeight, evitando capturar espaço vazio no final.
  */
 
-// ─── Helpers internos ────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
- * FIX #5 — Converte todas as <img> do elemento para base64
- * para garantir que logos externas apareçam no canvas e no iframe de impressão.
+ * Converte <img> para base64 para garantir que logos apareçam no canvas.
  */
 async function resolveImages(element) {
   const imgs = Array.from(element.querySelectorAll("img"));
@@ -27,71 +20,89 @@ async function resolveImages(element) {
     imgs.map(
       (img) =>
         new Promise((resolve) => {
-          if (!img.src || img.src.startsWith("data:")) {
-            resolve();
-            return;
-          }
+          if (!img.src || img.src.startsWith("data:")) { resolve(); return; }
           const canvas = document.createElement("canvas");
-          const ctx = canvas.getContext("2d");
-          const proxy = new Image();
+          const ctx    = canvas.getContext("2d");
+          const proxy  = new Image();
           proxy.crossOrigin = "anonymous";
           proxy.onload = () => {
             canvas.width  = proxy.naturalWidth;
             canvas.height = proxy.naturalHeight;
             ctx.drawImage(proxy, 0, 0);
-            try {
-              img.src = canvas.toDataURL("image/png");
-            } catch {
-              // CORS bloqueou — mantém src original
-            }
+            try { img.src = canvas.toDataURL("image/png"); } catch { /* CORS — mantém src */ }
             resolve();
           };
           proxy.onerror = () => resolve();
-          proxy.src = img.src + (img.src.includes("?") ? "&" : "?") + "_nocache=" + Date.now();
+          proxy.src = img.src + (img.src.includes("?") ? "&" : "?") + "_t=" + Date.now();
         })
     )
   );
 }
 
-// ─── Download PDF ─────────────────────────────────────────────────────────────
+/**
+ * Retorna a altura real do conteúdo renderizado de um elemento,
+ * sem espaço vazio abaixo (evita página em branco no PDF).
+ */
+function getContentHeight(el) {
+  // Tenta medir o último filho visível para pegar a altura real do conteúdo
+  const children = Array.from(el.children).filter(
+    (c) => c.offsetHeight > 0 && getComputedStyle(c).display !== "none"
+  );
+  if (children.length === 0) return el.scrollHeight;
+
+  const last     = children[children.length - 1];
+  const elRect   = el.getBoundingClientRect();
+  const lastRect = last.getBoundingClientRect();
+  const computed = getComputedStyle(el);
+  const padBottom = parseFloat(computed.paddingBottom) || 0;
+
+  const contentH = lastRect.bottom - elRect.top + padBottom;
+  // Fallback para scrollHeight se a medição for menor (ex: position:absolute)
+  return Math.min(Math.max(contentH, 100), el.scrollHeight);
+}
+
+// ─── Geração de PDF (núcleo compartilhado) ───────────────────────────────────
 
 /**
- * Captura o elemento HTML do layout e gera um PDF com alta resolução.
+ * Captura o layout HTML e retorna um blob PDF.
+ * Usado tanto pelo download quanto pela impressão.
  */
-export async function downloadPDF(elementId, filename = "documento.pdf") {
+async function generatePDFBlob(elementId) {
   const rootEl = document.getElementById(elementId);
-  if (!rootEl) {
-    console.error(`[DownloadPDF] Elemento #${elementId} não encontrado.`);
-    return;
-  }
+  if (!rootEl) throw new Error(`[DownloadPDF] Elemento #${elementId} não encontrado.`);
 
   await resolveImages(rootEl);
 
+  // Seleciona páginas individuais se existirem, senão usa o container todo
   const pages = rootEl.querySelectorAll(".budget-page, .workorder-page, .receipt-page");
-  const pageList = pages.length > 0 ? Array.from(pages) : [rootEl.querySelector(".pages-container") || rootEl];
+  const pageList = pages.length > 0
+    ? Array.from(pages)
+    : [rootEl.querySelector(".pages-container") || rootEl];
 
-  const { default: jsPDF }      = await import("jspdf");
+  const { default: jsPDF }       = await import("jspdf");
   const { default: html2canvas } = await import("html2canvas");
 
-  const doc  = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  const doc   = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
   const pageW = 210;
   const pageH = 297;
 
   for (let i = 0; i < pageList.length; i++) {
-    const pageEl = pageList[i];
+    const pageEl    = pageList[i];
+    const contentH  = getContentHeight(pageEl);    // altura real sem espaço vazio
+    const elWidth   = pageEl.scrollWidth;
 
     const canvas = await html2canvas(pageEl, {
-      scale: 3,
-      useCORS: true,
-      allowTaint: false,
+      scale:       3,
+      useCORS:     true,
+      allowTaint:  false,
       backgroundColor: "#ffffff",
-      logging: false,
-      width:  pageEl.scrollWidth,
-      height: pageEl.scrollHeight,
-      windowWidth: pageEl.scrollWidth,
+      logging:     false,
+      width:       elWidth,
+      height:      contentH,          // captura só até o conteúdo real
+      windowWidth: elWidth,
     });
 
-    const imgData     = canvas.toDataURL("image/jpeg", 0.95);
+    const imgData      = canvas.toDataURL("image/jpeg", 0.95);
     const canvasAspect = canvas.height / canvas.width;
     const imgH         = pageW * canvasAspect;
 
@@ -99,7 +110,7 @@ export async function downloadPDF(elementId, filename = "documento.pdf") {
       if (i > 0) doc.addPage();
       doc.addImage(imgData, "JPEG", 0, 0, pageW, imgH);
     } else {
-      // FIX #9 — Math.ceil garante que a última sub-página não seja cortada
+      // Conteúdo maior que uma página — divide em sub-páginas
       const totalSubPages = Math.ceil(imgH / pageH);
       for (let sp = 0; sp < totalSubPages; sp++) {
         if (i > 0 || sp > 0) doc.addPage();
@@ -108,7 +119,21 @@ export async function downloadPDF(elementId, filename = "documento.pdf") {
     }
   }
 
-  doc.save(filename);
+  return doc.output("blob");
+}
+
+// ─── Download ─────────────────────────────────────────────────────────────────
+
+export async function downloadPDF(elementId, filename = "documento.pdf") {
+  const blob = await generatePDFBlob(elementId);
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 export async function downloadBudgetPDF(budget, _company, filename) {
@@ -123,83 +148,37 @@ export async function downloadReceiptPDF(receipt, _company, filename) {
   return downloadPDF("receipt-print-layout", filename || `recibo-${receipt?.id || "novo"}.pdf`);
 }
 
-// ─── Impressão ────────────────────────────────────────────────────────────────
+// ─── Impressão (mesmo PDF do download, abre para imprimir) ───────────────────
 
 /**
- * FIX #7 — Impressão via iframe oculto (evita window.open bloqueado como popup).
- * FIX #5 — Imagens convertidas para base64 antes de clonar.
+ * Gera o mesmo PDF do download e abre o diálogo de impressão do browser.
+ * Garante visual idêntico entre "Imprimir" e "Baixar PDF".
  */
 export async function printElement(elementId) {
-  const rootEl = document.getElementById(elementId);
-  if (!rootEl) {
-    console.error(`[DownloadPDF] Elemento #${elementId} não encontrado.`);
-    return;
-  }
+  const blob = await generatePDFBlob(elementId);
+  const url  = URL.createObjectURL(blob);
 
-  await resolveImages(rootEl);
-
-  const clone = rootEl.cloneNode(true);
-  // FIX #7 — remove botões de ação que não devem aparecer na impressão
-  clone.querySelectorAll("button, [data-no-print]").forEach((el) => el.remove());
-
-  const printStyles = `
-    <style>
-      @page { size: A4; margin: 0; }
-      * { box-sizing: border-box; }
-      body { margin: 0; padding: 0; background: #fff; }
-      img { max-width: 100%; }
-      @media print {
-        body {
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        .pages-container { display: block !important; }
-        .budget-page, .workorder-page, .receipt-page {
-          page-break-after: always;
-          break-after: page;
-        }
-        .budget-page:last-child,
-        .workorder-page:last-child,
-        .receipt-page:last-child {
-          page-break-after: avoid;
-          break-after: auto;
-        }
-      }
-    </style>
-  `;
-
-  const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8">${printStyles}</head><body>${clone.innerHTML}</body></html>`;
-
+  // Abre o PDF em iframe oculto e dispara impressão
   const iframe = document.createElement("iframe");
   iframe.style.cssText = "position:fixed;width:0;height:0;border:none;opacity:0;pointer-events:none;";
   document.body.appendChild(iframe);
+  iframe.src = url;
 
-  const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-  iframeDoc.open();
-  iframeDoc.write(htmlContent);
-  iframeDoc.close();
+  iframe.onload = () => {
+    try {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    } catch {
+      // Fallback: abre o PDF em nova aba (o browser oferece impressão nativo)
+      window.open(url, "_blank");
+    }
+  };
 
-  await new Promise((resolve) => {
-    const imgs = Array.from(iframeDoc.querySelectorAll("img"));
-    if (imgs.length === 0) { setTimeout(resolve, 300); return; }
-    let loaded = 0;
-    const done = () => { if (++loaded >= imgs.length) resolve(); };
-    imgs.forEach((img) => { if (img.complete) done(); else { img.onload = done; img.onerror = done; } });
-    setTimeout(resolve, 3000);
-  });
-
-  try {
-    iframe.contentWindow.focus();
-    iframe.contentWindow.print();
-  } catch {
-    const url = URL.createObjectURL(new Blob([htmlContent], { type: "text/html" }));
-    window.open(url, "_blank");
-    setTimeout(() => URL.revokeObjectURL(url), 30_000);
-  }
-
+  // Limpa após 3 minutos
   setTimeout(() => {
     if (document.body.contains(iframe)) document.body.removeChild(iframe);
-  }, 120_000);
+    URL.revokeObjectURL(url);
+  }, 180_000);
 }
 
 export async function printDocument(type, _data, _company) {
@@ -213,7 +192,7 @@ export async function printDocument(type, _data, _company) {
   return printElement(id);
 }
 
-// Alias legado mantido para compatibilidade
+// Alias legado
 export async function printFromCanvas(elementId) {
   return printElement(elementId);
 }

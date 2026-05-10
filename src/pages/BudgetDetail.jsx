@@ -410,11 +410,14 @@ export default function BudgetDetail() {
       )}
 
       {/* Layout de orçamento — mesmo visual do PDF e da impressão */}
-      <div
-        id="budget-print-layout"
-        style={{ width: '210mm', margin: '0 auto' }}
-      >
-        {budget && <BudgetPrintLayoutMultiPage budget={budget} onReady={() => setPrintReady(true)} />}
+      {/* Wrapper de exibição: fundo cinza, centralizado, com sombra de folha A4 */}
+      <div style={{ background: "#e5e7eb", padding: "24px 0", borderRadius: "8px", overflowX: "auto" }}>
+        <div
+          id="budget-print-layout"
+          style={{ width: "210mm", margin: "0 auto", boxShadow: "0 2px 16px rgba(0,0,0,0.18)" }}
+        >
+          {budget && <BudgetPrintLayoutMultiPage budget={budget} onReady={() => setPrintReady(true)} />}
+        </div>
       </div>
     </div>
   );
