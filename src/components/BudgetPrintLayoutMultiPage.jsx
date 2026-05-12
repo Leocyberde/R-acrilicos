@@ -131,9 +131,8 @@ export default function BudgetPrintLayoutMultiPage({ budget, onReady }) {
               )}
               {c.show_email !== false && (settings?.company_email || settings?.company_email2) && (
                 <div style={{ fontSize: "11px", color: "#1565c0", marginTop: "4px" }}>
-                  {settings.company_email}
-                  {settings.company_email && settings.company_email2 && " | "}
-                  {settings.company_email2}
+                  {settings.company_email && <div>{settings.company_email}</div>}
+                  {settings.company_email2 && <div>{settings.company_email2}</div>}
                 </div>
               )}
               {c.show_address_company !== false && settings?.company_address && (
