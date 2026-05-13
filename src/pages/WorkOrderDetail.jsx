@@ -298,7 +298,6 @@ export default function WorkOrderDetail() {
       <Tabs defaultValue="details" className="no-print">
         <TabsList>
           <TabsTrigger value="details">Detalhes</TabsTrigger>
-          <TabsTrigger value="preview">Visualização</TabsTrigger>
           <TabsTrigger value="files">Arquivos ({order?.attachments?.length || 0})</TabsTrigger>
         </TabsList>
 
@@ -502,7 +501,12 @@ export default function WorkOrderDetail() {
         </TabsContent>
       </Tabs>
 
-
+      {/* Layout oculto — necessário para captura de PDF/impressão */}
+      <div style={{ position: "absolute", left: "-9999px", top: 0, width: "210mm", pointerEvents: "none", opacity: 0 }}>
+        <div id="workorder-print-layout">
+          {order && <WorkOrderPrintLayoutMultiPage workOrder={order} />}
+        </div>
+      </div>
     </div>
   );
 }
