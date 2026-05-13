@@ -503,17 +503,6 @@ export default function WorkOrderDetail() {
       </Tabs>
 
 
-      {/* Visualização — fundo cinza, exibe o layout sempre montado no DOM */}
-      <div style={{ background: "#e5e7eb", padding: "24px 0", borderRadius: "8px", overflowX: "auto", marginTop: "24px" }}>
-        <div
-          style={{ width: "210mm", margin: "0 auto", boxShadow: "0 2px 16px rgba(0,0,0,0.18)" }}
-        >
-          {/* id fora do wrapper visual para o html2canvas capturar sem sombra */}
-          <div id="workorder-print-layout">
-            {order && <WorkOrderPrintLayoutMultiPage workOrder={order} />}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
