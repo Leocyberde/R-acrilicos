@@ -131,6 +131,7 @@ export default function WorkOrderPrintLayoutMultiPage({ workOrder }) {
               {c.show_delivery_date !== false && deliveryDate && (
                 <div style={{ fontSize: "12px", marginTop: "2px" }}>Entrega: {deliveryDate}</div>
               )}
+              <div style={{ fontSize: "12px", marginTop: "4px", fontWeight: "bold" }}>Nº {String(workOrder.id || "")}</div>
             </div>
           </div>
 

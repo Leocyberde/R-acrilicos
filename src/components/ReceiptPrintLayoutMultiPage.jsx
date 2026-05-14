@@ -126,6 +126,7 @@ export default function ReceiptPrintLayoutMultiPage({ receipt }) {
                 {c.title_text || "Recibo"}
               </div>
               <div style={{ fontSize: "12px", marginTop: "4px" }}>Data: {emissionDate}</div>
+              <div style={{ fontSize: "12px", marginTop: "4px", fontWeight: "bold" }}>Nº {String(receipt.id || "")}</div>
             </div>
           </div>
 
