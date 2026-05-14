@@ -12,18 +12,18 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { FileText, AlertCircle, CheckCircle, XCircle, Printer, Download } from "lucide-react";
+import { FileText, AlertCircle, CheckCircle, XCircle, Printer, Download, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { downloadBudgetPDF, printDocument } from "@/components/DownloadPDF";
 
 const statusConfig = {
-  pendente: { badge: "bg-yellow-100 text-yellow-800 border-yellow-200", label: "Aguardando resposta" },
-  aprovado: { badge: "bg-green-100 text-green-800 border-green-200", label: "Aprovado" },
-  reprovado: { badge: "bg-red-100 text-red-800 border-red-200", label: "Reprovado" },
-  aceito_cliente: { badge: "bg-emerald-100 text-emerald-800 border-emerald-200", label: "Aceito por você" },
-  recusado_cliente: { badge: "bg-orange-100 text-orange-800 border-orange-200", label: "Recusado por você" },
+  pendente:        { badge: "bg-yellow-100 text-yellow-800 border-yellow-200",   label: "Aguardando resposta" },
+  aprovado:        { badge: "bg-green-100 text-green-800 border-green-200",      label: "Aprovado" },
+  reprovado:       { badge: "bg-red-100 text-red-800 border-red-200",            label: "Reprovado" },
+  aceito_cliente:  { badge: "bg-emerald-100 text-emerald-800 border-emerald-200", label: "Aceito por você" },
+  recusado_cliente:{ badge: "bg-orange-100 text-orange-800 border-orange-200",   label: "Recusado por você" },
 };
 
 function formatBRL(value) {
@@ -33,22 +33,18 @@ function formatBRL(value) {
 function BudgetDocument({ budget, settings, onAccept, onRefuse, submitting }) {
   const cfg = statusConfig[budget.status] || { badge: "bg-slate-100 text-slate-700 border-slate-200", label: budget.status };
   const canRespond = budget.status === "pendente" || budget.status === "aprovado";
-  const docId = `client-budget-doc-${budget.id}`;
 
-  // FIX #1/#7 — usa os dados do orçamento diretamente em vez de capturar o HTML da tela,
-  // evitando que botões de ação (Aceitar/Recusar) apareçam no PDF/impressão.
   const handlePrint = () => {
-    toast.info('Preparando impressão...');
-    printDocument('budget', budget, settings).catch(() => toast.error('Erro ao preparar impressão'));
+    toast.info("Preparando impressão...");
+    printDocument("budget", budget, settings).catch(() => toast.error("Erro ao preparar impressão"));
   };
   const handlePDF = () => {
-    downloadBudgetPDF(budget, settings, `orcamento-${budget.id}.pdf`).catch(() => toast.error('Erro ao gerar PDF'));
+    downloadBudgetPDF(budget, settings, `orcamento-${budget.id}.pdf`).catch(() => toast.error("Erro ao gerar PDF"));
   };
 
   return (
-    <div id={docId} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
-      {/* Document header */}
-      <div className="p-6 sm:p-8 border-b-2 border-slate-900">
+    <div className="bg-white rounded-xl overflow-hidden">
+      <div className="p-6 border-b-2 border-slate-900">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             {settings?.company_logo ? (
@@ -58,12 +54,8 @@ function BudgetDocument({ budget, settings, onAccept, onRefuse, submitting }) {
                 <FileText className="h-7 w-7 text-indigo-600" />
               </div>
             )}
-            {settings?.company_name && (
-              <p className="text-sm font-bold text-slate-800">{settings.company_name}</p>
-            )}
-            {settings?.company_address && (
-              <p className="text-xs text-slate-500 mt-0.5">{settings.company_address}</p>
-            )}
+            {settings?.company_name && <p className="text-sm font-bold text-slate-800">{settings.company_name}</p>}
+            {settings?.company_address && <p className="text-xs text-slate-500 mt-0.5">{settings.company_address}</p>}
             {(settings?.company_phone || settings?.company_email) && (
               <p className="text-xs text-slate-500">
                 {settings.company_phone}
@@ -80,8 +72,7 @@ function BudgetDocument({ budget, settings, onAccept, onRefuse, submitting }) {
         </div>
       </div>
 
-      <div className="p-6 sm:p-8 space-y-5">
-        {/* Emission date */}
+      <div className="p-6 space-y-5">
         {budget.emission_date && (
           <div className="pb-4 border-b border-slate-100">
             <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">Data de Emissão</p>
@@ -91,7 +82,6 @@ function BudgetDocument({ budget, settings, onAccept, onRefuse, submitting }) {
           </div>
         )}
 
-        {/* Client details grid */}
         <div className="pb-4 border-b border-slate-100 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
@@ -141,7 +131,6 @@ function BudgetDocument({ budget, settings, onAccept, onRefuse, submitting }) {
           </div>
         </div>
 
-        {/* Description */}
         {budget.description && (
           <div className="pb-4 border-b border-slate-100">
             <p className="text-xs text-slate-400 uppercase tracking-wider font-medium mb-1">Descrição</p>
@@ -149,7 +138,6 @@ function BudgetDocument({ budget, settings, onAccept, onRefuse, submitting }) {
           </div>
         )}
 
-        {/* Items table */}
         {budget.items?.length > 0 && (
           <div className="pb-4 border-b border-slate-100">
             <table className="w-full">
@@ -177,8 +165,6 @@ function BudgetDocument({ budget, settings, onAccept, onRefuse, submitting }) {
                 })}
               </tbody>
             </table>
-
-            {/* Totals */}
             <div className="mt-4 space-y-1.5">
               {budget.subtotal > 0 && (
                 <div className="flex justify-between text-sm text-slate-600">
@@ -206,7 +192,6 @@ function BudgetDocument({ budget, settings, onAccept, onRefuse, submitting }) {
           </div>
         )}
 
-        {/* Notes */}
         {budget.notes && (
           <div className="pb-4 border-b border-slate-100">
             <p className="text-xs text-slate-400 uppercase tracking-wider font-medium mb-1">Observações</p>
@@ -214,7 +199,6 @@ function BudgetDocument({ budget, settings, onAccept, onRefuse, submitting }) {
           </div>
         )}
 
-        {/* Counter-proposal sent info */}
         {budget.status === "recusado_cliente" && budget.client_counter_value && (
           <div className="rounded-lg bg-orange-50 border border-orange-200 p-4">
             <p className="text-xs font-semibold text-orange-700 mb-1">Sua contraproposta enviada</p>
@@ -225,7 +209,6 @@ function BudgetDocument({ budget, settings, onAccept, onRefuse, submitting }) {
           </div>
         )}
 
-        {/* Action buttons */}
         {canRespond && (
           <div className="flex flex-wrap gap-3 pt-2">
             <Button
@@ -248,7 +231,6 @@ function BudgetDocument({ budget, settings, onAccept, onRefuse, submitting }) {
           </div>
         )}
 
-        {/* Print / PDF */}
         <div className="flex gap-2 pt-2 border-t border-slate-100">
           <Button variant="outline" size="sm" onClick={handlePrint} className="text-xs">
             <Printer className="h-3.5 w-3.5 mr-1.5" />
@@ -268,6 +250,7 @@ export default function ClientBudgets() {
   const [budgets, setBudgets] = useState([]);
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null);
   const [refusing, setRefusing] = useState(null);
   const [counterValue, setCounterValue] = useState("");
   const [counterNotes, setCounterNotes] = useState("");
@@ -275,7 +258,6 @@ export default function ClientBudgets() {
 
   useEffect(() => {
     const load = async () => {
-      // FIX #4 — busca settings e usuário em paralelo; settings usa cache de sessão via localClient
       const [currentUser, settingsData] = await Promise.all([
         api.auth.me(),
         api.entities.Settings.list(),
@@ -298,7 +280,9 @@ export default function ClientBudgets() {
         status: "aceito_cliente",
         client_response_date: new Date().toISOString(),
       });
-      setBudgets(prev => prev.map(b => b.id === budget.id ? { ...b, status: "aceito_cliente" } : b));
+      const updated = { ...budget, status: "aceito_cliente" };
+      setBudgets(prev => prev.map(b => b.id === budget.id ? updated : b));
+      setSelected(updated);
       toast.success("Orçamento aceito com sucesso!");
     } catch {
       toast.error("Erro ao aceitar orçamento.");
@@ -326,13 +310,14 @@ export default function ClientBudgets() {
         client_counter_notes: counterNotes,
         client_response_date: new Date().toISOString(),
       });
-      setBudgets(prev =>
-        prev.map(b =>
-          b.id === refusing.id
-            ? { ...b, status: "recusado_cliente", client_counter_value: numericValue, client_counter_notes: counterNotes }
-            : b
-        )
-      );
+      const updated = {
+        ...refusing,
+        status: "recusado_cliente",
+        client_counter_value: numericValue,
+        client_counter_notes: counterNotes,
+      };
+      setBudgets(prev => prev.map(b => b.id === refusing.id ? updated : b));
+      if (selected?.id === refusing.id) setSelected(updated);
       toast.success("Resposta enviada com sucesso!");
       setRefusing(null);
     } catch {
@@ -354,8 +339,8 @@ export default function ClientBudgets() {
   const recusados = budgets.filter(b => b.status === "recusado_cliente" || b.status === "reprovado").length;
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="mb-8 flex items-center gap-3">
+    <div className="max-w-5xl mx-auto">
+      <div className="mb-6 flex items-center gap-3">
         <div className="h-10 w-10 rounded-xl bg-indigo-100 flex items-center justify-center">
           <FileText className="h-5 w-5 text-indigo-600" />
         </div>
@@ -366,7 +351,7 @@ export default function ClientBudgets() {
       </div>
 
       {budgets.length > 0 && (
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
             <div className="text-2xl font-bold text-amber-600">{pendentes}</div>
             <div className="text-xs text-slate-500 mt-1">Aguardando resposta</div>
@@ -389,19 +374,83 @@ export default function ClientBudgets() {
           <p className="text-slate-400 text-sm mt-1">Quando um orçamento for enviado para você, ele aparecerá aqui.</p>
         </div>
       ) : (
-        <div>
-          {budgets.map(budget => (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50">
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Nº</th>
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Job</th>
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Produtor</th>
+                  <th className="text-right text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Total</th>
+                  <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Status</th>
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Emissão</th>
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Validade</th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {budgets.map(budget => {
+                  const cfg = statusConfig[budget.status] || { badge: "bg-slate-100 text-slate-700 border-slate-200", label: budget.status };
+                  return (
+                    <tr
+                      key={budget.id}
+                      className="hover:bg-slate-50 cursor-pointer transition-colors"
+                      onClick={() => setSelected(budget)}
+                    >
+                      <td className="px-4 py-3 text-sm text-slate-500">#{budget.id}</td>
+                      <td className="px-4 py-3">
+                        <p className="text-sm font-semibold text-slate-800">{budget.job || "—"}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="text-sm text-slate-600 truncate max-w-[140px]">{budget.producer || "—"}</p>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className="text-sm font-semibold text-slate-800">
+                          R$ {formatBRL(budget.total_with_margin || budget.total)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Badge className={`text-xs border ${cfg.badge}`}>{cfg.label}</Badge>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-600">
+                        {budget.emission_date
+                          ? new Date(budget.emission_date).toLocaleDateString("pt-BR")
+                          : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-600">
+                        {budget.validity_date
+                          ? String(budget.validity_date).split("T")[0].split("-").reverse().join("/")
+                          : "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Button variant="ghost" size="sm" className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Document detail dialog */}
+      <Dialog open={!!selected} onOpenChange={open => !open && setSelected(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
+          {selected && (
             <BudgetDocument
-              key={budget.id}
-              budget={budget}
+              budget={selected}
               settings={settings}
               onAccept={handleAccept}
               onRefuse={openRefuseDialog}
               submitting={submitting}
             />
-          ))}
-        </div>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Counter-proposal dialog */}
       <Dialog open={!!refusing} onOpenChange={open => !open && setRefusing(null)}>
@@ -434,7 +483,10 @@ export default function ClientBudgets() {
             </div>
             {refusing && (
               <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 text-xs text-slate-500">
-                Valor atual: <span className="font-semibold text-slate-700">R$ {formatBRL(refusing.total_with_margin || refusing.total)}</span>
+                Valor atual:{" "}
+                <span className="font-semibold text-slate-700">
+                  R$ {formatBRL(refusing.total_with_margin || refusing.total)}
+                </span>
               </div>
             )}
           </div>

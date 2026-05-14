@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { api } from "@/api/apiClient";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Receipt, AlertCircle, Printer, Download } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Receipt, AlertCircle, Printer, Download, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -32,21 +33,18 @@ function formatBRL(value) {
 
 function ReceiptDocument({ receipt, settings }) {
   const cfg = statusConfig[receipt.status] || { badge: "bg-slate-100 text-slate-700 border-slate-200", label: receipt.status };
-  const docId = `client-receipt-doc-${receipt.id}`;
 
-  // FIX #1/#7 — passa os dados do recibo diretamente, sem capturar HTML da tela
   const handlePrint = () => {
-    toast.info('Preparando impressão...');
-    printDocument('receipt', receipt, settings).catch(() => toast.error('Erro ao preparar impressão'));
+    toast.info("Preparando impressão...");
+    printDocument("receipt", receipt, settings).catch(() => toast.error("Erro ao preparar impressão"));
   };
   const handlePDF = () => {
-    downloadReceiptPDF(receipt, settings, `recibo-${receipt.id}.pdf`).catch(() => toast.error('Erro ao gerar PDF'));
+    downloadReceiptPDF(receipt, settings, `recibo-${receipt.id}.pdf`).catch(() => toast.error("Erro ao gerar PDF"));
   };
 
   return (
-    <div id={docId} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
-      {/* Header */}
-      <div className="p-6 sm:p-8 border-b-2 border-slate-900">
+    <div className="bg-white rounded-xl overflow-hidden">
+      <div className="p-6 border-b-2 border-slate-900">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             {settings?.company_logo ? (
@@ -74,8 +72,7 @@ function ReceiptDocument({ receipt, settings }) {
         </div>
       </div>
 
-      <div className="p-6 sm:p-8 space-y-5">
-        {/* Client details */}
+      <div className="p-6 space-y-5">
         <div className="pb-4 border-b border-slate-100">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {receipt.client_name && (
@@ -115,7 +112,6 @@ function ReceiptDocument({ receipt, settings }) {
           </div>
         </div>
 
-        {/* Items table */}
         {receipt.items?.length > 0 && (
           <div className="pb-4 border-b border-slate-100">
             <table className="w-full">
@@ -158,7 +154,6 @@ function ReceiptDocument({ receipt, settings }) {
           </div>
         )}
 
-        {/* Notes */}
         {receipt.notes && (
           <div className="pb-4 border-b border-slate-100">
             <p className="text-xs text-slate-400 uppercase tracking-wider font-medium mb-1">Observações</p>
@@ -166,7 +161,6 @@ function ReceiptDocument({ receipt, settings }) {
           </div>
         )}
 
-        {/* Banking footer */}
         {(settings?.receipt_bank_name || settings?.receipt_pix_cnpj || settings?.receipt_pix_qrcode) && (
           <div className="pt-4 border-t-2 border-slate-300">
             <div className="flex items-start justify-between gap-4">
@@ -200,13 +194,11 @@ function ReceiptDocument({ receipt, settings }) {
           </div>
         )}
 
-        {/* Thank you */}
         <div className="pt-4 border-t border-slate-200 text-center">
           <p className="text-xs text-slate-500">Caso você tenha alguma dúvida entre em contato conosco</p>
           <p className="text-sm font-bold text-slate-800 mt-1">AGRADECEMOS SUA PREFERÊNCIA!</p>
         </div>
 
-        {/* Print / PDF */}
         <div className="flex gap-2 pt-2 border-t border-slate-100">
           <Button variant="outline" size="sm" onClick={handlePrint} className="text-xs">
             <Printer className="h-3.5 w-3.5 mr-1.5" />
@@ -226,6 +218,7 @@ export default function ClientReceipts() {
   const [receipts, setReceipts] = useState([]);
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -237,9 +230,8 @@ export default function ClientReceipts() {
       if (currentUser) {
         const data = await api.entities.Receipt.filter({ client_email: currentUser.email });
         const sent = (data || []).filter(r => r.sent_to_client === true || r.sent_to_client === "true");
-        // FIX #9 — parse seguro de datas sem timezone para evitar desvio de fuso horário
-      const parseDate = (d) => d ? new Date(String(d).replace('T', ' ').split('.')[0]) : new Date(0);
-      setReceipts(sent.sort((a, b) => parseDate(b.created_date) - parseDate(a.created_date)));
+        const parseDate = (d) => d ? new Date(String(d).replace("T", " ").split(".")[0]) : new Date(0);
+        setReceipts(sent.sort((a, b) => parseDate(b.created_date) - parseDate(a.created_date)));
       }
       setLoading(false);
     };
@@ -258,8 +250,8 @@ export default function ClientReceipts() {
   const pendentes = receipts.filter(r => r.status !== "pago" && r.status !== "recibo_fechado").length;
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="mb-8 flex items-center gap-3">
+    <div className="max-w-5xl mx-auto">
+      <div className="mb-6 flex items-center gap-3">
         <div className="h-10 w-10 rounded-xl bg-indigo-100 flex items-center justify-center">
           <Receipt className="h-5 w-5 text-indigo-600" />
         </div>
@@ -270,7 +262,7 @@ export default function ClientReceipts() {
       </div>
 
       {receipts.length > 0 && (
-        <div className="grid grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
             <div className="text-2xl font-bold text-green-600">{pagos}</div>
             <div className="text-xs text-slate-500 mt-1">Pagos</div>
@@ -289,12 +281,81 @@ export default function ClientReceipts() {
           <p className="text-slate-400 text-sm mt-1">Quando um recibo for enviado para você, ele aparecerá aqui.</p>
         </div>
       ) : (
-        <div>
-          {receipts.map(receipt => (
-            <ReceiptDocument key={receipt.id} receipt={receipt} settings={settings} />
-          ))}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50">
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Nº</th>
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Job</th>
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Forma de Pagamento</th>
+                  <th className="text-right text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Total</th>
+                  <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Status</th>
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Vencimento</th>
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">Emissão</th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {receipts.map(receipt => {
+                  const cfg = statusConfig[receipt.status] || { badge: "bg-slate-100 text-slate-700 border-slate-200", label: receipt.status };
+                  return (
+                    <tr
+                      key={receipt.id}
+                      className="hover:bg-slate-50 cursor-pointer transition-colors"
+                      onClick={() => setSelected(receipt)}
+                    >
+                      <td className="px-4 py-3 text-sm text-slate-500">#{receipt.id}</td>
+                      <td className="px-4 py-3">
+                        <p className="text-sm font-semibold text-slate-800">{receipt.job || "—"}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="text-sm text-slate-600">
+                          {paymentLabels[receipt.payment_method] || receipt.payment_method || "—"}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className="text-sm font-semibold text-slate-800">
+                          R$ {formatBRL(receipt.total_value || receipt.total_amount)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Badge className={`text-xs border ${cfg.badge}`}>{cfg.label}</Badge>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-600">
+                        {receipt.due_date
+                          ? String(receipt.due_date).split("T")[0].split("-").reverse().join("/")
+                          : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-600">
+                        {receipt.emission_date
+                          ? new Date(receipt.emission_date).toLocaleDateString("pt-BR")
+                          : receipt.created_date
+                            ? new Date(receipt.created_date).toLocaleDateString("pt-BR")
+                            : "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Button variant="ghost" size="sm" className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
+
+      {/* Document detail dialog */}
+      <Dialog open={!!selected} onOpenChange={open => !open && setSelected(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
+          {selected && (
+            <ReceiptDocument receipt={selected} settings={settings} />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
