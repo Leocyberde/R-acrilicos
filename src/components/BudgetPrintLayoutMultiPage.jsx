@@ -100,7 +100,7 @@ export default function BudgetPrintLayoutMultiPage({ budget, onReady }) {
 
   const c = config;
 
-  if (!settings || !config) return <div>Carregando...</div>;
+  if (!dataLoaded) return <div>Carregando...</div>;
 
   const BudgetPage = ({ items, pageNum, pageIdx, isFirstPage }) => (
     <div

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Printer, Download } from "lucide-react";
 import { toast } from "sonner";
 
-export default function ExportTabs({ data, filename, columns, onPDF, onPrint }) {
+export default function ExportTabs({ data, filename, columns, onPDF, onPrint, hideExcel }) {
   const [exporting, setExporting] = useState(false);
 
   const handlePrint = () => {
@@ -123,16 +123,18 @@ export default function ExportTabs({ data, filename, columns, onPDF, onPrint }) 
         <Download className="h-3.5 w-3.5 mr-1.5" />
         PDF
       </Button>
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={handleExcel}
-        disabled={exporting}
-        className="text-xs"
-      >
-        <Download className="h-3.5 w-3.5 mr-1.5" />
-        Excel
-      </Button>
+      {!hideExcel && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleExcel}
+          disabled={exporting}
+          className="text-xs"
+        >
+          <Download className="h-3.5 w-3.5 mr-1.5" />
+          Excel
+        </Button>
+      )}
     </div>
   );
 }
