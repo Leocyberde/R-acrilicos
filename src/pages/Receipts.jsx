@@ -314,6 +314,7 @@ export default function Receipts() {
                   <th className="px-5 py-3 w-12">
                     <Checkbox checked={filtered.length > 0 && selected.length === filtered.length} onCheckedChange={handleSelectAll} />
                   </th>
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 w-16">Nº</th>
                   {activeColumns.map(col => (
                     <th key={col.key} className={`text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 ${col.align === "right" ? "text-right" : col.align === "center" ? "text-center" : "text-left"}`}>
                       {col.label}
@@ -326,6 +327,9 @@ export default function Receipts() {
                   <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-5 py-3.5" onClick={e => e.stopPropagation()}>
                       <Checkbox checked={selected.includes(r.id)} onCheckedChange={checked => handleSelect(r.id, checked)} />
+                    </td>
+                    <td className="px-4 py-3.5 cursor-pointer" onClick={() => navigate(createPageUrl("ReceiptDetail") + `?id=${r.id}`)}>
+                      <p className="text-xs font-mono text-slate-400">#{String(r.id ?? "")}</p>
                     </td>
                     {activeColumns.map(col => (
                       <td key={col.key}

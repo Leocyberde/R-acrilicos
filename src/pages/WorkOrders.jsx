@@ -374,12 +374,14 @@ export default function WorkOrders() {
                   )}
                   {user?.role === "cliente" ? (
                     <>
+                      <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 w-16">Nº</th>
                       <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">JOB</th>
                       <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3">STATUS</th>
                       <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 hidden md:table-cell">ENTREGA</th>
                     </>
                   ) : (
                     <>
+                      <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 w-16">Nº</th>
                       {activeColumns.map(col => (
                         <th key={col.key} className={`text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 ${col.align === "right" ? "text-right" : col.align === "center" ? "text-center" : "text-left"}`}>
                           {col.label}
@@ -403,6 +405,9 @@ export default function WorkOrders() {
                       {user?.role === "cliente" ? (
                         <>
                           <td className="px-4 py-3.5 cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
+                            <p className="text-xs font-mono text-slate-400">#{String(o.id ?? "")}</p>
+                          </td>
+                          <td className="px-4 py-3.5 cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
                             <div className="flex items-center gap-2">
                               {urgent && <Zap className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />}
                               <p className="text-sm font-semibold text-slate-800">{o.job || "—"}</p>
@@ -417,6 +422,9 @@ export default function WorkOrders() {
                         </>
                       ) : (
                         <>
+                          <td className="px-4 py-3.5 cursor-pointer" onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${o.id}`)}>
+                            <p className="text-xs font-mono text-slate-400">#{String(o.id ?? "")}</p>
+                          </td>
                           {activeColumns.map(col => (
                             <td key={col.key}
                               className={`px-4 py-3.5 cursor-pointer ${col.align === "right" ? "text-right" : col.align === "center" ? "text-center" : ""}`}

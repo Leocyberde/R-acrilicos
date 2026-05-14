@@ -435,6 +435,7 @@ export default function Budgets() {
                       onCheckedChange={handleSelectAll}
                     />
                   </th>
+                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 w-16">Nº</th>
                   {activeColumns.map(col => (
                     <th
                       key={col.key}
@@ -455,6 +456,9 @@ export default function Budgets() {
                         checked={selected.includes(b.id)}
                         onCheckedChange={checked => handleSelect(b.id, checked)}
                       />
+                    </td>
+                    <td className="px-4 py-3.5 cursor-pointer" onClick={() => navigate(createPageUrl("BudgetDetail") + `?id=${b.id}`)}>
+                      <p className="text-xs font-mono text-slate-400">#{String(b.id ?? "")}</p>
                     </td>
                     {activeColumns.map(col => (
                       <td
