@@ -1,14 +1,17 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Send, CheckCircle2, X, Paperclip } from "lucide-react";
+import { Plus, Trash2, Send, CheckCircle2, X, Paperclip, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/api/apiClient";
 
 
 export default function ClientBudgetRequest() {
+  const navigate = useNavigate();
+  const isWhatsApp = Boolean(new URLSearchParams(window.location.search).get("client"));
   const [form, setForm] = useState({
     client_name: "",
     job: "",
@@ -169,6 +172,17 @@ export default function ClientBudgetRequest() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-slate-100 py-10 px-4">
       <div className="max-w-2xl mx-auto space-y-6">
+        {!isWhatsApp && (
+          <div>
+            <Button
+              variant="ghost"
+              className="text-slate-600 hover:text-slate-900 -ml-2"
+              onClick={() => navigate("/ClientDashboard")}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+            </Button>
+          </div>
+        )}
         <div className="text-center space-y-1">
           <h1 className="text-3xl font-bold text-slate-900">Solicitação de Orçamento</h1>
           <p className="text-slate-500">Preencha o formulário abaixo e envie sua solicitação</p>
