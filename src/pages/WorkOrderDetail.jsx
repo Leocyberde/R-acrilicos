@@ -37,6 +37,7 @@ export default function WorkOrderDetail() {
   const navigate = useNavigate();
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
+  const fromPage = params.get("from") || "WorkOrders";
 
   const [companySettings, setCompanySettings] = useState(null);
 
@@ -97,7 +98,7 @@ export default function WorkOrderDetail() {
 
   const handleDelete = async () => {
     await localClient.entities.WorkOrder.delete(id);
-    navigate(createPageUrl("WorkOrders"));
+    navigate(createPageUrl(fromPage));
   };
 
   const handleFileUpload = async (e) => {
@@ -150,7 +151,7 @@ export default function WorkOrderDetail() {
     return (
       <div className="text-center py-16">
         <p className="text-slate-500">Ordem de serviço não encontrada</p>
-        <Button className="mt-4" onClick={() => navigate(createPageUrl("WorkOrders"))}>Voltar</Button>
+        <Button className="mt-4" onClick={() => navigate(createPageUrl(fromPage))}>Voltar</Button>
       </div>
     );
   }
@@ -164,7 +165,7 @@ export default function WorkOrderDetail() {
     <div className="space-y-6">
       <div className="no-print flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(createPageUrl("WorkOrders"))}>
+          <Button variant="ghost" size="icon" onClick={() => navigate(createPageUrl(fromPage))}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>

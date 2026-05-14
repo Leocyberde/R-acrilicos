@@ -354,7 +354,7 @@ export default function Production() {
                       <td className="py-3 px-4">
                         <div className="flex items-center justify-end gap-2">
                           <Button variant="outline" size="sm" className="text-xs"
-                            onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${order.id}`)}>
+                            onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${order.id}&from=Production`)}>
                             Ver Detalhes
                           </Button>
                           {nextActionLabels[order.status] && (
