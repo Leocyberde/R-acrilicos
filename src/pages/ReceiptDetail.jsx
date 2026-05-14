@@ -148,6 +148,8 @@ export default function ReceiptDetail() {
             onSubmit={handleUpdate}
             onCancel={() => setEditing(false)}
             loading={saving}
+            hideValidity
+            submitLabel="Salvar Recibo"
           />
         </div>
       </div>
