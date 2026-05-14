@@ -34,18 +34,22 @@ export default function BudgetDetail() {
   const [companySettings, setCompanySettings] = useState(null);
   const [printReady, setPrintReady] = useState(false);
   const [pendingPrint, setPendingPrint] = useState(false);
+  const [existingOS, setExistingOS] = useState(null);
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const navigate = useNavigate();
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
 
   useEffect(() => {
     async function load() {
-      const [found, settingsList] = await Promise.all([
+      const [found, settingsList, existingOrders] = await Promise.all([
         localClient.entities.Budget.get(id),
         localClient.entities.Settings.list(),
+        localClient.entities.WorkOrder.filter({ budget_id: String(id) }),
       ]);
       setBudget(found);
       if (settingsList.length > 0) setCompanySettings(settingsList[0]);
+      if (existingOrders && existingOrders.length > 0) setExistingOS(existingOrders[0]);
       setLoading(false);
     }
     load();
@@ -159,13 +163,22 @@ export default function BudgetDetail() {
         delivery_date: budget.delivery_date || null,
       });
 
+      setExistingOS(os);
       setBudget(prev => ({ ...prev, status: "aprovado" }));
-      toast.success("O.S. e Recibo criados com sucesso!");
-      navigate(createPageUrl("ReceiptDetail") + `?id=${receipt.id}`);
+      toast.success(`✅ O.S. #${os.id} e Recibo #${receipt.id} criados com sucesso!`, { duration: 5000 });
+      setTimeout(() => navigate(createPageUrl("ReceiptDetail") + `?id=${receipt.id}`), 1500);
     } catch (e) {
       toast.error("Erro ao criar O.S. e Recibo: " + e.message);
     }
     setSaving(false);
+  };
+
+  const handleClickCreateOS = () => {
+    if (existingOS) {
+      setShowDuplicateWarning(true);
+    } else {
+      handleApproveAndCreateOS();
+    }
   };
 
   const handleUpdate = async (data) => {
@@ -352,8 +365,14 @@ export default function BudgetDetail() {
             <Edit className="h-3.5 w-3.5 mr-1.5" /> Editar
           </Button>
           {["pendente", "aprovado", "aceito_cliente", "em_aberto"].includes(budget.status) && (
-            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={handleApproveAndCreateOS} disabled={saving}>
-              <Wrench className="h-3.5 w-3.5 mr-1.5" /> Criar O.S. e Recibo
+            <Button
+              size="sm"
+              className={existingOS ? "bg-amber-500 hover:bg-amber-600" : "bg-emerald-600 hover:bg-emerald-700"}
+              onClick={handleClickCreateOS}
+              disabled={saving}
+            >
+              <Wrench className="h-3.5 w-3.5 mr-1.5" />
+              {existingOS ? "O.S. já criada" : "Criar O.S. e Recibo"}
             </Button>
           )}
           {budget.status !== "orcamento_fechado" && (
@@ -423,6 +442,33 @@ export default function BudgetDetail() {
           </div>
         </div>
       )}
+
+      {/* Alerta de duplicação de O.S. */}
+      <AlertDialog open={showDuplicateWarning} onOpenChange={setShowDuplicateWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-700">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              O.S. e Recibo já foram criados!
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-600">
+              Já existe uma <strong>O.S. #{existingOS?.id}</strong> vinculada a este orçamento.
+              Criar novamente vai gerar uma O.S. e um Recibo duplicados.
+              <br /><br />
+              Deseja criar mesmo assim?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-amber-600 hover:bg-amber-700"
+              onClick={() => { setShowDuplicateWarning(false); handleApproveAndCreateOS(); }}
+            >
+              Criar mesmo assim
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Layout de orçamento — mesmo visual do PDF e da impressão */}
       {/* Wrapper de exibição: fundo cinza, centralizado, com sombra de folha A4 */}
