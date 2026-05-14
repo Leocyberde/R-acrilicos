@@ -56,12 +56,12 @@ function BudgetDocument({ budget, settings, onAccept, onRefuse, submitting }) {
             )}
             {settings?.company_name && <p className="text-sm font-bold text-slate-800">{settings.company_name}</p>}
             {settings?.company_address && <p className="text-xs text-slate-500 mt-0.5">{settings.company_address}</p>}
-            {(settings?.company_phone || settings?.company_email) && (
-              <p className="text-xs text-slate-500">
-                {settings.company_phone}
-                {settings.company_phone && settings.company_email && " • "}
-                {settings.company_email}
-              </p>
+            {(settings?.company_phone || settings?.company_email || settings?.company_email2) && (
+              <div className="text-xs text-slate-500">
+                {settings.company_phone && <p>{settings.company_phone}</p>}
+                {settings.company_email && <p>{settings.company_email}</p>}
+                {settings.company_email2 && <p>{settings.company_email2}</p>}
+              </div>
             )}
           </div>
           <div className="text-right ml-4">
