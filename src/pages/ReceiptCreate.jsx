@@ -41,7 +41,7 @@ export default function ReceiptCreate() {
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <BudgetForm onSubmit={handleSubmit} onCancel={() => navigate(createPageUrl("Receipts"))} loading={loading} />
+        <BudgetForm onSubmit={handleSubmit} onCancel={() => navigate(createPageUrl("Receipts"))} loading={loading} hideValidity submitLabel="Salvar Recibo" />
       </div>
     </div>
   );

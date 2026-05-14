@@ -19,7 +19,7 @@ function FieldError({ message }) {
   );
 }
 
-export default function BudgetForm({ initialData, onSubmit, onCancel, loading }) {
+export default function BudgetForm({ initialData, onSubmit, onCancel, loading, hideValidity, submitLabel }) {
   const [errors, setErrors] = useState({});
   const firstErrorRef = useRef(null);
 
@@ -100,7 +100,7 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
     if (!form.client_name?.trim()) {
       newErrors.client_name = "Nome do cliente é obrigatório.";
     }
-    if (!form.validity_date) {
+    if (!hideValidity && !form.validity_date) {
       newErrors.validity_date = "Data de validade é obrigatória.";
     }
     if (!form.emission_date) {
@@ -179,17 +179,19 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
           />
           <FieldError message={errors.emission_date} />
         </div>
-        <div>
-          <Label>Validade <span className="text-red-500">*</span></Label>
-          <Input
-            ref={!errors.client_name && !errors.emission_date && errors.validity_date ? firstErrorRef : undefined}
-            type="date"
-            value={form.validity_date}
-            onChange={e => updateField("validity_date", e.target.value)}
-            className={`mt-1 ${errors.validity_date ? "border-red-500 focus-visible:ring-red-400" : ""}`}
-          />
-          <FieldError message={errors.validity_date} />
-        </div>
+        {!hideValidity && (
+          <div>
+            <Label>Validade <span className="text-red-500">*</span></Label>
+            <Input
+              ref={!errors.client_name && !errors.emission_date && errors.validity_date ? firstErrorRef : undefined}
+              type="date"
+              value={form.validity_date}
+              onChange={e => updateField("validity_date", e.target.value)}
+              className={`mt-1 ${errors.validity_date ? "border-red-500 focus-visible:ring-red-400" : ""}`}
+            />
+            <FieldError message={errors.validity_date} />
+          </div>
+        )}
         <div>
           <Label>Data de Entrega</Label>
           <Input type="date" value={form.delivery_date} onChange={e => updateField("delivery_date", e.target.value)} className="mt-1" />
@@ -346,7 +348,7 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading })
       <div className="flex gap-3 justify-end pt-4 border-t">
         {onCancel && <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>}
         <Button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700">
-          {loading ? "Salvando..." : "Salvar Orçamento"}
+          {loading ? "Salvando..." : (submitLabel || "Salvar Orçamento")}
         </Button>
       </div>
     </form>
