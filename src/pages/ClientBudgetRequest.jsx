@@ -152,18 +152,27 @@ export default function ClientBudgetRequest() {
           </div>
           <h2 className="text-2xl font-bold text-slate-900">Solicitação Enviada!</h2>
           <p className="text-slate-500">Sua solicitação de orçamento foi recebida com sucesso. Entraremos em contato em breve.</p>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setSubmitted(false);
-              setForm({ client_name: "", job: "", producer: "", delivery_date: "", description: "", notes: "" });
-              setItems([{ name: "", quantity: 1 }]);
-              setAttachments([]);
-            }}
-            className="mt-4"
-          >
-            Fazer nova solicitação
-          </Button>
+          <div className="flex flex-col gap-2 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSubmitted(false);
+                setForm({ client_name: "", job: "", producer: "", delivery_date: "", description: "", notes: "" });
+                setItems([{ name: "", quantity: 1 }]);
+                setAttachments([]);
+              }}
+            >
+              Fazer nova solicitação
+            </Button>
+            {!isWhatsApp && (
+              <Button
+                className="bg-indigo-600 hover:bg-indigo-700"
+                onClick={() => navigate("/ClientDashboard")}
+              >
+                Voltar ao Menu Principal
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     );
