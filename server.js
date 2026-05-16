@@ -345,6 +345,7 @@ async function initDB() {
       "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS employee_name VARCHAR(255)",
       "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS pending_items JSONB DEFAULT '[]'",
       "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS created_by_employee BOOLEAN DEFAULT FALSE",
+      "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS work_order_id INTEGER",
     ];
     for (const sql of migrations) {
       await client.query(sql);
