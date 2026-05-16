@@ -4,7 +4,7 @@ import WorkOrderPrintLayoutMultiPage from "@/components/WorkOrderPrintLayoutMult
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer, Trash2, Upload, Download, FileText, X, Edit, Save, Zap, ZapOff, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Printer, Trash2, Upload, Download, FileText, X, Edit, Save, Zap, ZapOff, AlertTriangle, Plus } from "lucide-react";
 import { downloadWorkOrderPDF, printDocument } from "@/components/DownloadPDF";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,9 @@ export default function WorkOrderDetail() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [isEmployee, setIsEmployee] = useState(false);
+  const [pendingItems, setPendingItems] = useState([]);
+  const [savingPending, setSavingPending] = useState(false);
   const navigate = useNavigate();
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
@@ -49,7 +52,12 @@ export default function WorkOrderDetail() {
         localClient.entities.Settings.list(),
       ]);
       setOrder(found);
+      const emp = user?.role === "user";
       setIsClient(user?.role === "cliente");
+      setIsEmployee(emp);
+      // Funcionário começa com lista vazia (não pré-popula com itens já enviados)
+      // Admin vê order.pending_items direto pela UI, não usa este state
+      setPendingItems(emp ? [] : (Array.isArray(found?.pending_items) ? found.pending_items : []));
       if (settingsList.length > 0) setCompanySettings(settingsList[0]);
       setLoading(false);
     }
@@ -83,6 +91,49 @@ export default function WorkOrderDetail() {
     const newVal = !order.is_urgent;
     await localClient.entities.WorkOrder.update(id, { is_urgent: newVal });
     setOrder(prev => ({ ...prev, is_urgent: newVal }));
+    setSaving(false);
+  };
+
+  const savePendingItems = async () => {
+    const newValid = pendingItems.filter(it => it.name?.trim());
+    if (newValid.length === 0) {
+      toast.error("Adicione pelo menos um item antes de salvar");
+      return;
+    }
+    setSavingPending(true);
+    try {
+      // Mescla com itens pendentes já existentes no banco (não substitui)
+      const existing = Array.isArray(order.pending_items) ? order.pending_items : [];
+      const allPending = [...existing, ...newValid];
+      await localClient.entities.WorkOrder.update(id, {
+        pending_items: allPending,
+      });
+      setOrder(prev => ({ ...prev, pending_items: allPending }));
+      setPendingItems([]); // limpa o formulário após envio
+      toast.success(`${newValid.length} item(ns) enviado(s) para o admin!`, { duration: 4000 });
+    } catch (e) {
+      toast.error("Erro ao salvar itens: " + e.message);
+    }
+    setSavingPending(false);
+  };
+
+  const acceptPendingItems = async () => {
+    setSaving(true);
+    try {
+      const existingItems = Array.isArray(order.items) ? order.items : [];
+      // Usa order.pending_items diretamente — mesma fonte do banner exibido ao admin
+      const toAccept = (Array.isArray(order.pending_items) ? order.pending_items : []).filter(it => it.name?.trim());
+      const mergedItems = [...existingItems, ...toAccept];
+      await localClient.entities.WorkOrder.update(id, {
+        items: mergedItems,
+        pending_items: [],
+      });
+      setOrder(prev => ({ ...prev, items: mergedItems, pending_items: [] }));
+      setPendingItems([]);
+      toast.success("Itens do gerente aceitos e adicionados à O.S.!");
+    } catch (e) {
+      toast.error("Erro ao aceitar itens: " + e.message);
+    }
     setSaving(false);
   };
 
@@ -174,7 +225,7 @@ export default function WorkOrderDetail() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {!isClient && !editing && (
+          {!isClient && !isEmployee && !editing && (
             <>
               <ExportTabs 
                 data={[order]}
@@ -229,7 +280,7 @@ export default function WorkOrderDetail() {
               )}
             </>
           )}
-          {!isClient && editing && (
+          {!isClient && !isEmployee && editing && (
             <>
               <Button variant="outline" size="sm" onClick={() => setEditing(false)}>
                 Cancelar
@@ -239,7 +290,12 @@ export default function WorkOrderDetail() {
               </Button>
             </>
           )}
-          {!isClient && (
+          {isEmployee && nextStatus && (
+            <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700" onClick={() => updateStatus(nextStatus)} disabled={saving}>
+              {statusLabels[order.status]}
+            </Button>
+          )}
+          {!isClient && !isEmployee && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600">
@@ -293,6 +349,69 @@ export default function WorkOrderDetail() {
               </p>
             )}
           </div>
+        </div>
+      )}
+
+      {order.employee_name && !isEmployee && !isClient && (
+        <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+          <AlertTriangle className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-blue-700">
+            Esta O.S. foi criada ou alterada pelo gerente <strong>{order.employee_name}</strong>.
+            {!order.budget_id && <span className="text-amber-700 font-medium"> Não possui orçamento vinculado — crie um orçamento para ela.</span>}
+          </p>
+        </div>
+      )}
+
+      {!isEmployee && !isClient && Array.isArray(order.pending_items) && order.pending_items.length > 0 && (
+        <div className="bg-amber-50 border-2 border-amber-300 rounded-xl px-4 py-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5 animate-pulse" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-800">
+                🔔 {order.employee_name ? `O gerente ${order.employee_name} adicionou` : "Itens adicionados"} {order.pending_items.length} item(ns) — precisam de preço
+              </p>
+              
+              {/* ✅ TABELA COM DESTAQUE */}
+              <table className="w-full mt-3 bg-white rounded border border-amber-200">
+                <thead>
+                  <tr className="border-b border-amber-200 bg-amber-100">
+                    <th className="text-left text-xs font-bold text-amber-800 uppercase py-2 px-3">Item</th>
+                    <th className="text-center text-xs font-bold text-amber-800 uppercase py-2 px-3">Qtd</th>
+                    <th className="text-right text-xs font-bold text-amber-800 uppercase py-2 px-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {order.pending_items.map((item, i) => (
+                    <tr key={i} className="border-b border-amber-100 hover:bg-amber-50">
+                      <td className="py-2 px-3 text-sm text-slate-800 font-medium">{item.name}</td>
+                      <td className="py-2 px-3 text-sm text-slate-600 text-center">{item.quantity}</td>
+                      <td className="py-2 px-3 text-xs text-amber-700 text-right">⏳ Aguardando preço</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div className="mt-3 flex gap-2">
+                <Button
+                  size="sm"
+                  className="bg-amber-600 hover:bg-amber-700"
+                  onClick={acceptPendingItems}
+                  disabled={saving}
+                >
+                  Aceitar e Mesclar com os Itens da O.S.
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isEmployee && order.status !== "entregue" && (
+        <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+          <AlertTriangle className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-blue-700">
+            Você pode adicionar itens abaixo. Os itens já existentes não podem ser removidos. O admin receberá uma notificação para precificar.
+          </p>
         </div>
       )}
 
@@ -400,7 +519,9 @@ export default function WorkOrderDetail() {
         {/* Items (NO PRICES) */}
         {order.items?.length > 0 && (
           <div className="py-4">
-            <p className="text-xs text-slate-400 uppercase tracking-wider font-medium mb-3">Itens</p>
+            <p className="text-xs text-slate-400 uppercase tracking-wider font-medium mb-3">
+              Itens {isEmployee && <span className="text-slate-300 normal-case font-normal">(somente leitura)</span>}
+            </p>
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-200">
@@ -419,6 +540,88 @@ export default function WorkOrderDetail() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Seção de itens pendentes — visível para o funcionário, exceto em O.S. entregue */}
+        {isEmployee && order.status !== "entregue" && (
+          <div className="py-4 border-t border-slate-100">
+
+            {/* Itens já enviados aguardando aprovação */}
+            {Array.isArray(order.pending_items) && order.pending_items.length > 0 && (
+              <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg px-3 py-3">
+                <p className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-2">
+                  Aguardando aprovação do admin ({order.pending_items.length} item(ns))
+                </p>
+                <ul className="space-y-1">
+                  {order.pending_items.map((it, i) => (
+                    <li key={i} className="flex items-center justify-between text-sm">
+                      <span className="text-slate-700">{it.name}</span>
+                      <span className="text-slate-500 text-xs">Qtd: {it.quantity}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-indigo-600 uppercase tracking-wider font-bold">Adicionar Novos Itens</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPendingItems(prev => [...prev, { name: "", quantity: 1 }])}
+              >
+                <Plus className="h-3.5 w-3.5 mr-1.5" /> Adicionar Item
+              </Button>
+            </div>
+
+            {pendingItems.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-4 border-2 border-dashed border-slate-200 rounded-lg">
+                Nenhum item adicionado ainda — clique em "Adicionar Item"
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {pendingItems.map((item, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <Input
+                        value={item.name}
+                        onChange={e => setPendingItems(prev => prev.map((p, idx) => idx === i ? { ...p, name: e.target.value } : p))}
+                        placeholder="Nome do produto ou serviço"
+                      />
+                    </div>
+                    <div className="w-24">
+                      <Input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={e => setPendingItems(prev => prev.map((p, idx) => idx === i ? { ...p, quantity: Number(e.target.value) || 1 } : p))}
+                        className="text-center"
+                      />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50"
+                      onClick={() => setPendingItems(prev => prev.filter((_, idx) => idx !== i))}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <div className="pt-2">
+                  <Button
+                    onClick={savePendingItems}
+                    disabled={savingPending}
+                    className="bg-indigo-600 hover:bg-indigo-700"
+                    size="sm"
+                  >
+                    <Save className="h-3.5 w-3.5 mr-1.5" />
+                    {savingPending ? "Enviando..." : "Enviar Itens para o Admin"}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

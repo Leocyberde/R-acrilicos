@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, FileText, Trash2, Settings2, GripVertical, ChevronRight, ChevronLeft, X } from "lucide-react";
+import { Plus, FileText, Trash2, Settings2, GripVertical, ChevronRight, ChevronLeft, X, Bell, Wrench } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import ExportTabs from "@/components/ExportTabs";
 import SearchAutocomplete from "@/components/SearchAutocomplete";
@@ -270,6 +270,7 @@ export default function Budgets() {
   const [deleting, setDeleting] = useState(false);
   const [showColConfig, setShowColConfig] = useState(false);
   const [activeKeys, setActiveKeys] = useState(loadColumnConfig);
+  const [employeeRequests, setEmployeeRequests] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -278,7 +279,22 @@ export default function Budgets() {
       setBudgets(data);
       setLoading(false);
     }
+    async function loadEmployeeRequests() {
+      try {
+        const token = localStorage.getItem("auth_token");
+        const res = await fetch("/api/employee-os-requests", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (res.ok) {
+          const all = await res.json();
+          setEmployeeRequests(all.filter(r => !r.budget_id || (Array.isArray(r.pending_items) && r.pending_items.length > 0)));
+        }
+      } catch (e) {
+        console.error("Failed to load employee requests", e);
+      }
+    }
     load();
+    loadEmployeeRequests();
   }, []);
 
   const filtered = budgets.filter(b => {
@@ -314,18 +330,26 @@ export default function Budgets() {
 
   const handleDeleteSelected = async () => {
     if (selected.length === 0) return;
-    if (!confirm(`Tem certeza que deseja excluir ${selected.length} orçamento(s)?`)) return;
-    setDeleting(true);
-    try {
-      await Promise.all(selected.map(id => api.entities.Budget.delete(id)));
-      setBudgets(budgets.filter(b => !selected.includes(b.id)));
-      setSelected([]);
-      toast.success(`${selected.length} orçamento(s) excluído(s) com sucesso`);
-    } catch {
-      toast.error("Erro ao excluir orçamentos");
-    } finally {
-      setDeleting(false);
-    }
+    // ✅ Usa toast com ação em vez de confirm() nativo
+    toast(`Excluir ${selected.length} orçamento(s)?`, {
+      action: {
+        label: "Confirmar",
+        onClick: async () => {
+          setDeleting(true);
+          try {
+            await Promise.all(selected.map(id => api.entities.Budget.delete(id)));
+            setBudgets(budgets.filter(b => !selected.includes(b.id)));
+            setSelected([]);
+            toast.success(`${selected.length} orçamento(s) excluído(s) com sucesso`);
+          } catch {
+            toast.error("Erro ao excluir orçamentos");
+          } finally {
+            setDeleting(false);
+          }
+        },
+      },
+      cancel: { label: "Cancelar", onClick: () => {} },
+    });
   };
 
   const handleSaveColumns = (newActiveKeys) => {
@@ -417,6 +441,42 @@ export default function Budgets() {
           ))}
         </div>
       </div>
+
+      {employeeRequests.length > 0 && (
+        <div className="bg-amber-50 border border-amber-300 rounded-xl px-4 py-4">
+          <div className="flex items-start gap-3">
+            <Bell className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-800">
+                {employeeRequests.length} solicitação(ões) pendente(s) do gerente
+              </p>
+              <div className="mt-2 space-y-1.5">
+                {employeeRequests.map(r => (
+                  <div key={r.id} className="flex items-center justify-between bg-white border border-amber-200 rounded-lg px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <Wrench className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+                      <span className="text-sm text-slate-700">
+                        {!r.budget_id
+                          ? <><strong>O.S. #{r.id}</strong> — {r.client_name} — <span className="text-amber-700">sem orçamento</span> (por {r.employee_name})</>
+                          : <><strong>O.S. #{r.id}</strong> — {r.client_name} — <span className="text-blue-700">{r.pending_items?.length} item(ns) adicionado(s) pelo gerente</span></>
+                        }
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-amber-400 text-amber-700 hover:bg-amber-100 text-xs"
+                      onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${r.id}`)}
+                    >
+                      Ver O.S.
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {filtered.length === 0 ? (
         <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">

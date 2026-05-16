@@ -20,6 +20,7 @@ import {
   User,
   CalendarDays,
   Smartphone,
+  ClipboardPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppBranding } from "@/lib/useAppBranding";
@@ -29,7 +30,7 @@ const navItems = [
   { name: "Dashboard Orçamentos", icon: FileText, page: "BudgetDashboard", module: "budgets" },
   { name: "Dashboard O.S.", icon: Wrench, page: "WorkOrderDashboard", module: "work_orders" },
   { name: "Clientes", icon: Users, page: "Clients", module: "clients" },
-  { name: "Orçamentos", icon: FileText, page: "Budgets", module: "budgets" },
+  { name: "Orçamentos", icon: FileText, page: "Budgets", module: "budgets", showEmployeeOSBadge: true },
   { name: "Ordens de Serviço", icon: Wrench, page: "WorkOrders", module: "work_orders" },
   { name: "Recibos", icon: Receipt, page: "Receipts", module: "receipts" },
   { name: "Financeiro", icon: TrendingUp, page: "Financial", module: "financial" },
@@ -44,6 +45,8 @@ const navItems = [
   { name: "Minhas O.S.", icon: Wrench, page: "WorkOrders", clientOnly: true },
   { name: "Perfil", icon: User, page: "ClientProfile", clientOnly: true },
 
+  { name: "Solicitar Nova O.S.", icon: ClipboardPlus, page: "EmployeeOSRequest", employeeOnly: true },
+
   { name: "Solicitações de Orçamento", icon: Inbox, page: "BudgetRequests", adminOnly: true, showBadge: true },
   { name: "Usuários", icon: Users, page: "AdminUsers", adminOnly: true },
   { name: "Editor de Layout", icon: Settings, page: "LayoutEditor", adminOnly: true },
@@ -55,6 +58,7 @@ export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [permissions, setPermissions] = useState({});
   const [budgetRequestCount, setBudgetRequestCount] = useState(0);
+  const [employeeOSCount, setEmployeeOSCount] = useState(0);
   const { user, logout } = useAuth();
   const { appName, appLogo } = useAppBranding();
 
@@ -92,6 +96,31 @@ export default function Layout({ children, currentPageName }) {
     } else {
       loadBudgetRequestCount();
       const interval = setInterval(loadBudgetRequestCount, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [user, currentPageName]);
+
+  useEffect(() => {
+    async function loadEmployeeOSCount() {
+      if (user?.role !== "admin") return;
+      try {
+        const token = localStorage.getItem("auth_token");
+        const res = await fetch("/api/employee-os-requests/pending-count", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setEmployeeOSCount(data.count || 0);
+        }
+      } catch (e) {
+        console.error('Failed to load employee OS count', e);
+      }
+    }
+    if (currentPageName === "Budgets") {
+      setEmployeeOSCount(0);
+    } else {
+      loadEmployeeOSCount();
+      const interval = setInterval(loadEmployeeOSCount, 60000);
       return () => clearInterval(interval);
     }
   }, [user, currentPageName]);
@@ -162,14 +191,22 @@ export default function Layout({ children, currentPageName }) {
           {navItems.map((item) => {
             if (item.adminOnly && user?.role !== "admin") return null;
             if (item.clientOnly && user?.role !== "cliente") return null;
+            if (item.employeeOnly && user?.role !== "user") return null;
             if (user?.role === "cliente") {
               if (!item.clientOnly) return null;
+            } else if (user?.role === "user") {
+              const allowedPages = ["WorkOrderDashboard", "WorkOrders", "Production", "Calendar", "EmployeeOSRequest"];
+              if (!allowedPages.includes(item.page)) return null;
             } else if (user?.role !== "admin") {
               const allowedPages = ["WorkOrderDashboard", "WorkOrders", "Production", "Calendar"];
               if (!allowedPages.includes(item.page)) return null;
             }
             const isActive = currentPageName === item.page;
-            const badgeCount = item.showBadge && user?.role === "admin" ? budgetRequestCount : 0;
+            const badgeCount = item.showBadge && user?.role === "admin"
+              ? budgetRequestCount
+              : item.showEmployeeOSBadge && user?.role === "admin"
+              ? employeeOSCount
+              : 0;
             return (
               <Link
                 key={item.page}

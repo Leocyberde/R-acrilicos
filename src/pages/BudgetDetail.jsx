@@ -35,7 +35,6 @@ export default function BudgetDetail() {
   const [printReady, setPrintReady] = useState(false);
   const [pendingPrint, setPendingPrint] = useState(false);
   const [existingOS, setExistingOS] = useState(null);
-  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const navigate = useNavigate();
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
@@ -49,7 +48,17 @@ export default function BudgetDetail() {
       ]);
       setBudget(found);
       if (settingsList.length > 0) setCompanySettings(settingsList[0]);
-      if (existingOrders && existingOrders.length > 0) setExistingOS(existingOrders[0]);
+
+      if (existingOrders && existingOrders.length > 0) {
+        setExistingOS(existingOrders[0]);
+      } else if (found?.work_order_id) {
+        // ✅ Se o orçamento foi criado a partir de uma O.S. do funcionário,
+        // busca a O.S. pelo work_order_id salvo no orçamento
+        try {
+          const linkedOS = await localClient.entities.WorkOrder.get(found.work_order_id);
+          if (linkedOS) setExistingOS(linkedOS);
+        } catch (_) {}
+      }
       setLoading(false);
     }
     load();
@@ -117,30 +126,48 @@ export default function BudgetDetail() {
     try {
       await localClient.entities.Budget.update(id, { status: "aprovado" });
 
-      const osItems = (budget.items || []).map(item => ({
-        name: item.name,
-        quantity: item.quantity,
-      }));
+      let osId;
+      let osToUse;
+      let wasReused = false; // ✅ flag local para saber se reutilizou ou criou
 
-      const os = await localClient.entities.WorkOrder.create({
-        budget_id: String(id),
-        client_name: budget.client_name,
-        client_email: budget.client_email,
-        client_phone: budget.client_phone,
-        client_address: budget.client_address,
-        job: budget.job,
-        producer: budget.producer,
-        description: budget.description,
-        items: osItems,
-        status: "pendente",
-        notes: budget.notes,
-        start_date: new Date().toISOString().split("T")[0],
-        delivery_date: budget.delivery_date || null,
-      });
+      if (existingOS && existingOS.id) {
+        osId = existingOS.id;
+        osToUse = existingOS;
+        wasReused = true;
+        // ✅ Atualiza budget_id e delivery_date na O.S. reutilizada,
+        // assim ela sai do OrphanWorkOrdersAlert e fica vinculada corretamente
+        await localClient.entities.WorkOrder.update(osId, {
+          budget_id: String(id),
+          delivery_date: budget.delivery_date || null,
+        });
+      } else {
+        const osItems = (budget.items || []).map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+        }));
+        const os = await localClient.entities.WorkOrder.create({
+          budget_id: String(id),
+          client_name: budget.client_name,
+          client_email: budget.client_email,
+          client_phone: budget.client_phone,
+          client_address: budget.client_address,
+          job: budget.job,
+          producer: budget.producer,
+          description: budget.description,
+          items: osItems,
+          status: "pendente",
+          notes: budget.notes,
+          start_date: new Date().toISOString().split("T")[0],
+          delivery_date: budget.delivery_date || null,
+        });
+        osId = os.id;
+        osToUse = os;
+        wasReused = false;
+      }
 
       const receipt = await localClient.entities.Receipt.create({
         budget_id: String(id),
-        work_order_id: String(os.id),
+        work_order_id: String(osId),
         client_name: budget.client_name,
         client_phone: budget.client_phone,
         client_email: budget.client_email,
@@ -163,9 +190,15 @@ export default function BudgetDetail() {
         delivery_date: budget.delivery_date || null,
       });
 
-      setExistingOS(os);
+      setExistingOS(osToUse);
       setBudget(prev => ({ ...prev, status: "aprovado" }));
-      toast.success(`✅ O.S. #${os.id} e Recibo #${receipt.id} criados com sucesso!`, { duration: 5000 });
+
+      // ✅ usa wasReused (local) em vez de existingOS (estado React, ainda null neste ponto)
+      const message = wasReused
+        ? `✅ O.S. #${osId} reutilizada e Recibo #${receipt.id} criado com sucesso!`
+        : `✅ O.S. #${osId} e Recibo #${receipt.id} criados com sucesso!`;
+
+      toast.success(message, { duration: 5000 });
       setTimeout(() => navigate(createPageUrl("ReceiptDetail") + `?id=${receipt.id}`), 1500);
     } catch (e) {
       toast.error("Erro ao criar O.S. e Recibo: " + e.message);
@@ -174,24 +207,30 @@ export default function BudgetDetail() {
   };
 
   const handleClickCreateOS = () => {
-    if (existingOS) {
-      setShowDuplicateWarning(true);
-    } else {
-      handleApproveAndCreateOS();
-    }
+    // ✅ Simplesmente executa - a lógica interna já detecta O.S. existente
+    handleApproveAndCreateOS();
   };
 
   const handleUpdate = async (data) => {
     setSaving(true);
-    await localClient.entities.Budget.update(id, data);
-    setBudget(prev => ({ ...prev, ...data }));
-    setSaving(false);
-    setEditing(false);
+    try {
+      await localClient.entities.Budget.update(id, data);
+      setBudget(prev => ({ ...prev, ...data }));
+      setEditing(false);
+    } catch {
+      toast.error("Erro ao salvar orçamento.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async () => {
-    await localClient.entities.Budget.delete(id);
-    navigate(createPageUrl("Budgets"));
+    try {
+      await localClient.entities.Budget.delete(id);
+      navigate(createPageUrl("Budgets"));
+    } catch {
+      toast.error("Erro ao excluir orçamento.");
+    }
   };
 
   const handleClose = async () => {
@@ -220,30 +259,37 @@ export default function BudgetDetail() {
 
   const handleCreateReceipt = async () => {
     setSaving(true);
-    const receipt = await localClient.entities.Receipt.create({
-      budget_id: id,
-      client_name: budget.client_name,
-      client_phone: budget.client_phone,
-      client_email: budget.client_email,
-      client_address: budget.client_address,
-      job: budget.job,
-      producer: budget.producer,
-      description: budget.description,
-      emission_date: budget.emission_date || new Date().toISOString().split('T')[0],
-      items: budget.items,
-      subtotal: budget.subtotal,
-      discount: budget.discount,
-      total_amount: budget.total,
-      total_label: budget.total_label,
-      apply_margin: budget.apply_margin,
-      margin_percentage: budget.margin_percentage,
-      total_with_margin: budget.total_with_margin,
-      total_with_margin_label: budget.total_with_margin_label,
-      notes: budget.notes,
-      delivery_date: budget.delivery_date || null,
-    });
-    setSaving(false);
-    navigate(createPageUrl("ReceiptDetail") + `?id=${receipt.id}`);
+    try {
+      const receipt = await localClient.entities.Receipt.create({
+        budget_id: id,
+        // ✅ vincula ao work_order_id se existir (evita recibo órfão)
+        work_order_id: existingOS ? String(existingOS.id) : null,
+        client_name: budget.client_name,
+        client_phone: budget.client_phone,
+        client_email: budget.client_email,
+        client_address: budget.client_address,
+        job: budget.job,
+        producer: budget.producer,
+        description: budget.description,
+        emission_date: budget.emission_date || new Date().toISOString().split('T')[0],
+        items: budget.items,
+        subtotal: budget.subtotal,
+        discount: budget.discount,
+        total_amount: budget.total,
+        total_label: budget.total_label,
+        apply_margin: budget.apply_margin,
+        margin_percentage: budget.margin_percentage,
+        total_with_margin: budget.total_with_margin,
+        total_with_margin_label: budget.total_with_margin_label,
+        notes: budget.notes,
+        delivery_date: budget.delivery_date || null,
+      });
+      navigate(createPageUrl("ReceiptDetail") + `?id=${receipt.id}`);
+    } catch {
+      toast.error("Erro ao criar recibo.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -365,15 +411,28 @@ export default function BudgetDetail() {
             <Edit className="h-3.5 w-3.5 mr-1.5" /> Editar
           </Button>
           {["pendente", "aprovado", "aceito_cliente", "em_aberto"].includes(budget.status) && (
-            <Button
-              size="sm"
-              className={existingOS ? "bg-amber-500 hover:bg-amber-600" : "bg-emerald-600 hover:bg-emerald-700"}
-              onClick={handleClickCreateOS}
-              disabled={saving}
-            >
-              <Wrench className="h-3.5 w-3.5 mr-1.5" />
-              {existingOS ? "O.S. já criada" : "Criar O.S. e Recibo"}
-            </Button>
+            existingOS ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-amber-400 text-amber-700 hover:bg-amber-50"
+                onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${existingOS.id}`)}
+                disabled={saving}
+              >
+                <Wrench className="h-3.5 w-3.5 mr-1.5" />
+                Ver O.S. #{existingOS.id}
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700"
+                onClick={handleClickCreateOS}
+                disabled={saving}
+              >
+                <Wrench className="h-3.5 w-3.5 mr-1.5" />
+                Criar O.S. e Recibo
+              </Button>
+            )
           )}
           {budget.status !== "orcamento_fechado" && (
             <Button
@@ -443,32 +502,32 @@ export default function BudgetDetail() {
         </div>
       )}
 
-      {/* Alerta de duplicação de O.S. */}
-      <AlertDialog open={showDuplicateWarning} onOpenChange={setShowDuplicateWarning}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-amber-700">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
-              O.S. e Recibo já foram criados!
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-600">
-              Já existe uma <strong>O.S. #{existingOS?.id}</strong> vinculada a este orçamento.
-              Criar novamente vai gerar uma O.S. e um Recibo duplicados.
-              <br /><br />
-              Deseja criar mesmo assim?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-amber-600 hover:bg-amber-700"
-              onClick={() => { setShowDuplicateWarning(false); handleApproveAndCreateOS(); }}
-            >
-              Criar mesmo assim
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Banner: itens pendentes adicionados pelo gerente na O.S. vinculada */}
+      {existingOS && Array.isArray(existingOS.pending_items) && existingOS.pending_items.length > 0 && (
+        <div className="no-print bg-amber-50 border border-amber-300 rounded-xl px-4 py-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-800">
+                O gerente {existingOS.employee_name ? `(${existingOS.employee_name})` : ""} adicionou {existingOS.pending_items.length} item(ns) à O.S. #{existingOS.id} — precisam ser precificados
+              </p>
+              <p className="text-xs text-amber-600 mt-0.5">
+                Itens: {existingOS.pending_items.map(it => it.name).join(", ")}
+              </p>
+              <div className="mt-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-amber-400 text-amber-700 hover:bg-amber-100 text-xs"
+                  onClick={() => navigate(createPageUrl("WorkOrderDetail") + `?id=${existingOS.id}`)}
+                >
+                  Abrir O.S. e Aceitar Itens
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Layout de orçamento — mesmo visual do PDF e da impressão */}
       {/* Wrapper de exibição: fundo cinza, centralizado, com sombra de folha A4 */}

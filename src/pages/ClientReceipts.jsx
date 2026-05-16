@@ -127,29 +127,66 @@ function ReceiptDocument({ receipt, settings }) {
                 {receipt.items.map((item, i) => {
                   const qty = item.quantity || 1;
                   const unit = item.unit_price || item.price || 0;
-                  const total = item.total || qty * unit;
+                  const itemTotal = qty * unit;
                   return (
                     <tr key={i}>
                       <td className="py-2.5 pr-4 text-sm text-slate-800">{item.name}</td>
                       <td className="py-2.5 px-4 text-sm text-slate-600 text-center">{qty}</td>
                       <td className="py-2.5 px-4 text-sm text-slate-600 text-right">R$ {formatBRL(unit)}</td>
-                      <td className="py-2.5 pl-4 text-sm font-medium text-slate-800 text-right">R$ {formatBRL(total)}</td>
+                      <td className="py-2.5 pl-4 text-sm font-medium text-slate-800 text-right">R$ {formatBRL(itemTotal)}</td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
             <div className="mt-4 space-y-1.5">
-              {Number(receipt.amount_paid) > 0 && (
-                <div className="flex justify-between text-sm text-slate-600">
-                  <span>Valor Pago:</span>
-                  <span>R$ {formatBRL(receipt.amount_paid)}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-sm font-bold text-slate-900 border-t-2 border-slate-900 pt-3 mt-2">
-                <span>Total:</span>
-                <span>R$ {formatBRL(receipt.total_value || receipt.total_amount)}</span>
-              </div>
+              {(() => {
+                // ✅ Calcula totais dinamicamente a partir dos itens atuais
+                // evita exibir valor desatualizado quando qtd/preço muda
+                const computedSubtotal = (receipt.items || []).reduce((sum, item) => {
+                  const qty = item.quantity || 1;
+                  const unit = item.unit_price || item.price || 0;
+                  return sum + qty * unit;
+                }, 0);
+                const discount = Math.min(Number(receipt.discount || 0), computedSubtotal);
+                const totalSemNota = computedSubtotal - discount;
+                const totalComNota = receipt.apply_margin && receipt.margin_percentage
+                  ? totalSemNota * (1 + receipt.margin_percentage / 100)
+                  : null;
+
+                return (
+                  <>
+                    {computedSubtotal !== totalSemNota && (
+                      <div className="flex justify-between text-sm text-slate-600">
+                        <span>Subtotal:</span>
+                        <span>R$ {formatBRL(computedSubtotal)}</span>
+                      </div>
+                    )}
+                    {discount > 0 && (
+                      <div className="flex justify-between text-sm text-red-600">
+                        <span>Desconto:</span>
+                        <span>- R$ {formatBRL(discount)}</span>
+                      </div>
+                    )}
+                    {Number(receipt.amount_paid) > 0 && (
+                      <div className="flex justify-between text-sm text-slate-600">
+                        <span>Valor Pago:</span>
+                        <span>R$ {formatBRL(receipt.amount_paid)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm font-bold text-slate-900 border-t-2 border-slate-900 pt-3 mt-2">
+                      <span>{receipt.total_label || "Total sem Nota"}:</span>
+                      <span>R$ {formatBRL(totalSemNota)}</span>
+                    </div>
+                    {totalComNota && (
+                      <div className="flex justify-between text-sm font-bold text-slate-900">
+                        <span>{receipt.total_with_margin_label || "Total com Nota"}:</span>
+                        <span>R$ {formatBRL(totalComNota)}</span>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
         )}

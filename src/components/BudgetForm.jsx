@@ -41,6 +41,8 @@ export default function BudgetForm({ initialData, onSubmit, onCancel, loading, h
     total_label: initialData?.total_label || "Total sem Nota",
     total_with_margin_label: initialData?.total_with_margin_label || "Total com Nota",
     items: initialData?.items?.length ? initialData.items : [{ name: "", quantity: 1, unit_price: 0 }],
+    // ✅ Preserva work_order_id quando criado a partir de uma O.S. do funcionário
+    work_order_id: initialData?.work_order_id || null,
   });
 
   const updateField = (field, value) => {

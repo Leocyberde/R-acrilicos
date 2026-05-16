@@ -242,15 +242,24 @@ export default function WorkOrders() {
   const handleSelect = (id, checked) => setSelected(checked ? [...selected, id] : selected.filter(s => s !== id));
 
   const handleDeleteSelected = async () => {
-    if (!selected.length || !confirm(`Tem certeza que deseja excluir ${selected.length} ordem(ns) de serviço?`)) return;
-    setDeleting(true);
-    try {
-      await Promise.all(selected.map(id => api.entities.WorkOrder.delete(id)));
-      setOrders(orders.filter(o => !selected.includes(o.id)));
-      setSelected([]);
-      toast.success(`${selected.length} ordem(ns) excluída(s) com sucesso`);
-    } catch { toast.error("Erro ao excluir ordens de serviço"); }
-    finally { setDeleting(false); }
+    if (!selected.length) return;
+    // ✅ Usa toast com ação de confirmação em vez de confirm() nativo (bloqueado em alguns browsers)
+    toast(`Excluir ${selected.length} ordem(ns)?`, {
+      action: {
+        label: "Confirmar",
+        onClick: async () => {
+          setDeleting(true);
+          try {
+            await Promise.all(selected.map(id => api.entities.WorkOrder.delete(id)));
+            setOrders(orders.filter(o => !selected.includes(o.id)));
+            setSelected([]);
+            toast.success(`${selected.length} ordem(ns) excluída(s) com sucesso`);
+          } catch { toast.error("Erro ao excluir ordens de serviço"); }
+          finally { setDeleting(false); }
+        },
+      },
+      cancel: { label: "Cancelar", onClick: () => {} },
+    });
   };
 
   const handleStatusChange = async (id, newStatus) => {

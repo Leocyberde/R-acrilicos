@@ -85,6 +85,7 @@ import ClientDashboard from './pages/ClientDashboard';
 import ClientReceipts from './pages/ClientReceipts';
 import ClientProfile from './pages/ClientProfile';
 import WhatsAppSettings from './pages/WhatsAppSettings';
+import EmployeeOSRequest from './pages/EmployeeOSRequest';
 import __Layout from './Layout.jsx';
 
 
@@ -127,6 +128,7 @@ export const PAGES = {
     "ClientReceipts": ClientReceipts,
     "ClientProfile": ClientProfile,
     "WhatsAppSettings": WhatsAppSettings,
+    "EmployeeOSRequest": EmployeeOSRequest,
 }
 
 export const pagesConfig = {

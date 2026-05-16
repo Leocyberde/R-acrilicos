@@ -342,6 +342,9 @@ async function initDB() {
       "ALTER TABLE settings ADD COLUMN IF NOT EXISTS receipt_pix_qrcode TEXT",
       "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS sent_to_client BOOLEAN DEFAULT FALSE",
       "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS client_email VARCHAR(255)",
+      "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS employee_name VARCHAR(255)",
+      "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS pending_items JSONB DEFAULT '[]'",
+      "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS created_by_employee BOOLEAN DEFAULT FALSE",
     ];
     for (const sql of migrations) {
       await client.query(sql);
@@ -983,6 +986,42 @@ app.delete('/api/entities/WorkOrder/:id', optionalAuth, async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+app.get('/api/employee-os-requests', optionalAuth, async (req, res) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+  try {
+    // Retorna O.S. criadas pelo funcionário (sem orçamento) OU qualquer O.S. com itens pendentes
+    const result = await pool.query(
+      `SELECT * FROM work_orders
+       WHERE (created_by_employee = TRUE AND budget_id IS NULL)
+          OR (pending_items IS NOT NULL AND jsonb_array_length(pending_items) > 0)
+       ORDER BY created_date DESC LIMIT 200`
+    );
+    res.json(result.rows.map(mapWorkOrder));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/employee-os-requests/pending-count', optionalAuth, async (req, res) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+  try {
+    // Conta O.S. criadas pelo funcionário sem orçamento OU qualquer O.S. com itens pendentes
+    const result = await pool.query(
+      `SELECT COUNT(*) FROM work_orders
+       WHERE (created_by_employee = TRUE AND budget_id IS NULL)
+          OR (pending_items IS NOT NULL AND jsonb_array_length(pending_items) > 0)`
+    );
+    res.json({ count: parseInt(result.rows[0].count, 10) });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.use('/api/entities/Receipt', buildEntityRoutes('receipts'));
 app.use('/api/entities/Financial', buildEntityRoutes('financial'));
 app.use('/api/entities/Client', buildEntityRoutes('clients'));

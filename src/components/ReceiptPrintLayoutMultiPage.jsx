@@ -180,32 +180,62 @@ export default function ReceiptPrintLayoutMultiPage({ receipt }) {
 
       {pages.length > 0 && pageIdx === pages.length - 1 && (
         <>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <tbody>
-              <tr style={{ borderTop: `${c.totals_border_thickness || 2}px solid ${c.totals_border_color || "#333"}`, borderBottom: `1px solid ${c.totals_border_color || "#aaa"}`, background: c.totals_bg }}>
-                <td style={{ padding: "6px", fontWeight: "bold", width: "50%" }} />
-                <td style={{ width: "10%" }} />
-                <td style={{ padding: "6px", fontWeight: "bold", textAlign: "right", width: "20%" }}>
-                  {receipt.total_label || c.totals_label_sem_nota || "SEM NOTA"}
-                </td>
-                <td style={{ padding: "6px", fontWeight: "bold", textAlign: "right", width: "20%", color: c.totals_value_color }}>
-                  R${fmt(receipt.total_amount)}
-                </td>
-              </tr>
-              {receipt.total_with_margin > 0 && (
-                <tr style={{ borderBottom: `${c.totals_border_thickness || 2}px solid ${c.totals_border_color || "#333"}`, background: c.totals_bg }}>
-                  <td style={{ padding: "6px", fontWeight: "bold" }} />
-                  <td />
-                  <td style={{ padding: "6px", fontWeight: "bold", textAlign: "right" }}>
-                    {receipt.total_with_margin_label || c.totals_label_com_nota || "COM NOTA"}
-                  </td>
-                  <td style={{ padding: "6px", fontWeight: "bold", textAlign: "right", color: c.totals_value_color }}>
-                    R${fmt(receipt.total_with_margin)}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          {(() => {
+            // ✅ Calcula totais dinamicamente a partir dos itens atuais
+            // evita exibir valor desatualizado quando qtd/preço muda
+            const allItems = receipt.items || [];
+            const computedSubtotal = allItems.reduce(
+              (sum, item) => sum + (item.quantity || 0) * (item.unit_price || 0), 0
+            );
+            const discount = Math.min(Number(receipt.discount || 0), computedSubtotal);
+            const totalSemNota = computedSubtotal - discount;
+            const totalComNota = receipt.apply_margin && receipt.margin_percentage
+              ? totalSemNota * (1 + receipt.margin_percentage / 100)
+              : null;
+
+            return (
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <tbody>
+                  {computedSubtotal !== totalSemNota && (
+                    <tr>
+                      <td colSpan={2} />
+                      <td style={{ padding: "4px 6px", textAlign: "right", fontSize: "12px" }}>Subtotal</td>
+                      <td style={{ padding: "4px 6px", textAlign: "right", fontSize: "12px" }}>R${fmt(computedSubtotal)}</td>
+                    </tr>
+                  )}
+                  {discount > 0 && (
+                    <tr>
+                      <td colSpan={2} />
+                      <td style={{ padding: "4px 6px", textAlign: "right", fontSize: "12px" }}>Desconto</td>
+                      <td style={{ padding: "4px 6px", textAlign: "right", fontSize: "12px", color: "#c00" }}>- R${fmt(discount)}</td>
+                    </tr>
+                  )}
+                  <tr style={{ borderTop: `${c.totals_border_thickness || 2}px solid ${c.totals_border_color || "#333"}`, borderBottom: `1px solid ${c.totals_border_color || "#aaa"}`, background: c.totals_bg }}>
+                    <td style={{ padding: "6px", fontWeight: "bold", width: "50%" }} />
+                    <td style={{ width: "10%" }} />
+                    <td style={{ padding: "6px", fontWeight: "bold", textAlign: "right", width: "20%" }}>
+                      {receipt.total_label || c.totals_label_sem_nota || "Total sem Nota"}
+                    </td>
+                    <td style={{ padding: "6px", fontWeight: "bold", textAlign: "right", width: "20%", color: c.totals_value_color }}>
+                      R${fmt(totalSemNota)}
+                    </td>
+                  </tr>
+                  {totalComNota && (
+                    <tr style={{ borderBottom: `${c.totals_border_thickness || 2}px solid ${c.totals_border_color || "#333"}`, background: c.totals_bg }}>
+                      <td style={{ padding: "6px", fontWeight: "bold" }} />
+                      <td />
+                      <td style={{ padding: "6px", fontWeight: "bold", textAlign: "right" }}>
+                        {receipt.total_with_margin_label || c.totals_label_com_nota || "Total com Nota"}
+                      </td>
+                      <td style={{ padding: "6px", fontWeight: "bold", textAlign: "right", color: c.totals_value_color }}>
+                        R${fmt(totalComNota)}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            );
+          })()}
 
           {c.show_instructions !== false && (c.instructions_text || c.instructions_qrcode_url) && (
             <div style={{

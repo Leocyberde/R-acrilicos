@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import StatusBadge from "@/components/StatusBadge";
 import ExportTabs from "@/components/ExportTabs";
+import OrphanWorkOrdersAlert from "@/components/OrphanWorkOrdersAlert";
 
 export default function BudgetDashboard() {
   const [budgets, setBudgets] = useState([]);
@@ -59,6 +60,8 @@ export default function BudgetDashboard() {
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Dashboard de Orçamentos</h1>
         <p className="text-slate-500 mt-1">Visão completa dos orçamentos</p>
       </div>
+
+      <OrphanWorkOrdersAlert />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
