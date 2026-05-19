@@ -91,7 +91,7 @@ export default function BudgetCreate() {
       navigate(createPageUrl("BudgetDetail") + `?id=${created.id}`);
     } catch (err) {
       console.error("Erro ao criar orçamento:", err);
-      toast.error("Erro ao salvar orçamento. Tente novamente.");
+      toast.error("Erro ao salvar orçamento: " + (err.message || "Tente novamente."));
       setLoading(false);
     }
   };

@@ -346,6 +346,9 @@ async function initDB() {
       "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS pending_items JSONB DEFAULT '[]'",
       "ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS created_by_employee BOOLEAN DEFAULT FALSE",
       "ALTER TABLE budgets ADD COLUMN IF NOT EXISTS work_order_id INTEGER",
+      "ALTER TABLE budgets ALTER COLUMN discount TYPE DECIMAL(15,2)",
+      "ALTER TABLE receipts ALTER COLUMN discount TYPE DECIMAL(15,2)",
+      "ALTER TABLE budgets ALTER COLUMN margin_percentage TYPE DECIMAL(5,2)",
     ];
     for (const sql of migrations) {
       await client.query(sql);
