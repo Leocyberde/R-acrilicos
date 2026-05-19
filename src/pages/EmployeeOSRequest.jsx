@@ -18,7 +18,7 @@ function ClientSearchWithCreate({ onClientSelect }) {
   const [selectedClient, setSelectedClient] = useState(null);
   const [showNewForm, setShowNewForm] = useState(false);
   const [newClient, setNewClient] = useState({
-    name: "", phone: "", email: "", address: "", city: "",
+    name: "", email: "", city: "",
   });
   const containerRef = useRef(null);
   const inputRef = useRef(null);
@@ -61,7 +61,7 @@ function ClientSearchWithCreate({ onClientSelect }) {
     setSelectedClient(null);
     setQuery("");
     setShowNewForm(false);
-    setNewClient({ name: "", phone: "", email: "", address: "", city: "" });
+    setNewClient({ name: "", email: "", city: "" });
     onClientSelect(null);
     setTimeout(() => inputRef.current?.focus(), 0);
   };
@@ -83,7 +83,7 @@ function ClientSearchWithCreate({ onClientSelect }) {
 
   const cancelNew = () => {
     setShowNewForm(false);
-    setNewClient({ name: "", phone: "", email: "", address: "", city: "" });
+    setNewClient({ name: "", email: "", city: "" });
     setQuery("");
     onClientSelect(null);
   };
@@ -196,21 +196,12 @@ function ClientSearchWithCreate({ onClientSelect }) {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
+            <div className="sm:col-span-2">
               <Label className="text-xs text-slate-500 uppercase tracking-wider font-medium">Nome *</Label>
               <Input
                 value={newClient.name}
                 onChange={e => updateNew("name", e.target.value)}
                 placeholder="Nome completo ou empresa"
-                className="mt-1 bg-white"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-slate-500 uppercase tracking-wider font-medium">Telefone</Label>
-              <Input
-                value={newClient.phone}
-                onChange={e => updateNew("phone", e.target.value)}
-                placeholder="(11) 99999-9999"
                 className="mt-1 bg-white"
               />
             </div>
@@ -232,15 +223,6 @@ function ClientSearchWithCreate({ onClientSelect }) {
                 className="mt-1 bg-white"
               />
             </div>
-            <div className="sm:col-span-2">
-              <Label className="text-xs text-slate-500 uppercase tracking-wider font-medium">Endereço</Label>
-              <Input
-                value={newClient.address}
-                onChange={e => updateNew("address", e.target.value)}
-                placeholder="Rua, número, bairro..."
-                className="mt-1 bg-white"
-              />
-            </div>
           </div>
 
           <p className="text-xs text-indigo-600">
@@ -258,6 +240,7 @@ export default function EmployeeOSRequest() {
   const [saving, setSaving] = useState(false);
   const [clientSelection, setClientSelection] = useState(null);
   const [form, setForm] = useState({
+    producer: "",
     job: "",
     description: "",
     notes: "",
@@ -318,6 +301,7 @@ export default function EmployeeOSRequest() {
         client_id: clientId,
         client_phone: clientPhone,
         client_address: clientAddress,
+        producer: form.producer,
         job: form.job,
         description: form.description,
         notes: form.notes,
@@ -362,14 +346,25 @@ export default function EmployeeOSRequest() {
 
       <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
         <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Detalhes do Serviço</h2>
-        <div>
-          <Label className="text-xs text-slate-500 uppercase tracking-wider font-medium">Job / Tipo de Serviço</Label>
-          <Input
-            value={form.job}
-            onChange={e => setForm(p => ({ ...p, job: e.target.value }))}
-            placeholder="Ex: Adesivagem veículo, Banner 3x2m, Fachada..."
-            className="mt-1"
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Label className="text-xs text-slate-500 uppercase tracking-wider font-medium">Produtor</Label>
+            <Input
+              value={form.producer}
+              onChange={e => setForm(p => ({ ...p, producer: e.target.value }))}
+              placeholder="Nome do produtor responsável"
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-slate-500 uppercase tracking-wider font-medium">Job / Tipo de Serviço</Label>
+            <Input
+              value={form.job}
+              onChange={e => setForm(p => ({ ...p, job: e.target.value }))}
+              placeholder="Ex: Adesivagem veículo, Banner 3x2m..."
+              className="mt-1"
+            />
+          </div>
         </div>
         <div>
           <Label className="text-xs text-slate-500 uppercase tracking-wider font-medium">Descrição do Serviço</Label>
