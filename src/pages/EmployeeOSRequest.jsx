@@ -18,7 +18,7 @@ function ClientSearchWithCreate({ onClientSelect }) {
   const [selectedClient, setSelectedClient] = useState(null);
   const [showNewForm, setShowNewForm] = useState(false);
   const [newClient, setNewClient] = useState({
-    name: "", email: "", city: "",
+    name: "", phone: "", email: "", address: "", city: "",
   });
   const containerRef = useRef(null);
   const inputRef = useRef(null);
@@ -61,7 +61,7 @@ function ClientSearchWithCreate({ onClientSelect }) {
     setSelectedClient(null);
     setQuery("");
     setShowNewForm(false);
-    setNewClient({ name: "", email: "", city: "" });
+    setNewClient({ name: "", phone: "", email: "", address: "", city: "" });
     onClientSelect(null);
     setTimeout(() => inputRef.current?.focus(), 0);
   };
@@ -83,7 +83,7 @@ function ClientSearchWithCreate({ onClientSelect }) {
 
   const cancelNew = () => {
     setShowNewForm(false);
-    setNewClient({ name: "", email: "", city: "" });
+    setNewClient({ name: "", phone: "", email: "", address: "", city: "" });
     setQuery("");
     onClientSelect(null);
   };
@@ -196,12 +196,21 @@ function ClientSearchWithCreate({ onClientSelect }) {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="sm:col-span-2">
+            <div>
               <Label className="text-xs text-slate-500 uppercase tracking-wider font-medium">Nome *</Label>
               <Input
                 value={newClient.name}
                 onChange={e => updateNew("name", e.target.value)}
                 placeholder="Nome completo ou empresa"
+                className="mt-1 bg-white"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-slate-500 uppercase tracking-wider font-medium">Telefone</Label>
+              <Input
+                value={newClient.phone}
+                onChange={e => updateNew("phone", e.target.value)}
+                placeholder="(11) 99999-9999"
                 className="mt-1 bg-white"
               />
             </div>
@@ -220,6 +229,15 @@ function ClientSearchWithCreate({ onClientSelect }) {
                 value={newClient.city}
                 onChange={e => updateNew("city", e.target.value)}
                 placeholder="Ex: São Paulo"
+                className="mt-1 bg-white"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Label className="text-xs text-slate-500 uppercase tracking-wider font-medium">Endereço</Label>
+              <Input
+                value={newClient.address}
+                onChange={e => updateNew("address", e.target.value)}
+                placeholder="Rua, número, bairro..."
                 className="mt-1 bg-white"
               />
             </div>
