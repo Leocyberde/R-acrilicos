@@ -270,8 +270,18 @@ export default function WorkOrderDetail() {
                 {order.is_urgent ? <ZapOff className="h-3.5 w-3.5 mr-1.5" /> : <Zap className="h-3.5 w-3.5 mr-1.5" />}
                 {order.is_urgent ? "Remover Urgência" : "Marcar Urgente"}
               </Button>
+              {order.client_id && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(createPageUrl("ClientDetail") + `?id=${order.client_id}`)}
+                  className="text-indigo-600 hover:text-indigo-700 hover:border-indigo-400"
+                >
+                  <Edit className="h-3.5 w-3.5 mr-1.5" /> Editar Cliente
+                </Button>
+              )}
               <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-                <Edit className="h-3.5 w-3.5 mr-1.5" /> Editar
+                <Edit className="h-3.5 w-3.5 mr-1.5" /> Editar O.S.
               </Button>
               {nextStatus && (
                 <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700" onClick={() => updateStatus(nextStatus)} disabled={saving}>
@@ -353,12 +363,15 @@ export default function WorkOrderDetail() {
       )}
 
       {order.employee_name && !isEmployee && !isClient && (
-        <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
-          <AlertTriangle className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-blue-700">
-            Esta O.S. foi criada ou alterada pelo gerente <strong>{order.employee_name}</strong>.
-            {!order.budget_id && <span className="text-amber-700 font-medium"> Não possui orçamento vinculado — crie um orçamento para ela.</span>}
-          </p>
+        <div className="flex items-start justify-between gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-blue-700 space-y-0.5">
+              <p>Esta O.S. foi criada pelo funcionário <strong>{order.employee_name}</strong>.</p>
+              {!order.budget_id && <p className="text-amber-700 font-medium">Não possui orçamento vinculado — crie um orçamento para ela.</p>}
+              {order.client_id && <p className="text-blue-600">O cadastro do cliente pode estar incompleto — use o botão <strong>Editar Cliente</strong> para preencher os dados.</p>}
+            </div>
+          </div>
         </div>
       )}
 

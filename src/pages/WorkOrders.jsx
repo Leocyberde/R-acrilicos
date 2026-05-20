@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Wrench, Trash2, RefreshCw, Plus, Upload, Zap, ZapOff, AlertTriangle, Settings2, GripVertical, ChevronRight, ChevronLeft, X } from "lucide-react";
+import { Wrench, Trash2, RefreshCw, Plus, Upload, Zap, ZapOff, AlertTriangle, Settings2, GripVertical, ChevronRight, ChevronLeft, X, Bell } from "lucide-react";
 import SearchAutocomplete from "@/components/SearchAutocomplete";
 import {
   DropdownMenu,
@@ -202,6 +202,7 @@ export default function WorkOrders() {
   const [showPDFUpload, setShowPDFUpload] = useState(false);
   const [showColConfig, setShowColConfig] = useState(false);
   const [activeKeys, setActiveKeys] = useState(loadColumnConfig);
+  const [pendingEmployeeCount, setPendingEmployeeCount] = useState(0);
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -215,6 +216,19 @@ export default function WorkOrders() {
       }
       setOrders(data || []);
       setLoading(false);
+
+      if (user?.role === "admin") {
+        try {
+          const token = localStorage.getItem("auth_token");
+          const res = await fetch("/api/employee-os-requests/pending-count", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (res.ok) {
+            const { count } = await res.json();
+            setPendingEmployeeCount(count || 0);
+          }
+        } catch {}
+      }
     }
     load();
   }, [user]);
@@ -331,6 +345,30 @@ export default function WorkOrders() {
           </div>
         )}
       </div>
+
+      {user?.role === "admin" && pendingEmployeeCount > 0 && (
+        <div className="flex items-center justify-between gap-3 bg-amber-50 border border-amber-300 rounded-xl px-4 py-3">
+          <div className="flex items-start gap-3">
+            <Bell className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5 animate-pulse" />
+            <div>
+              <p className="text-sm font-semibold text-amber-800">
+                {pendingEmployeeCount} nova(s) O.S. criada(s) por funcionários aguardando revisão
+              </p>
+              <p className="text-xs text-amber-600 mt-0.5">
+                Essas ordens ainda não possuem orçamento vinculado. Acesse cada uma para criar o orçamento.
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-amber-400 text-amber-700 hover:bg-amber-100 whitespace-nowrap flex-shrink-0"
+            onClick={() => setFilterStatus("pendente")}
+          >
+            Ver pendentes
+          </Button>
+        </div>
+      )}
 
       {urgentOrders.length > 0 && (
         <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
