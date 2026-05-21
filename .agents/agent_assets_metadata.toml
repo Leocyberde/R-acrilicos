@@ -6,3 +6,9 @@ id = "PHN5AUQZrLHwg89YNMD-N"
 uri = "file://relatorio_correcoes_impressao.pdf"
 type = "pdf"
 title = "Relatório de Correções — Problema de Impressão Mobile"
+
+[[outputs]]
+id = "Mc1Lb49SiROKQl1Z6g91j"
+uri = "file://arquivos_alterados.tar.gz"
+type = "unspecified"
+title = "Arquivos Alterados — GestãoPro"
