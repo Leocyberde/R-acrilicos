@@ -12,3 +12,9 @@ id = "Mc1Lb49SiROKQl1Z6g91j"
 uri = "file://arquivos_alterados.tar.gz"
 type = "unspecified"
 title = "Arquivos Alterados — GestãoPro"
+
+[[outputs]]
+id = "CH5Pje3DOGwj0pvXCFifK"
+uri = "file://arquivos_alterados.zip"
+type = "unspecified"
+title = "Arquivos Alterados — GestãoPro.zip"
