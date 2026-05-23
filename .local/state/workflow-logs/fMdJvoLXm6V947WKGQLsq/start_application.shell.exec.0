@@ -1,0 +1,11 @@
+[1G[0K⠙[1G[0K
+> gestao-pro@0.0.0 dev
+> npx concurrently "node server.js" "vite"
+
+[1G[0K⠙[1G[0K[1G[0K⠙[1G[0K⠹[1G[0K⠸[1G[0K[0m[1][0m 
+[0m[1][0m   [32m[1mVITE[22m v6.4.1[39m  [2mready in [0m[1m764[22m[2m[0m ms[22m
+[0m[1][0m 
+[0m[1][0m   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5000[22m/[39m
+[0m[1][0m   [32m➜[39m  [1mNetwork[22m: [36mhttp://172.24.0.2:[1m5000[22m/[39m
+[0m[0][0m Database initialized successfully
+[0m[0][0m Server running on port 3001
